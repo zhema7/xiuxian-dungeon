@@ -1,0 +1,35 @@
+{
+  "name": "xiuxian-dungeon",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "scripts": {
+    "predev": "node scripts/validate-data.mjs && node scripts/validate-assets.mjs",
+    "dev": "vite",
+    "prebuild": "node scripts/validate-data.mjs && node scripts/validate-assets.mjs",
+    "build": "tsc --noEmit && vite build",
+    "build:minitool": "tsc --noEmit && vite build --config vite.config.minitool.ts && node scripts/minitool-postbuild.mjs",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "validate": "node scripts/validate-data.mjs && node scripts/validate-assets.mjs",
+    "validate:data": "node scripts/validate-data.mjs",
+    "validate:assets": "node scripts/validate-assets.mjs",
+    "validate:assets:strict": "node scripts/validate-assets.mjs --strict",
+    "test": "node ../vitest-env/node_modules/vitest/vitest.mjs run --root . --config ./vitest.config.ts",
+    "test:run": "node ../vitest-env/node_modules/vitest/vitest.mjs run --root . --config ./vitest.config.ts",
+    "cap:sync": "vite build && npx cap sync",
+    "cap:open": "npx cap open android",
+    "build:android": "vite build && npx cap copy android"
+  },
+  "dependencies": {
+    "@capacitor/core": "^7.0.0",
+    "phaser": "^3.90.0"
+  },
+  "devDependencies": {
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/cli": "^7.0.0",
+    "sharp": "^0.35.3",
+    "typescript": "^5.6.0",
+    "vite": "^5.4.0"
+  }
+}

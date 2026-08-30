@@ -1,0 +1,44 @@
+# ---------- 依赖 ----------
+node_modules/
+
+# ---------- 构建产物 ----------
+dist/
+dist-*/
+dist-minitool/
+
+# ---------- 归档与备份（大体积，非当前源码）----------
+archive/
+backup/
+
+# ---------- 发布包与影音（超大文件，不入库）----------
+release/*.zip
+release/archives/
+promo/*.mp4
+promo/*.webm
+promo/_smoke/
+promo/_taptap/
+promo/screenshots/
+marketing/*.mp4
+
+# ---------- 历史打包副本（与 public/ 大量重复，仅不入库，未删除）----------
+game/
+.trae-html-share-packages/
+
+# ---------- 测试与诊断临时产物 ----------
+.vitest-asset-gate-tmp/
+_probe/
+_dim.log
+_vite.diag.ts
+
+# ---------- 日志与临时输出 ----------
+*.log
+_tc*.log
+_test*.log
+_qa-*.json
+_qa-*.log
+failure-message.txt
+failed-test-summary.json
+
+# ---------- 系统文件 ----------
+Thumbs.db
+.DS_Store

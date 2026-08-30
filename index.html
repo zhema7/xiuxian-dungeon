@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#0b0e14" />
+  <title>修仙与地下城</title>
+</head>
+<body>
+  <div id="app">
+    <div id="game"></div>
+
+    <div id="hud">
+      <div class="row">
+        <span id="hudName">无名散修 · 剑修</span>
+        <span class="tag" id="hudFloor"></span>
+      </div>
+      <div class="bar" id="hpbar"><i></i><b></b></div>
+      <div class="row">
+        <span class="tag" id="hudLv">Lv.1</span>
+        <span class="tag" id="hudGold">灵石 0</span>
+        <span class="tag" id="hudInsight">悟道 0</span>
+        <span class="tag" id="hudPot">丹药 0</span>
+      </div>
+      <div class="bar" id="expbar"><i></i><b></b></div>
+    </div>
+
+    <div id="controls">
+      <div id="joy"><div id="joyKnob"></div></div>
+      <div class="btn" id="btnAtk">攻击</div>
+      <div class="btn" id="btnSkill">神通</div>
+      <div class="btn" id="btnPot">丹药</div>
+      <div class="btn" id="btnBag">背包</div>
+      <div class="btn" id="btnAct">交谈</div>
+      <div class="btn" id="btnRetreat">撤离</div>
+      <div class="btn" id="btnSettings" style="position:absolute;left:50%;bottom:4px;transform:translateX(-50%);width:24px;height:32px;background-image:url('sprites/talisman_grey.jpg');background-size:contain;background-repeat:no-repeat;background-position:center;background-color:transparent;border:none;padding:0;z-index:20;font-size:0"></div>
+    </div>
+
+    <div id="dialog"><div class="card">
+      <div id="dialogName"></div>
+      <div id="dialogText"></div>
+      <div id="dialogOpts" style="margin-top:6px"></div>
+      <div id="dialogHint">点击继续 ▼</div>
+    </div></div>
+
+    <video id="titleVideo" muted loop playsinline webkit-playsinline preload="auto"></video>
+
+    <div id="title">
+      <div id="titleName">修仙与地下城</div>
+      <div id="titleSub">像素修仙 · ROGUELIKE · 青冥山</div>
+      <div id="titleBtns">
+        <button id="btnNew" class="primary">开始仙途</button>
+        <button id="btnContinue">继续前缘</button>
+        <button id="btnRecords">查看榜单</button>
+      </div>
+      <div id="titleVer">v0.2 · 竖屏像素修仙</div>
+      <div id="titleAuthor">哲码游戏 出品</div>
+    </div>
+
+    <div id="panel"></div>
+    <div id="toast"></div>
+  </div>
+  <script type="module" src="/src/main.ts"></script>
+</body>
+</html>

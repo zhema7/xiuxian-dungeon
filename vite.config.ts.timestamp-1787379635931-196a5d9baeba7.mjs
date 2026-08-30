@@ -1,0 +1,17 @@
+// vite.config.ts
+import { defineConfig } from "file:///c:/kimi/%E4%BF%AE%E4%BB%99%E4%B8%8E%E5%9C%B0%E4%B8%8A%E5%9F%8E/node_modules/vite/dist/node/index.js";
+var vite_config_default = defineConfig({
+  base: "./",
+  server: { host: true },
+  build: {
+    chunkSizeWarningLimit: 1600
+  },
+  test: {
+    environment: "node",
+    include: ["tests/**/*.test.ts"]
+  }
+});
+export {
+  vite_config_default as default
+};
+//# sourceMappingURL=data:application/json;base64,ewogICJ2ZXJzaW9uIjogMywKICAic291cmNlcyI6IFsidml0ZS5jb25maWcudHMiXSwKICAic291cmNlc0NvbnRlbnQiOiBbImNvbnN0IF9fdml0ZV9pbmplY3RlZF9vcmlnaW5hbF9kaXJuYW1lID0gXCJjOlxcXFxraW1pXFxcXFx1NEZFRVx1NEVEOVx1NEUwRVx1NTczMFx1NEUwQVx1NTdDRVwiO2NvbnN0IF9fdml0ZV9pbmplY3RlZF9vcmlnaW5hbF9maWxlbmFtZSA9IFwiYzpcXFxca2ltaVxcXFxcdTRGRUVcdTRFRDlcdTRFMEVcdTU3MzBcdTRFMEFcdTU3Q0VcXFxcdml0ZS5jb25maWcudHNcIjtjb25zdCBfX3ZpdGVfaW5qZWN0ZWRfb3JpZ2luYWxfaW1wb3J0X21ldGFfdXJsID0gXCJmaWxlOi8vL2M6L2tpbWkvJUU0JUJGJUFFJUU0JUJCJTk5JUU0JUI4JThFJUU1JTlDJUIwJUU0JUI4JThBJUU1JTlGJThFL3ZpdGUuY29uZmlnLnRzXCI7Ly8vIDxyZWZlcmVuY2UgdHlwZXM9XCJ2aXRlc3QvY29uZmlnXCIgLz5cbmltcG9ydCB7IGRlZmluZUNvbmZpZyB9IGZyb20gJ3ZpdGUnXG5cbmV4cG9ydCBkZWZhdWx0IGRlZmluZUNvbmZpZyh7XG4gIGJhc2U6ICcuLycsXG4gIHNlcnZlcjogeyBob3N0OiB0cnVlIH0sXG4gIGJ1aWxkOiB7XG4gICAgY2h1bmtTaXplV2FybmluZ0xpbWl0OiAxNjAwLFxuICB9LFxuICB0ZXN0OiB7XG4gICAgZW52aXJvbm1lbnQ6ICdub2RlJyxcbiAgICBpbmNsdWRlOiBbJ3Rlc3RzLyoqLyoudGVzdC50cyddLFxuICB9LFxufSlcbiJdLAogICJtYXBwaW5ncyI6ICI7QUFDQSxTQUFTLG9CQUFvQjtBQUU3QixJQUFPLHNCQUFRLGFBQWE7QUFBQSxFQUMxQixNQUFNO0FBQUEsRUFDTixRQUFRLEVBQUUsTUFBTSxLQUFLO0FBQUEsRUFDckIsT0FBTztBQUFBLElBQ0wsdUJBQXVCO0FBQUEsRUFDekI7QUFBQSxFQUNBLE1BQU07QUFBQSxJQUNKLGFBQWE7QUFBQSxJQUNiLFNBQVMsQ0FBQyxvQkFBb0I7QUFBQSxFQUNoQztBQUNGLENBQUM7IiwKICAibmFtZXMiOiBbXQp9Cg==

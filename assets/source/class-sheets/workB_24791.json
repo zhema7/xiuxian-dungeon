@@ -1,0 +1,1187 @@
+{
+  "textures": [
+    {
+      "imageName": "fairy_spritesheet.png",
+      "width": 384,
+      "height": 336,
+      "frames": [
+        {
+          "name": "fairy_down_idle_00",
+          "frame": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_down_idle_01",
+          "frame": {
+            "x": 48,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_down_idle_02",
+          "frame": {
+            "x": 96,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_down_idle_03",
+          "frame": {
+            "x": 144,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_down_walk_00",
+          "frame": {
+            "x": 192,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_down_walk_01",
+          "frame": {
+            "x": 240,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_down_walk_02",
+          "frame": {
+            "x": 288,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_down_walk_03",
+          "frame": {
+            "x": 336,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_down_attack_00",
+          "frame": {
+            "x": 0,
+            "y": 48,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_down_attack_01",
+          "frame": {
+            "x": 48,
+            "y": 48,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_down_attack_02",
+          "frame": {
+            "x": 96,
+            "y": 48,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_down_attack_03",
+          "frame": {
+            "x": 144,
+            "y": 48,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_down_hit_00",
+          "frame": {
+            "x": 192,
+            "y": 48,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_down_hit_01",
+          "frame": {
+            "x": 240,
+            "y": 48,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_left_idle_00",
+          "frame": {
+            "x": 288,
+            "y": 48,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_left_idle_01",
+          "frame": {
+            "x": 336,
+            "y": 48,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_left_idle_02",
+          "frame": {
+            "x": 0,
+            "y": 96,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_left_idle_03",
+          "frame": {
+            "x": 48,
+            "y": 96,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_left_walk_00",
+          "frame": {
+            "x": 96,
+            "y": 96,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_left_walk_01",
+          "frame": {
+            "x": 144,
+            "y": 96,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_left_walk_02",
+          "frame": {
+            "x": 192,
+            "y": 96,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_left_walk_03",
+          "frame": {
+            "x": 240,
+            "y": 96,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_left_attack_00",
+          "frame": {
+            "x": 288,
+            "y": 96,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_left_attack_01",
+          "frame": {
+            "x": 336,
+            "y": 96,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_left_attack_02",
+          "frame": {
+            "x": 0,
+            "y": 144,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_left_attack_03",
+          "frame": {
+            "x": 48,
+            "y": 144,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_left_hit_00",
+          "frame": {
+            "x": 96,
+            "y": 144,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_left_hit_01",
+          "frame": {
+            "x": 144,
+            "y": 144,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_right_idle_00",
+          "frame": {
+            "x": 192,
+            "y": 144,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_right_idle_01",
+          "frame": {
+            "x": 240,
+            "y": 144,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_right_idle_02",
+          "frame": {
+            "x": 288,
+            "y": 144,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_right_idle_03",
+          "frame": {
+            "x": 336,
+            "y": 144,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_right_walk_00",
+          "frame": {
+            "x": 0,
+            "y": 192,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_right_walk_01",
+          "frame": {
+            "x": 48,
+            "y": 192,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_right_walk_02",
+          "frame": {
+            "x": 96,
+            "y": 192,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_right_walk_03",
+          "frame": {
+            "x": 144,
+            "y": 192,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_right_attack_00",
+          "frame": {
+            "x": 192,
+            "y": 192,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_right_attack_01",
+          "frame": {
+            "x": 240,
+            "y": 192,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_right_attack_02",
+          "frame": {
+            "x": 288,
+            "y": 192,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_right_attack_03",
+          "frame": {
+            "x": 336,
+            "y": 192,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_right_hit_00",
+          "frame": {
+            "x": 0,
+            "y": 240,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_right_hit_01",
+          "frame": {
+            "x": 48,
+            "y": 240,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_up_idle_00",
+          "frame": {
+            "x": 96,
+            "y": 240,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_up_idle_01",
+          "frame": {
+            "x": 144,
+            "y": 240,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_up_idle_02",
+          "frame": {
+            "x": 192,
+            "y": 240,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_up_idle_03",
+          "frame": {
+            "x": 240,
+            "y": 240,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_up_walk_00",
+          "frame": {
+            "x": 288,
+            "y": 240,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_up_walk_01",
+          "frame": {
+            "x": 336,
+            "y": 240,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_up_walk_02",
+          "frame": {
+            "x": 0,
+            "y": 288,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_up_walk_03",
+          "frame": {
+            "x": 48,
+            "y": 288,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_up_attack_00",
+          "frame": {
+            "x": 96,
+            "y": 288,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_up_attack_01",
+          "frame": {
+            "x": 144,
+            "y": 288,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_up_attack_02",
+          "frame": {
+            "x": 192,
+            "y": 288,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_up_attack_03",
+          "frame": {
+            "x": 240,
+            "y": 288,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_up_hit_00",
+          "frame": {
+            "x": 288,
+            "y": 288,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        },
+        {
+          "name": "fairy_up_hit_01",
+          "frame": {
+            "x": 336,
+            "y": 288,
+            "w": 48,
+            "h": 48
+          },
+          "spriteSourceSize": {
+            "x": 0,
+            "y": 0,
+            "w": 48,
+            "h": 48
+          },
+          "sourceSize": {
+            "w": 48,
+            "h": 48
+          },
+          "rotated": false,
+          "trimmed": false
+        }
+      ]
+    }
+  ]
+}

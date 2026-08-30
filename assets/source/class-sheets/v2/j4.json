@@ -1,0 +1,498 @@
+{
+  "fairy_down_idle": {
+    "key": "fairy_down_idle",
+    "frames": [
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_down_idle_00"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_down_idle_01"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_down_idle_02"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_down_idle_03"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_down_idle_04"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_down_idle_05"
+      }
+    ],
+    "frameRate": 8,
+    "repeat": -1
+  },
+  "fairy_down_walk": {
+    "key": "fairy_down_walk",
+    "frames": [
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_down_walk_00"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_down_walk_01"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_down_walk_02"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_down_walk_03"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_down_walk_04"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_down_walk_05"
+      }
+    ],
+    "frameRate": 12,
+    "repeat": -1
+  },
+  "fairy_down_attack": {
+    "key": "fairy_down_attack",
+    "frames": [
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_down_attack_00"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_down_attack_01"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_down_attack_02"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_down_attack_03"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_down_attack_04"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_down_attack_05"
+      }
+    ],
+    "frameRate": 10,
+    "repeat": 0
+  },
+  "fairy_down_hit": {
+    "key": "fairy_down_hit",
+    "frames": [
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_down_hit_00"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_down_hit_01"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_down_hit_02"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_down_hit_03"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_down_hit_04"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_down_hit_05"
+      }
+    ],
+    "frameRate": 10,
+    "repeat": 0
+  },
+  "fairy_left_idle": {
+    "key": "fairy_left_idle",
+    "frames": [
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_left_idle_00"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_left_idle_01"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_left_idle_02"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_left_idle_03"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_left_idle_04"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_left_idle_05"
+      }
+    ],
+    "frameRate": 8,
+    "repeat": -1
+  },
+  "fairy_left_walk": {
+    "key": "fairy_left_walk",
+    "frames": [
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_left_walk_00"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_left_walk_01"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_left_walk_02"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_left_walk_03"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_left_walk_04"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_left_walk_05"
+      }
+    ],
+    "frameRate": 12,
+    "repeat": -1
+  },
+  "fairy_left_attack": {
+    "key": "fairy_left_attack",
+    "frames": [
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_left_attack_00"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_left_attack_01"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_left_attack_02"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_left_attack_03"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_left_attack_04"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_left_attack_05"
+      }
+    ],
+    "frameRate": 10,
+    "repeat": 0
+  },
+  "fairy_left_hit": {
+    "key": "fairy_left_hit",
+    "frames": [
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_left_hit_00"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_left_hit_01"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_left_hit_02"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_left_hit_03"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_left_hit_04"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_left_hit_05"
+      }
+    ],
+    "frameRate": 10,
+    "repeat": 0
+  },
+  "fairy_right_idle": {
+    "key": "fairy_right_idle",
+    "frames": [
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_right_idle_00"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_right_idle_01"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_right_idle_02"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_right_idle_03"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_right_idle_04"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_right_idle_05"
+      }
+    ],
+    "frameRate": 8,
+    "repeat": -1
+  },
+  "fairy_right_walk": {
+    "key": "fairy_right_walk",
+    "frames": [
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_right_walk_00"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_right_walk_01"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_right_walk_02"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_right_walk_03"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_right_walk_04"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_right_walk_05"
+      }
+    ],
+    "frameRate": 12,
+    "repeat": -1
+  },
+  "fairy_right_attack": {
+    "key": "fairy_right_attack",
+    "frames": [
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_right_attack_00"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_right_attack_01"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_right_attack_02"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_right_attack_03"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_right_attack_04"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_right_attack_05"
+      }
+    ],
+    "frameRate": 10,
+    "repeat": 0
+  },
+  "fairy_right_hit": {
+    "key": "fairy_right_hit",
+    "frames": [
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_right_hit_00"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_right_hit_01"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_right_hit_02"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_right_hit_03"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_right_hit_04"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_right_hit_05"
+      }
+    ],
+    "frameRate": 10,
+    "repeat": 0
+  },
+  "fairy_up_idle": {
+    "key": "fairy_up_idle",
+    "frames": [
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_up_idle_00"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_up_idle_01"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_up_idle_02"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_up_idle_03"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_up_idle_04"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_up_idle_05"
+      }
+    ],
+    "frameRate": 8,
+    "repeat": -1
+  },
+  "fairy_up_walk": {
+    "key": "fairy_up_walk",
+    "frames": [
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_up_walk_00"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_up_walk_01"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_up_walk_02"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_up_walk_03"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_up_walk_04"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_up_walk_05"
+      }
+    ],
+    "frameRate": 12,
+    "repeat": -1
+  },
+  "fairy_up_attack": {
+    "key": "fairy_up_attack",
+    "frames": [
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_up_attack_00"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_up_attack_01"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_up_attack_02"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_up_attack_03"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_up_attack_04"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_up_attack_05"
+      }
+    ],
+    "frameRate": 10,
+    "repeat": 0
+  },
+  "fairy_up_hit": {
+    "key": "fairy_up_hit",
+    "frames": [
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_up_hit_00"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_up_hit_01"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_up_hit_02"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_up_hit_03"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_up_hit_04"
+      },
+      {
+        "key": "fairy_atlas",
+        "frame": "fairy_up_hit_05"
+      }
+    ],
+    "frameRate": 10,
+    "repeat": 0
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "success": false,
+  "total": 92,
+  "passed": 87,
+  "failed": 5,
+  "suites": [
+    30,
+    36
+  ],
+  "failedSuites": [
+    {
+      "name": "c:/kimi/修仙与地上城/tests/procedural-random-sets.test.ts",
+      "failures": [
+        {
+          "name": "procedural random set generation resolves generated display names and VFX only when its dynamic set wins",
+          "msg": "AssertionError: expected 'melee_arc' to be 'thunder_chain' // Object.is equality"
+        },
+        {
+          "name": "procedural random set generation does not borrow a lower-priority procedural VFX recipe during mixed-set overrides",
+          "msg": "AssertionError: expected 'melee_arc' to be 'giant_sword' // Object.is equality"
+        }
+      ]
+    },
+    {
+      "name": "c:/kimi/修仙与地上城/tests/set-art-override.test.ts",
+      "failures": [
+        {
+          "name": "set art override resolver resolves a dynamic four-piece attack and complete art contract",
+          "msg": "AssertionError: expected 'melee_arc' to be 'thunder_chain' // Object.is equality"
+        },
+        {
+          "name": "set art override resolver uses highest activated threshold then lexicographic setId as stable tie-break",
+          "msg": "AssertionError: expected null to match object { mode: 'fire_rain', power: 1.2, …(1) }"
+        }
+      ]
+    },
+    {
+      "name": "c:/kimi/修仙与地上城/tests/set-effect-runtime.test.ts",
+      "failures": [
+        {
+          "name": "set effect runtime activates declared tags at bonus threshold and ignores unknown tags",
+          "msg": "AssertionError: expected false to be true // Object.is equality"
+        }
+      ]
+    }
+  ]
+}

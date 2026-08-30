@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 447" font-family="SimSun, 宋体, serif">
+  <defs>
+    <marker id="ah" markerWidth="12" markerHeight="12" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L9,4 L0,8 z" fill="#000"/>
+    </marker>
+    <marker id="ahd" markerWidth="12" markerHeight="12" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L9,4 L0,8 z" fill="#000"/>
+    </marker>
+    <style>
+      .box{fill:#fff;stroke:#000;stroke-width:1.6}
+      .edge{stroke:#000;stroke-width:1.4;fill:none}
+      .edge-d{stroke:#000;stroke-width:1.2;fill:none;stroke-dasharray:6 4}
+      .lbl{font-size:13px;fill:#000;text-anchor:middle}
+      .lblb{font-size:15px;fill:#000;text-anchor:middle;font-weight:bold}
+      .cap{font-size:11px;fill:#000}
+      .num{font-size:11px;fill:#000;font-weight:bold}
+    </style>
+  </defs>
+  <g transform="scale(0.8947)">
+    <text x="380" y="32" class="lblb">图 2　读档重建时序图</text>
+
+    <rect class="box" x="10" y="55" width="140" height="38" rx="4"/>
+    <text x="80" y="79" class="lbl">玩家客户端</text>
+    <line class="edge-d" x1="80" y1="93" x2="80" y2="470"/>
+
+    <rect class="box" x="160" y="55" width="160" height="38" rx="4"/>
+    <text x="240" y="79" class="lbl">loadGame</text>
+    <line class="edge-d" x1="240" y1="93" x2="240" y2="470"/>
+
+    <rect class="box" x="320" y="55" width="160" height="38" rx="4"/>
+    <text x="400" y="79" class="lbl">玩家存档</text>
+    <line class="edge-d" x1="400" y1="93" x2="400" y2="470"/>
+
+    <rect class="box" x="470" y="55" width="180" height="38" rx="4"/>
+    <text x="560" y="79" class="lbl">registerDynamicContent</text>
+    <line class="edge-d" x1="560" y1="93" x2="560" y2="470"/>
+
+    <rect class="box" x="615" y="55" width="130" height="38" rx="4"/>
+    <text x="680" y="79" class="lbl">静态配置表</text>
+    <line class="edge-d" x1="680" y1="93" x2="680" y2="470"/>
+
+    <line class="edge" x1="82" y1="120" x2="238" y2="120" marker-end="url(#ah)"/>
+    <text x="160" y="113" class="cap">① 启动游戏 / 读档</text>
+
+    <line class="edge" x1="242" y1="160" x2="398" y2="160" marker-end="url(#ah)"/>
+    <text x="320" y="153" class="cap">② 读取存档</text>
+
+    <line class="edge-d" x1="398" y1="200" x2="242" y2="200" marker-end="url(#ahd)"/>
+    <text x="320" y="193" class="cap">③ 返回序列化数据（含动态内容）</text>
+
+    <line class="edge" x1="242" y1="245" x2="558" y2="245" marker-end="url(#ah)"/>
+    <text x="400" y="238" class="cap">④ 传入动态内容</text>
+
+    <line class="edge" x1="562" y1="290" x2="678" y2="290" marker-end="url(#ah)"/>
+    <text x="620" y="283" class="cap">⑤ 注入 SETS / ITEM_BASES / SKILLS</text>
+
+    <line class="edge-d" x1="678" y1="330" x2="562" y2="330" marker-end="url(#ahd)"/>
+    <text x="620" y="323" class="cap">⑥ 运行期配置表重建完成</text>
+
+    <line class="edge-d" x1="558" y1="375" x2="242" y2="375" marker-end="url(#ahd)"/>
+    <text x="400" y="368" class="cap">⑦ 返回</text>
+
+    <line class="edge" x1="238" y1="420" x2="82" y2="420" marker-end="url(#ah)"/>
+    <text x="160" y="413" class="cap">⑧ 进入游戏（生成内容已重建）</text>
+  </g>
+</svg>

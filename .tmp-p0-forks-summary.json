@@ -1,0 +1,46 @@
+[
+  {
+    "name": "c:/kimi/修仙与地上城/tests/procedural-random-sets.test.ts",
+    "status": "failed",
+    "message": "",
+    "assertionCount": 13,
+    "failed": [
+      {
+        "name": "procedural random set generation resolves generated display names and VFX only when its dynamic set wins",
+        "msg": "AssertionError: expected 'melee_arc' to be 'thunder_chain' // Object.is equality\n    at c:\\kimi\\修仙与地上城\\tests\\procedural-random-sets.test.ts:161:40\n    at withTemporarySets (C:\\kimi\\修仙与地上城\\tests\\set-test-fixture.ts:12:12)\n    at c:\\kimi\\修仙与地上城\\tests\\procedural-random-sets.test.ts:155:5\n    at file:///c:/kimi/vitest-env/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///c:/kimi/vitest-env/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///c:/kimi/vitest-env/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///c:/kimi/vitest-env/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)\n    at runTest (file:///c:/kimi/vitest-env/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)"
+      },
+      {
+        "name": "procedural random set generation does not borrow a lower-priority procedural VFX recipe during mixed-set overrides",
+        "msg": "AssertionError: expected 'melee_arc' to be 'giant_sword' // Object.is equality\n    at c:\\kimi\\修仙与地上城\\tests\\procedural-random-sets.test.ts:189:40\n    at withTemporarySets (C:\\kimi\\修仙与地上城\\tests\\set-test-fixture.ts:12:12)\n    at c:\\kimi\\修仙与地上城\\tests\\procedural-random-sets.test.ts:179:5\n    at file:///c:/kimi/vitest-env/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///c:/kimi/vitest-env/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///c:/kimi/vitest-env/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///c:/kimi/vitest-env/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)\n    at runTest (file:///c:/kimi/vitest-env/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)"
+      }
+    ]
+  },
+  {
+    "name": "c:/kimi/修仙与地上城/tests/set-art-override.test.ts",
+    "status": "failed",
+    "message": "",
+    "assertionCount": 6,
+    "failed": [
+      {
+        "name": "set art override resolver resolves a dynamic four-piece attack and complete art contract",
+        "msg": "AssertionError: expected 'melee_arc' to be 'thunder_chain' // Object.is equality\n    at c:\\kimi\\修仙与地上城\\tests\\set-art-override.test.ts:49:40\n    at withTemporarySets (C:\\kimi\\修仙与地上城\\tests\\set-test-fixture.ts:12:12)\n    at c:\\kimi\\修仙与地上城\\tests\\set-art-override.test.ts:47:5\n    at file:///c:/kimi/vitest-env/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///c:/kimi/vitest-env/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///c:/kimi/vitest-env/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///c:/kimi/vitest-env/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)\n    at runTest (file:///c:/kimi/vitest-env/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)"
+      },
+      {
+        "name": "set art override resolver uses highest activated threshold then lexicographic setId as stable tie-break",
+        "msg": "AssertionError: expected null to match object { mode: 'fire_rain', power: 1.2, …(1) }\n    at Proxy.<anonymous> (file:///c:/kimi/vitest-env/node_modules/@vitest/expect/dist/index.js:1155:10)\n    at Proxy.<anonymous> (file:///c:/kimi/vitest-env/node_modules/@vitest/expect/dist/index.js:1029:14)\n    at Proxy.methodWrapper (file:///c:/kimi/vitest-env/node_modules/chai/index.js:1686:25)\n    at c:\\kimi\\修仙与地上城\\tests\\set-art-override.test.ts:78:44\n    at withTemporarySets (C:\\kimi\\修仙与地上城\\tests\\set-test-fixture.ts:12:12)\n    at c:\\kimi\\修仙与地上城\\tests\\set-art-override.test.ts:68:5\n    at file:///c:/kimi/vitest-env/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///c:/kimi/vitest-env/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///c:/kimi/vitest-env/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)"
+      }
+    ]
+  },
+  {
+    "name": "c:/kimi/修仙与地上城/tests/set-effect-runtime.test.ts",
+    "status": "failed",
+    "message": "",
+    "assertionCount": 3,
+    "failed": [
+      {
+        "name": "set effect runtime activates declared tags at bonus threshold and ignores unknown tags",
+        "msg": "AssertionError: expected false to be true // Object.is equality\n    at c:\\kimi\\修仙与地上城\\tests\\set-effect-runtime.test.ts:19:53\n    at withTemporarySets (C:\\kimi\\修仙与地上城\\tests\\set-test-fixture.ts:12:12)\n    at c:\\kimi\\修仙与地上城\\tests\\set-effect-runtime.test.ts:15:5\n    at file:///c:/kimi/vitest-env/node_modules/@vitest/runner/dist/chunk-hooks.js:155:11\n    at file:///c:/kimi/vitest-env/node_modules/@vitest/runner/dist/chunk-hooks.js:752:26\n    at file:///c:/kimi/vitest-env/node_modules/@vitest/runner/dist/chunk-hooks.js:1897:20\n    at new Promise (<anonymous>)\n    at runWithTimeout (file:///c:/kimi/vitest-env/node_modules/@vitest/runner/dist/chunk-hooks.js:1863:10)\n    at runTest (file:///c:/kimi/vitest-env/node_modules/@vitest/runner/dist/chunk-hooks.js:1574:12)\n    at processTicksAndRejections (node:internal/process/task_queues:103:5)"
+      }
+    ]
+  }
+]

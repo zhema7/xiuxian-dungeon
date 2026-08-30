@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>修仙与地上城 - 游戏介绍</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Microsoft YaHei', 'PingFang SC', sans-serif;
+    background: #0a0e1a;
+    color: #e0e0e0;
+    line-height: 1.8;
+    overflow-x: hidden;
+  }
+  .hero {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+    min-height: 600px;
+    background: url('game_cover.jpg') center/cover no-repeat;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+  .hero::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(180deg, rgba(10,14,26,0.3) 0%, rgba(10,14,26,0.7) 70%, #0a0e1a 100%);
+  }
+  .hero-content {
+    position: relative;
+    z-index: 1;
+    max-width: 800px;
+    padding: 0 30px;
+  }
+  .hero h1 {
+    font-size: 4.5em;
+    font-weight: 900;
+    color: #ffd700;
+    text-shadow: 0 0 30px rgba(255,215,0,0.5), 0 0 60px rgba(100,200,255,0.3);
+    letter-spacing: 0.1em;
+    margin-bottom: 15px;
+    animation: glow 3s ease-in-out infinite alternate;
+  }
+  @keyframes glow {
+    from { text-shadow: 0 0 20px rgba(255,215,0,0.4), 0 0 40px rgba(100,200,255,0.2); }
+    to { text-shadow: 0 0 40px rgba(255,215,0,0.7), 0 0 80px rgba(100,200,255,0.4); }
+  }
+  .hero .subtitle {
+    font-size: 1.4em;
+    color: #a0c4e0;
+    letter-spacing: 0.3em;
+    margin-bottom: 30px;
+  }
+  .hero .tagline {
+    font-size: 1.1em;
+    color: #e0e0e0;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+  .section {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 80px 30px;
+  }
+  .section-title {
+    font-size: 2.5em;
+    text-align: center;
+    margin-bottom: 50px;
+    color: #ffd700;
+    font-weight: 700;
+    position: relative;
+  }
+  .section-title::after {
+    content: '';
+    display: block;
+    width: 80px;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, #ffd700, transparent);
+    margin: 15px auto 0;
+  }
+  .intro-text {
+    font-size: 1.15em;
+    text-align: center;
+    max-width: 800px;
+    margin: 0 auto 50px;
+    color: #b0b8c8;
+  }
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 30px;
+  }
+  .feature-card {
+    background: linear-gradient(135deg, #141a2a, #1a2238);
+    border: 1px solid #2a3050;
+    border-radius: 12px;
+    padding: 35px 25px;
+    text-align: center;
+    transition: transform 0.3s, border-color 0.3s;
+  }
+  .feature-card:hover {
+    transform: translateY(-8px);
+    border-color: #ffd700;
+  }
+  .feature-icon {
+    font-size: 3em;
+    margin-bottom: 15px;
+    display: block;
+  }
+  .feature-card h3 {
+    font-size: 1.3em;
+    color: #ffd700;
+    margin-bottom: 12px;
+  }
+  .feature-card p {
+    color: #9098a8;
+    font-size: 0.95em;
+  }
+  .char-section {
+    background: linear-gradient(180deg, #0a0e1a, #121828, #0a0e1a);
+  }
+  .char-img {
+    width: 100%;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    margin-bottom: 30px;
+  }
+  .char-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+  }
+  .char-item {
+    background: #141a2a;
+    border-radius: 8px;
+    padding: 20px;
+    border-left: 3px solid;
+    text-align: center;
+  }
+  .char-item:nth-child(1) { border-color: #4a90d9; }
+  .char-item:nth-child(2) { border-color: #ff69b4; }
+  .char-item:nth-child(3) { border-color: #9b59b6; }
+  .char-item:nth-child(4) { border-color: #2c3e50; }
+  .char-item:nth-child(5) { border-color: #e74c3c; }
+  .char-item h4 { font-size: 1.2em; margin-bottom: 8px; }
+  .char-item p { font-size: 0.85em; color: #8088a0; }
+  .scene-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 25px;
+  }
+  .scene-card {
+    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: pointer;
+  }
+  .scene-card img {
+    width: 100%;
+    display: block;
+    transition: transform 0.4s;
+  }
+  .scene-card:hover img { transform: scale(1.05); }
+  .scene-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(transparent, rgba(0,0,0,0.85));
+    padding: 25px 20px 15px;
+  }
+  .scene-overlay h4 { color: #ffd700; font-size: 1.2em; margin-bottom: 5px; }
+  .scene-overlay p { color: #b0b8c8; font-size: 0.9em; }
+  .screenshot-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 20px;
+  }
+  .screenshot-grid img {
+    width: 100%;
+    border-radius: 8px;
+    border: 1px solid #2a3050;
+    transition: border-color 0.3s;
+  }
+  .screenshot-grid img:hover { border-color: #ffd700; }
+  .video-wrapper {
+    max-width: 900px;
+    margin: 0 auto;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .video-wrapper video {
+    width: 100%;
+    display: block;
+  }
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+  }
+  .stat-item {
+    text-align: center;
+    padding: 25px 15px;
+    background: #141a2a;
+    border-radius: 10px;
+    border: 1px solid #2a3050;
+  }
+  .stat-num {
+    font-size: 2.5em;
+    font-weight: 900;
+    color: #ffd700;
+    display: block;
+  }
+  .stat-label {
+    font-size: 0.9em;
+    color: #8088a0;
+    margin-top: 5px;
+  }
+  .footer {
+    text-align: center;
+    padding: 50px 30px;
+    background: #060810;
+    color: #606878;
+    font-size: 0.9em;
+  }
+  .footer strong { color: #ffd700; }
+  @media (max-width: 768px) {
+    .hero h1 { font-size: 2.5em; }
+    .section-title { font-size: 1.8em; }
+    .scene-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="hero-content">
+    <h1>修仙与地上城</h1>
+    <div class="subtitle">仙侠 · 肉鸽 · 地下城</div>
+    <p class="tagline">踏入修仙之路，探索无尽地牢。剑斩妖魔，法御天地，在天枢城交易珍宝，于深渊中成就大道。</p>
+  </div>
+</div>
+
+<!-- 游戏简介 -->
+<div class="section">
+  <h2 class="section-title">游戏简介</h2>
+  <p class="intro-text">
+    《修仙与地上城》是一款融合中国仙侠文化与Roguelike地下城探索的像素风动作RPG。
+    玩家将扮演一名初入修仙界的修士，在随机生成的迷宫中战斗、收集、成长，
+    最终挑战无尽妖域与云上仙界。五大职业各具特色，百种装备自由搭配，
+    天枢城内交易切磋，每一次冒险都是独一无二的修仙之旅。
+  </p>
+  <div class="stats">
+    <div class="stat-item"><span class="stat-num">5</span><div class="stat-label">职业流派</div></div>
+    <div class="stat-item"><span class="stat-num">22</span><div class="stat-label">怪物种类</div></div>
+    <div class="stat-item"><span class="stat-num">63</span><div class="stat-label">装备基座</div></div>
+    <div class="stat-item"><span class="stat-num">∞</span><div class="stat-label">随机迷宫</div></div>
+    <div class="stat-item"><span class="stat-num">30</span><div class="stat-label">v4套装</div></div>
+  </div>
+</div>
+
+<!-- 核心特色 -->
+<div class="section" style="background: #121828;">
+  <h2 class="section-title">核心特色</h2>
+  <div class="feature-grid">
+    <div class="feature-card">
+      <span class="feature-icon">⚔️</span>
+      <h3>即时战斗</h3>
+      <p>流畅的即时动作战斗系统，普攻连击、技能释放、蓄力原语，搭配走位闪避，操作感十足</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">🏰</span>
+      <h3>俯视城池</h3>
+      <p>天枢城俯视RPG地图，城主府、坊市、擂台、悬赏堂等功能区域自由探索，NPC交互丰富</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">🌫️</span>
+      <h3>迷雾探索</h3>
+      <p>仙界与无尽妖域启用战争迷雾系统，视野范围内才能发现敌人和宝物，探索感拉满</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">🎨</span>
+      <h3>像素美术</h3>
+      <p>统一像素风格角色与NPC，30套v4特效套装，1140张精灵图资源，视觉表现丰富</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">📦</span>
+      <h3>装备词缀</h3>
+      <p>63种装备基座 × 10种精英词缀 × 30套套装效果，自由搭配构筑专属流派</p>
+    </div>
+    <div class="feature-card">
+      <span class="feature-icon">🏆</span>
+      <h3>擂台竞技</h3>
+      <p>天枢城擂台PK系统，5段位荣誉奖励，3套荣誉套装兑换，竞技场多波次挑战</p>
+    </div>
+  </div>
+</div>
+
+<!-- 角色展示 -->
+<div class="section char-section">
+  <h2 class="section-title">五大职业</h2>
+  <img src="character_showcase.jpg" class="char-img" alt="五大职业展示">
+  <div class="char-list">
+    <div class="char-item">
+      <h4 style="color:#4a90d9">剑修</h4>
+      <p>钢蓝银白配色，长剑近战，冷峻剑客。高攻速连击，剑气纵横</p>
+    </div>
+    <div class="char-item">
+      <h4 style="color:#ff69b4">仙子</h4>
+      <p>粉白配色，莲花法杖，飘逸灵动。远程灵术，治疗辅助</p>
+    </div>
+    <div class="char-item">
+      <h4 style="color:#9b59b6">法修</h4>
+      <p>紫金配色，法术能量，博学深沉。元素法术，范围爆发</p>
+    </div>
+    <div class="char-item">
+      <h4 style="color:#5dade2">道修</h4>
+      <p>深蓝配色，太极拂尘，道法自然。蓄力原语，攻守兼备</p>
+    </div>
+    <div class="char-item">
+      <h4 style="color:#e74c3c">合欢</h4>
+      <p>绯红配色，折扇魅惑，红发张扬。控制干扰，灵巧走位</p>
+    </div>
+  </div>
+</div>
+
+<!-- 场景展示 -->
+<div class="section" style="background: #121828;">
+  <h2 class="section-title">场景掠影</h2>
+  <div class="scene-grid">
+    <div class="scene-card">
+      <img src="dungeon_scene.jpg" alt="迷宫场景">
+      <div class="scene-overlay">
+        <h4>幽冥迷宫</h4>
+        <p>随机生成的地下洞穴，水晶闪烁，传送门通向未知深处</p>
+      </div>
+    </div>
+    <div class="scene-card">
+      <img src="city_scene.jpg" alt="天枢城">
+      <div class="scene-overlay">
+        <h4>天枢城</h4>
+        <p>俯视RPG城池，城主府、坊市、擂台、悬赏堂等功能区一应俱全</p>
+      </div>
+    </div>
+    <div class="scene-card">
+      <img src="combat_scene.jpg" alt="战斗场景">
+      <div class="scene-overlay">
+        <h4>激烈战斗</h4>
+        <p>剑气纵横，法术爆裂，击败妖兽获取装备与灵石</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 游戏截图 -->
+<div class="section">
+  <h2 class="section-title">实机截图</h2>
+  <div class="screenshot-grid">
+    <img src="screenshots/01-title-screen.png" alt="标题画面">
+    <img src="screenshots/02-main-menu.png" alt="主菜单">
+    <img src="screenshots/06-town-cave-scene.png" alt="洞府场景">
+    <img src="screenshots/08-dungeon-entrance.png" alt="迷宫入口">
+    <img src="screenshots/10-town-scene.png" alt="城镇探索">
+    <img src="screenshots/12-menu-open.png" alt="游戏菜单">
+  </div>
+</div>
+
+<!-- 预告视频 -->
+<div class="section" style="background: #121828;">
+  <h2 class="section-title">预告影片</h2>
+  <div class="video-wrapper">
+    <video controls autoplay muted loop>
+      <source src="game_trailer.mp4" type="video/mp4">
+      您的浏览器不支持视频播放。
+    </video>
+  </div>
+</div>
+
+<div class="footer">
+  <p><strong>修仙与地上城</strong> · 像素风仙侠 Roguelike RPG</p>
+  <p style="margin-top:10px;">哲码游戏 出品 | Phaser + TypeScript 开发</p>
+</div>
+
+</body>
+</html>

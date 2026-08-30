@@ -1,0 +1,12 @@
+[
+  { "id": "af_atk", "name": "锋利", "stat": "atk", "min": 2, "max": 6 },
+  { "id": "af_atkp", "name": "破军", "stat": "atkPct", "min": 0.04, "max": 0.1 },
+  { "id": "af_def", "name": "坚韧", "stat": "def", "min": 2, "max": 5 },
+  { "id": "af_defp", "name": "磐石", "stat": "defPct", "min": 0.04, "max": 0.1 },
+  { "id": "af_hp", "name": "气血", "stat": "maxHp", "min": 15, "max": 40 },
+  { "id": "af_crit", "name": "会心", "stat": "crit", "min": 0.02, "max": 0.05 },
+  { "id": "af_spd", "name": "疾行", "stat": "speed", "min": 4, "max": 10 },
+  { "id": "af_ls", "name": "嗜血", "stat": "lifesteal", "min": 0.02, "max": 0.05 },
+  { "id": "af_skill", "name": "凝神", "stat": "skillPct", "min": 0.05, "max": 0.12 },
+  { "id": "af_aspd", "name": "迅捷", "stat": "aspd", "min": 0.04, "max": 0.09 }
+]

@@ -1,0 +1,28 @@
+{
+  "branches": [
+    {
+      "id": "fast", "name": "快剑",
+      "nodes": [
+        { "id": "t_jifeng", "name": "疾风", "max": 3, "per": { "aspd": 0.06 }, "desc": "每级 攻速 +6%" },
+        { "id": "t_jinghong", "name": "惊鸿", "max": 3, "per": { "crit": 0.03 }, "desc": "每级 会心 +3%" },
+        { "id": "t_liuyun", "name": "流云", "max": 3, "per": { "speed": 6 }, "desc": "每级 速度 +6" }
+      ]
+    },
+    {
+      "id": "heavy", "name": "重剑",
+      "nodes": [
+        { "id": "t_bengshan", "name": "崩山", "max": 3, "per": { "atkPct": 0.05 }, "desc": "每级 攻击 +5%" },
+        { "id": "t_liekong", "name": "裂空", "max": 3, "per": { "skillPct": 0.08 }, "desc": "每级 技能伤害 +8%" },
+        { "id": "t_zhenyue", "name": "镇岳", "max": 3, "per": { "hpPct": 0.06 }, "desc": "每级 气血 +6%" }
+      ]
+    },
+    {
+      "id": "qi", "name": "剑气",
+      "nodes": [
+        { "id": "t_yujianshu", "name": "御剑", "max": 3, "per": { "cdPct": 0.08 }, "desc": "每级 神通冷却 -8%" },
+        { "id": "t_ningjian", "name": "凝剑", "max": 3, "per": { "lifesteal": 0.02 }, "desc": "每级 吸血 +2%" },
+        { "id": "t_huahong", "name": "化虹", "max": 3, "per": { "defPct": 0.08 }, "desc": "每级 防御 +8%" }
+      ]
+    }
+  ]
+}

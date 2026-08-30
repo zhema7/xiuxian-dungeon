@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 621" font-family="SimSun, 宋体, serif">
+  <defs>
+    <marker id="ah" markerWidth="12" markerHeight="12" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L9,4 L0,8 z" fill="#000"/>
+    </marker>
+    <style>
+      .box{fill:#fff;stroke:#000;stroke-width:1.6}
+      .rnd{fill:#fff;stroke:#000;stroke-width:1.6}
+      .dia{fill:#fff;stroke:#000;stroke-width:1.6}
+      .edge{stroke:#000;stroke-width:1.4;fill:none}
+      .lbl{font-size:13px;fill:#000;text-anchor:middle}
+      .lblb{font-size:13px;fill:#000;text-anchor:middle;font-weight:bold}
+      .cap{font-size:11px;fill:#000;text-anchor:middle}
+      .stp{font-size:12px;fill:#000;font-weight:bold;text-anchor:middle}
+    </style>
+  </defs>
+  <g transform="scale(1.1724)">
+    <text x="290" y="30" class="lblb" font-size="16">图 3　无尽模式现世策略流程图</text>
+
+    <rect class="rnd" x="190" y="48" width="200" height="42" rx="21"/>
+    <text x="290" y="73" class="lbl">触发机缘套装现世</text>
+    <text x="150" y="73" class="stp">①</text>
+
+    <polygon class="dia" points="290,118 400,158 290,198 180,158"/>
+    <text x="290" y="154" class="lbl">是否已存在</text>
+    <text x="290" y="172" class="lbl">动态套装？</text>
+    <text x="120" y="162" class="stp">②</text>
+
+    <rect class="box" x="150" y="228" width="270" height="50" rx="4"/>
+    <text x="285" y="257" class="lbl">生成新套装（genDynamicSet）</text>
+    <text x="110" y="257" class="stp">③</text>
+
+    <polygon class="dia" points="470,128 580,168 470,208 360,168"/>
+    <text x="470" y="164" class="lbl">数量≥12 或</text>
+    <text x="470" y="182" class="lbl">rng&lt;0.6？</text>
+    <text x="340" y="172" class="stp">④</text>
+
+    <rect class="box" x="370" y="248" width="200" height="50" rx="4"/>
+    <text x="470" y="277" class="lbl">沿用已有套装之一</text>
+    <text x="350" y="277" class="stp">⑤</text>
+
+    <rect class="box" x="150" y="348" width="270" height="50" rx="4"/>
+    <text x="285" y="377" class="lbl">动态注册 + 提示「现世」</text>
+    <text x="110" y="377" class="stp">⑥</text>
+
+    <rect class="rnd" x="210" y="448" width="160" height="42" rx="21"/>
+    <text x="290" y="473" class="lbl">进入战斗（返回套装 ID）</text>
+    <text x="170" y="473" class="stp">⑦</text>
+
+    <line class="edge" x1="290" y1="90" x2="290" y2="116" marker-end="url(#ah)"/>
+    <line class="edge" x1="290" y1="198" x2="290" y2="226" marker-end="url(#ah)"/>
+    <text x="318" y="216" class="cap">否</text>
+    <line class="edge" x1="400" y1="158" x2="358" y2="168" marker-end="url(#ah)"/>
+    <text x="408" y="148" class="cap">是</text>
+    <line class="edge" x1="285" y1="278" x2="285" y2="346" marker-end="url(#ah)"/>
+    <line class="edge" x1="470" y1="208" x2="470" y2="246" marker-end="url(#ah)"/>
+    <text x="500" y="232" class="cap">满足</text>
+    <path class="edge" d="M580,168 L610,168 L610,253 L420,253" marker-end="url(#ah)"/>
+    <text x="598" y="150" class="cap">否</text>
+    <path class="edge" d="M470,298 L470,469 L372,469" marker-end="url(#ah)"/>
+    <line class="edge" x1="285" y1="398" x2="285" y2="446" marker-end="url(#ah)"/>
+  </g>
+</svg>

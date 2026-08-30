@@ -1,0 +1,107 @@
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /assets/index-Bco3L9CV.js HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] code 404, message File not found
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/player.png HTTP/1.1" 404 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] code 404, message File not found
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/npc.png HTTP/1.1" 404 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/npc_elder.png HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/npc_merchant.png HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/npc_junior.png HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/m_bat.png HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/m_slime.png HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/m_spitter.png HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/m_boss.png HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/m_wraith.png HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/m_flower.png HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/m_tortoise.png HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/m_boss2.png HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/floor.png HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/wall.png HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/wall2.png HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/floor2.png HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/grass.png HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/stone.png HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/portal.png HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/slash.png HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/proj.png HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/bolt.png HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/sword_proj.png HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/d_potion.png HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/d_gold.png HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/d_equip.png HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/d_book.png HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/chest.png HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/altar.png HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/furnace.png HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/deco_qm1.png HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/deco_qm2.png HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/deco_qm3.png HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/deco_ym2.png HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/deco_ym1.png HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/deco_ym3.png HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/deco_sy2.png HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/deco_sy1.png HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/deco_sy3.png HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/m_moth.png HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/m_golem.png HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/cave_bg.png HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/m_eagle.png HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/m_boss3.png HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/title_bg.png HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/sword_spritesheet.png HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/sword_atlas.json HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/sword_anims.json HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/fairy_spritesheet.png HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/fairy_atlas.json HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/fairy_anims.json HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /audio/bgm_title.mp3 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /audio/bgm_town.mp3 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /audio/bgm_dungeon.mp3 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /audio/sfx_click.mp3 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /audio/sfx_open.mp3 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /audio/sfx_equip.mp3 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /audio/sfx_skill.mp3 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /audio/sfx_swing.mp3 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /audio/sfx_magic.mp3 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /audio/sfx_art.mp3 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /audio/sfx_hit.mp3 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /audio/sfx_die.mp3 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /audio/sfx_pickup.mp3 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /audio/sfx_chest.mp3 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /audio/sfx_potion.mp3 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /audio/sfx_levelup.mp3 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /audio/sfx_portal.mp3 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/hanli_cast.png HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/hanli_base.png HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:09] "GET /sprites/leshangshi.png HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:10] "HEAD /sprites/title_bg.mp4 HTTP/1.1" 200 -
+127.0.0.1 - - [20/Aug/2026 21:18:10] "GET /sprites/title_bg.mp4 HTTP/1.1" 200 -
+  告辞 1/5
+  告辞 2/5
+  告辞 3/5
+  告辞 4/5
+  告辞 5/5
+GM 面板已开: True
+版本: 4
+动态套装: [('天澜套', '2件：技伤+17%'), ('黄枫套', '2件：会心+5%，攻击+11%')]
+动态功法: [('坐忘功', '无名古卷所录心法：攻速+5%。'), ('紫霄章', '无名古卷所录心法：吸血+3%，攻击+13%。')]
+图鉴: {'items': 8, 'skills': 2, 'sets': 2}
+背包件数: 8 | 功法数: 3
+机缘词缀条数(背包): 4
+127.0.0.1 - - [20/Aug/2026 21:18:22] "GET / HTTP/1.1" 304 -
+127.0.0.1 - - [20/Aug/2026 21:18:22] code 404, message File not found
+127.0.0.1 - - [20/Aug/2026 21:18:22] "GET /sprites/player.png HTTP/1.1" 404 -
+127.0.0.1 - - [20/Aug/2026 21:18:22] code 404, message File not found
+127.0.0.1 - - [20/Aug/2026 21:18:22] "GET /sprites/npc.png HTTP/1.1" 404 -
+  告辞 1/5
+  告辞 2/5
+  告辞 3/5
+  告辞 4/5
+  告辞 5/5
+读档后 GM 面板含动态套装: True
+读档后 GM 面板含动态功法: True
+图鉴含动态套装名: True
+图鉴含动态功法名: True
+图鉴含未知占位: True
+errors: 无
+CODEX TEST DONE

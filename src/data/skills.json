@@ -1,0 +1,806 @@
+[
+  {
+    "id": "sk_sanlian", "name": "三连斩", "type": "style", "class": "sword",
+    "attackMode": "melee_arc", "power": 1.0,
+    "desc": "剑修基础剑式，三段连击，最后一式威力更盛。",
+    "upgrades": [
+      { "level": 1, "power": 1.00, "desc": "威力 100%" },
+      { "level": 2, "power": 1.12, "desc": "威力 112%" },
+      { "level": 3, "power": 1.24, "desc": "威力 124%" },
+      { "level": 4, "power": 1.36, "desc": "威力 136%" },
+      { "level": 5, "power": 1.48, "desc": "威力 148%" }
+    ]
+  },
+  {
+    "id": "sk_yujian", "name": "御剑术", "type": "style", "class": "sword",
+    "attackMode": "flying_sword", "power": 0.8,
+    "desc": "以气御剑，飞剑穿透敌阵。连击段数越高，飞剑越多。",
+    "upgrades": [
+      { "level": 1, "power": 0.800, "desc": "威力 80%" },
+      { "level": 2, "power": 0.896, "desc": "威力 89.6%" },
+      { "level": 3, "power": 0.992, "desc": "威力 99.2%" },
+      { "level": 4, "power": 1.088, "desc": "威力 108.8%" },
+      { "level": 5, "power": 1.184, "desc": "威力 118.4%" }
+    ]
+  },
+  {
+    "id": "sk_wanjian", "name": "万剑归宗", "type": "style", "class": "sword",
+    "attackMode": "sword_array", "power": 0.6,
+    "desc": "开启后飞剑环绕周身持续绞杀近身之敌（Lv1 三柄，每升一级多一柄、剑阵更大），每秒燃烧气血 10 点；再按攻击键收敛剑阵。",
+    "upgrades": [
+      { "level": 1, "power": 0.600, "desc": "威力 60%，三柄飞剑" },
+      { "level": 2, "power": 0.672, "desc": "威力 67.2%，四柄飞剑" },
+      { "level": 3, "power": 0.744, "desc": "威力 74.4%，五柄飞剑" },
+      { "level": 4, "power": 0.816, "desc": "威力 81.6%，六柄飞剑" },
+      { "level": 5, "power": 0.888, "desc": "威力 88.8%，七柄飞剑" }
+    ]
+  },
+  {
+    "id": "sk_taiyi", "name": "太一剑经", "type": "mind", "class": "sword",
+    "mods": { "atkPct": 0.12 },
+    "desc": "太上心法，剑修专修，攻击大幅提升。",
+    "upgrades": [
+      { "level": 1, "mods": { "atkPct": 0.120 }, "desc": "攻击 +12%" },
+      { "level": 2, "mods": { "atkPct": 0.144 }, "desc": "攻击 +14.4%" },
+      { "level": 3, "mods": { "atkPct": 0.168 }, "desc": "攻击 +16.8%" },
+      { "level": 4, "mods": { "atkPct": 0.192 }, "desc": "攻击 +19.2%" },
+      { "level": 5, "mods": { "atkPct": 0.216 }, "desc": "攻击 +21.6%" }
+    ]
+  },
+  {
+    "id": "sk_lingxi", "name": "灵犀诀", "type": "mind", "class": "sword",
+    "mods": { "crit": 0.05, "aspd": 0.06 },
+    "desc": "心剑相通，剑随心走，会心与攻速齐增。",
+    "upgrades": [
+      { "level": 1, "mods": { "crit": 0.050, "aspd": 0.060 }, "desc": "会心 +5%，攻速 +6%" },
+      { "level": 2, "mods": { "crit": 0.060, "aspd": 0.072 }, "desc": "会心 +6%，攻速 +7.2%" },
+      { "level": 3, "mods": { "crit": 0.070, "aspd": 0.084 }, "desc": "会心 +7%，攻速 +8.4%" },
+      { "level": 4, "mods": { "crit": 0.080, "aspd": 0.096 }, "desc": "会心 +8%，攻速 +9.6%" },
+      { "level": 5, "mods": { "crit": 0.090, "aspd": 0.108 }, "desc": "会心 +9%，攻速 +10.8%" }
+    ]
+  },
+  {
+    "id": "sk_jianqi", "name": "剑气纵横", "type": "art", "class": "sword",
+    "power": 1.6, "cd": 7000, "artMode": "sword_fan",
+    "desc": "凝全身剑气于一瞬，五道剑气呈扇形激射而出。高阶追加多波齐发。",
+    "upgrades": [
+      { "level": 1, "power": 1.600, "cd": 7000, "desc": "五道剑气扇形齐发，威力 160%" },
+      { "level": 2, "power": 1.792, "cd": 7000, "desc": "威力 179.2%，冷却 7 秒" },
+      { "level": 3, "power": 1.984, "cd": 7000, "desc": "二波剑气齐发（共 10 道），威力 198.4%" },
+      { "level": 4, "power": 2.176, "cd": 7000, "desc": "二波六道剑气（共 12 道），威力 217.6%" },
+      { "level": 5, "power": 2.368, "cd": 7000, "desc": "三波六道剑气（共 18 道），威力 236.8%" }
+    ]
+  },
+  {
+    "id": "sk_huodan", "name": "火弹术", "type": "style", "class": "fairy",
+    "attackMode": "magic_bolt", "power": 1.0,
+    "desc": "凝火为弹，命中后炸裂伤及周围敌人。",
+    "upgrades": [
+      { "level": 1, "power": 1.00, "desc": "威力 100%" },
+      { "level": 2, "power": 1.12, "desc": "威力 112%" },
+      { "level": 3, "power": 1.24, "desc": "威力 124%" },
+      { "level": 4, "power": 1.36, "desc": "威力 136%" },
+      { "level": 5, "power": 1.48, "desc": "威力 148%" }
+    ]
+  },
+  {
+    "id": "sk_binghuan", "name": "冰环术", "type": "style", "class": "fairy",
+    "attackMode": "frost_nova", "power": 0.85,
+    "desc": "寒气四溢，迟缓周身敌人的行动。",
+    "upgrades": [
+      { "level": 1, "power": 0.850, "desc": "威力 85%" },
+      { "level": 2, "power": 0.952, "desc": "威力 95.2%" },
+      { "level": 3, "power": 1.054, "desc": "威力 105.4%" },
+      { "level": 4, "power": 1.156, "desc": "威力 115.6%" },
+      { "level": 5, "power": 1.258, "desc": "威力 125.8%" }
+    ]
+  },
+  {
+    "id": "sk_leiyin", "name": "五雷引", "type": "style", "class": "fairy",
+    "attackMode": "thunder_chain", "power": 0.9,
+    "desc": "引动五雷，雷电在敌群之间跳跃传导，越传越弱。",
+    "upgrades": [
+      { "level": 1, "power": 0.900, "desc": "威力 90%，跳跃 3 次" },
+      { "level": 2, "power": 1.008, "desc": "威力 100.8%，跳跃 4 次" },
+      { "level": 3, "power": 1.116, "desc": "威力 111.6%，跳跃 5 次" },
+      { "level": 4, "power": 1.224, "desc": "威力 122.4%，跳跃 6 次" },
+      { "level": 5, "power": 1.332, "desc": "威力 133.2%，跳跃 7 次" }
+    ]
+  },
+  {
+    "id": "sk_bingxin", "name": "冰心诀", "type": "mind", "class": "fairy",
+    "mods": { "crit": 0.04, "cdPct": 0.08 },
+    "desc": "冰心澄澈，仙子专修，会心提升且神通冷却缩短。",
+    "upgrades": [
+      { "level": 1, "mods": { "crit": 0.040, "cdPct": 0.080 }, "desc": "会心 +4%，神通冷却 -8%" },
+      { "level": 2, "mods": { "crit": 0.048, "cdPct": 0.096 }, "desc": "会心 +4.8%，神通冷却 -9.6%" },
+      { "level": 3, "mods": { "crit": 0.056, "cdPct": 0.112 }, "desc": "会心 +5.6%，神通冷却 -11.2%" },
+      { "level": 4, "mods": { "crit": 0.064, "cdPct": 0.128 }, "desc": "会心 +6.4%，神通冷却 -12.8%" },
+      { "level": 5, "mods": { "crit": 0.072, "cdPct": 0.144 }, "desc": "会心 +7.2%，神通冷却 -14.4%" }
+    ]
+  },
+  {
+    "id": "sk_zixiao", "name": "紫霄心法", "type": "mind", "class": "fairy",
+    "mods": { "skillPct": 0.1, "cdPct": 0.1 },
+    "desc": "紫霄雷意淬炼神魂，仙子专修，技能伤害提升且冷却缩减。",
+    "upgrades": [
+      { "level": 1, "mods": { "skillPct": 0.100, "cdPct": 0.100 }, "desc": "技能伤害 +10%，神通冷却 -10%" },
+      { "level": 2, "mods": { "skillPct": 0.120, "cdPct": 0.120 }, "desc": "技能伤害 +12%，神通冷却 -12%" },
+      { "level": 3, "mods": { "skillPct": 0.140, "cdPct": 0.140 }, "desc": "技能伤害 +14%，神通冷却 -14%" },
+      { "level": 4, "mods": { "skillPct": 0.160, "cdPct": 0.160 }, "desc": "技能伤害 +16%，神通冷却 -16%" },
+      { "level": 5, "mods": { "skillPct": 0.180, "cdPct": 0.180 }, "desc": "技能伤害 +18%，神通冷却 -18%" }
+    ]
+  },
+  {
+    "id": "sk_liuxing", "name": "流星火雨", "type": "art", "class": "fairy",
+    "power": 1.2, "cd": 9000, "artMode": "fire_rain",
+    "desc": "召来漫天火星，七枚火弹呼啸而出，所过之处尽皆焚毁。高阶追加火弹与余烬。",
+    "upgrades": [
+      { "level": 1, "power": 1.200, "cd": 9000, "desc": "七枚火弹散布，威力 120%" },
+      { "level": 2, "power": 1.344, "cd": 9000, "desc": "威力 134.4%，冷却 9 秒" },
+      { "level": 3, "power": 1.488, "cd": 9000, "desc": "十枚火弹散布，威力 148.8%" },
+      { "level": 4, "power": 1.632, "cd": 9000, "desc": "十枚火弹 + 余烬爆裂，威力 163.2%" },
+      { "level": 5, "power": 1.776, "cd": 9000, "desc": "十四枚火弹 + 余烬爆裂，威力 177.6%" }
+    ]
+  },
+  {
+    "id": "sk_jujian", "name": "巨剑术", "type": "style", "class": "sword_new",
+    "attackMode": "giant_sword", "power": 1.3,
+    "desc": "道修重剑之法，剑化巨形，每一击皆有开山裂石之力。",
+    "upgrades": [
+      { "level": 1, "power": 1.300, "desc": "威力 130%" },
+      { "level": 2, "power": 1.456, "desc": "威力 145.6%" },
+      { "level": 3, "power": 1.612, "desc": "威力 161.2%" },
+      { "level": 4, "power": 1.768, "desc": "威力 176.8%" },
+      { "level": 5, "power": 1.924, "desc": "威力 192.4%" }
+    ]
+  },
+  {
+    "id": "sk_xuanfeng", "name": "旋风斩", "type": "style", "class": "sword_new",
+    "attackMode": "whirlwind", "power": 0.9,
+    "desc": "剑随身转，旋风般横扫周身所有敌人。",
+    "upgrades": [
+      { "level": 1, "power": 0.900, "desc": "威力 90%" },
+      { "level": 2, "power": 1.008, "desc": "威力 100.8%" },
+      { "level": 3, "power": 1.116, "desc": "威力 111.6%" },
+      { "level": 4, "power": 1.224, "desc": "威力 122.4%" },
+      { "level": 5, "power": 1.332, "desc": "威力 133.2%" }
+    ]
+  },
+  {
+    "id": "sk_chunyang", "name": "纯阳无极功", "type": "mind", "class": "sword_new",
+    "mods": { "atkPct": 0.08, "hpPct": 0.12 },
+    "desc": "纯阳内力生生不息，道修专修，攻击与气血同增。",
+    "upgrades": [
+      { "level": 1, "mods": { "atkPct": 0.080, "hpPct": 0.120 }, "desc": "攻击 +8%，气血 +12%" },
+      { "level": 2, "mods": { "atkPct": 0.096, "hpPct": 0.144 }, "desc": "攻击 +9.6%，气血 +14.4%" },
+      { "level": 3, "mods": { "atkPct": 0.112, "hpPct": 0.168 }, "desc": "攻击 +11.2%，气血 +16.8%" },
+      { "level": 4, "mods": { "atkPct": 0.128, "hpPct": 0.192 }, "desc": "攻击 +12.8%，气血 +19.2%" },
+      { "level": 5, "mods": { "atkPct": 0.144, "hpPct": 0.216 }, "desc": "攻击 +14.4%，气血 +21.6%" }
+    ]
+  },
+  {
+    "id": "sk_xuanwu", "name": "玄武真诀", "type": "mind", "class": "sword_new",
+    "mods": { "defPct": 0.15, "hpPct": 0.1 },
+    "desc": "玄武护体，道修专修，防御与气血大增，坚不可摧。",
+    "upgrades": [
+      { "level": 1, "mods": { "defPct": 0.150, "hpPct": 0.100 }, "desc": "防御 +15%，气血 +10%" },
+      { "level": 2, "mods": { "defPct": 0.180, "hpPct": 0.120 }, "desc": "防御 +18%，气血 +12%" },
+      { "level": 3, "mods": { "defPct": 0.210, "hpPct": 0.140 }, "desc": "防御 +21%，气血 +14%" },
+      { "level": 4, "mods": { "defPct": 0.240, "hpPct": 0.160 }, "desc": "防御 +24%，气血 +16%" },
+      { "level": 5, "mods": { "defPct": 0.270, "hpPct": 0.180 }, "desc": "防御 +27%，气血 +18%" }
+    ]
+  },
+  {
+    "id": "sk_dageng", "name": "大庚剑阵", "type": "art", "class": "sword_new",
+    "power": 0.45, "cd": 15000, "artMode": "dageng",
+    "desc": "以大庚金精铸就万剑大阵，剑阵铺展开来，持续绞杀范围内所有敌人。三阶解锁护身剑阵，自动索敌发射剑光。",
+    "upgrades": [
+      { "level": 1, "power": 0.450, "cd": 15000, "desc": "六批剑气齐发，威力 45%" },
+      { "level": 2, "power": 0.504, "cd": 15000, "desc": "威力 50.4%，冷却 15 秒" },
+      { "level": 3, "power": 0.558, "cd": 15000, "desc": "四剑环绕护身（60 秒），自动索敌，威力 55.8%" },
+      { "level": 4, "power": 0.612, "cd": 15000, "desc": "四剑环绕 + 搜索范围增大，威力 61.2%" },
+      { "level": 5, "power": 0.666, "cd": 15000, "desc": "六剑环绕 + 搜索范围最大，威力 66.6%" }
+    ]
+  },
+  {
+    "id": "sk_xiangsi", "name": "相思镖", "type": "style", "class": "fairy_new",
+    "attackMode": "bolt_dart", "power": 1.1,
+    "desc": "合欢独门飞镖，命中后在敌身刻下相思印记，叠层引爆伤害更高。",
+    "upgrades": [
+      { "level": 1, "power": 1.100, "desc": "威力 110%" },
+      { "level": 2, "power": 1.232, "desc": "威力 123.2%" },
+      { "level": 3, "power": 1.364, "desc": "威力 136.4%" },
+      { "level": 4, "power": 1.496, "desc": "威力 149.6%" },
+      { "level": 5, "power": 1.628, "desc": "威力 162.8%" }
+    ]
+  },
+  {
+    "id": "sk_duoqing", "name": "多情环", "type": "style", "class": "fairy_new",
+    "attackMode": "flying_sword_burst", "power": 0.75,
+    "desc": "环刃多情，掷出后回旋爆裂，伤及一片。",
+    "upgrades": [
+      { "level": 1, "power": 0.750, "desc": "威力 75%" },
+      { "level": 2, "power": 0.840, "desc": "威力 84%" },
+      { "level": 3, "power": 0.930, "desc": "威力 93%" },
+      { "level": 4, "power": 1.020, "desc": "威力 102%" },
+      { "level": 5, "power": 1.110, "desc": "威力 111%" }
+    ]
+  },
+  {
+    "id": "sk_caibu", "name": "采补术", "type": "mind", "class": "fairy_new",
+    "mods": { "lifesteal": 0.06, "atkPct": 0.08 },
+    "desc": "合欢秘术，吸取敌人精元化为己用，攻击与吸血同增。",
+    "upgrades": [
+      { "level": 1, "mods": { "lifesteal": 0.060, "atkPct": 0.080 }, "desc": "吸血 +6%，攻击 +8%" },
+      { "level": 2, "mods": { "lifesteal": 0.072, "atkPct": 0.096 }, "desc": "吸血 +7.2%，攻击 +9.6%" },
+      { "level": 3, "mods": { "lifesteal": 0.084, "atkPct": 0.112 }, "desc": "吸血 +8.4%，攻击 +11.2%" },
+      { "level": 4, "mods": { "lifesteal": 0.096, "atkPct": 0.128 }, "desc": "吸血 +9.6%，攻击 +12.8%" },
+      { "level": 5, "mods": { "lifesteal": 0.108, "atkPct": 0.144 }, "desc": "吸血 +10.8%，攻击 +14.4%" }
+    ]
+  },
+  {
+    "id": "sk_meihuo", "name": "魅惑心法", "type": "mind", "class": "fairy_new",
+    "mods": { "crit": 0.07, "skillPct": 0.1 },
+    "desc": "魅惑心神，令敌防不胜防，会心一击与技能伤害大增。",
+    "upgrades": [
+      { "level": 1, "mods": { "crit": 0.070, "skillPct": 0.100 }, "desc": "会心 +7%，技能伤害 +10%" },
+      { "level": 2, "mods": { "crit": 0.084, "skillPct": 0.120 }, "desc": "会心 +8.4%，技能伤害 +12%" },
+      { "level": 3, "mods": { "crit": 0.098, "skillPct": 0.140 }, "desc": "会心 +9.8%，技能伤害 +14%" },
+      { "level": 4, "mods": { "crit": 0.112, "skillPct": 0.160 }, "desc": "会心 +11.2%，技能伤害 +16%" },
+      { "level": 5, "mods": { "crit": 0.126, "skillPct": 0.180 }, "desc": "会心 +12.6%，技能伤害 +18%" }
+    ]
+  },
+  {
+    "id": "sk_yixiao", "name": "一笑倾城", "type": "art", "class": "fairy_new",
+    "power": 1.5, "cd": 11000, "artMode": "thunder_strike",
+    "desc": "倾城一笑，魅惑众生，五道天雷从天而降轰杀群敌。高阶追加雷击次数与连锁。",
+    "upgrades": [
+      { "level": 1, "power": 1.500, "cd": 11000, "desc": "五道天雷轰击，威力 150%" },
+      { "level": 2, "power": 1.680, "cd": 11000, "desc": "威力 168%，冷却 11 秒" },
+      { "level": 3, "power": 1.860, "cd": 11000, "desc": "七道天雷轰击，威力 186%" },
+      { "level": 4, "power": 2.040, "cd": 11000, "desc": "七道天雷 + 雷击减速，威力 204%" },
+      { "level": 5, "power": 2.220, "cd": 11000, "desc": "九道天雷 + 中心雷暴，威力 222%" }
+    ]
+  },
+  {
+    "id": "sk_bingzhui", "name": "冰锥术", "type": "style", "class": "mage",
+    "attackMode": "frost_nova_burst", "power": 0.95,
+    "desc": "凝水成锥，冰锥爆裂后碎片折射散射，覆盖更广范围。",
+    "upgrades": [
+      { "level": 1, "power": 0.950, "desc": "威力 95%" },
+      { "level": 2, "power": 1.064, "desc": "威力 106.4%" },
+      { "level": 3, "power": 1.178, "desc": "威力 117.8%" },
+      { "level": 4, "power": 1.292, "desc": "威力 129.2%" },
+      { "level": 5, "power": 1.406, "desc": "威力 140.6%" }
+    ]
+  },
+  {
+    "id": "sk_shandian", "name": "闪电链", "type": "style", "class": "mage",
+    "attackMode": "thunder_net", "power": 1.0,
+    "desc": "法修雷法，闪电在敌阵中织成雷网，层层传导。",
+    "upgrades": [
+      { "level": 1, "power": 1.00, "desc": "威力 100%，跳跃 4 次" },
+      { "level": 2, "power": 1.12, "desc": "威力 112%，跳跃 5 次" },
+      { "level": 3, "power": 1.24, "desc": "威力 124%，跳跃 6 次" },
+      { "level": 4, "power": 1.36, "desc": "威力 136%，跳跃 7 次" },
+      { "level": 5, "power": 1.48, "desc": "威力 148%，跳跃 8 次" }
+    ]
+  },
+  {
+    "id": "sk_yuansu", "name": "元素精通", "type": "mind", "class": "mage",
+    "mods": { "skillPct": 0.12, "cdPct": 0.08 },
+    "desc": "法修专修，通晓五行元素之理，技能伤害大增且冷却缩短。",
+    "upgrades": [
+      { "level": 1, "mods": { "skillPct": 0.120, "cdPct": 0.080 }, "desc": "技能伤害 +12%，神通冷却 -8%" },
+      { "level": 2, "mods": { "skillPct": 0.144, "cdPct": 0.096 }, "desc": "技能伤害 +14.4%，神通冷却 -9.6%" },
+      { "level": 3, "mods": { "skillPct": 0.168, "cdPct": 0.112 }, "desc": "技能伤害 +16.8%，神通冷却 -11.2%" },
+      { "level": 4, "mods": { "skillPct": 0.192, "cdPct": 0.128 }, "desc": "技能伤害 +19.2%，神通冷却 -12.8%" },
+      { "level": 5, "mods": { "skillPct": 0.216, "cdPct": 0.144 }, "desc": "技能伤害 +21.6%，神通冷却 -14.4%" }
+    ]
+  },
+  {
+    "id": "sk_falihu", "name": "法力护盾", "type": "mind", "class": "mage",
+    "mods": { "defPct": 0.1, "hpPct": 0.08 },
+    "desc": "以法力凝聚护体护盾，法修专修，防御与气血提升。",
+    "upgrades": [
+      { "level": 1, "mods": { "defPct": 0.100, "hpPct": 0.080 }, "desc": "防御 +10%，气血 +8%" },
+      { "level": 2, "mods": { "defPct": 0.120, "hpPct": 0.096 }, "desc": "防御 +12%，气血 +9.6%" },
+      { "level": 3, "mods": { "defPct": 0.140, "hpPct": 0.112 }, "desc": "防御 +14%，气血 +11.2%" },
+      { "level": 4, "mods": { "defPct": 0.160, "hpPct": 0.128 }, "desc": "防御 +16%，气血 +12.8%" },
+      { "level": 5, "mods": { "defPct": 0.180, "hpPct": 0.144 }, "desc": "防御 +18%，气血 +14.4%" }
+    ]
+  },
+  {
+    "id": "sk_wanlei", "name": "万雷天牢", "type": "art", "class": "mage",
+    "power": 1.4, "cd": 12000, "artMode": "thunder_prison",
+    "desc": "积蓄万钧雷霆，布下天牢雷阵，七道天雷接连降下轰杀敌人。",
+    "upgrades": [
+      { "level": 1, "power": 1.400, "cd": 12000, "desc": "威力 140%，冷却 12 秒" },
+      { "level": 2, "power": 1.568, "cd": 12000, "desc": "威力 156.8%，冷却 12 秒" },
+      { "level": 3, "power": 1.736, "cd": 12000, "desc": "威力 173.6%，冷却 12 秒" },
+      { "level": 4, "power": 1.904, "cd": 12000, "desc": "威力 190.4%，冷却 12 秒" },
+      { "level": 5, "power": 2.072, "cd": 12000, "desc": "威力 207.2%，冷却 12 秒" }
+    ]
+  },
+  {
+    "id": "sk_pokong", "name": "破空斩", "type": "style", "class": "sword",
+    "attackMode": "slash_pierce", "power": 1.2,
+    "desc": "剑气破空而出，飞剑直线贯穿所有敌阵。",
+    "upgrades": [
+      { "level": 1, "power": 1.200, "desc": "威力 120%" },
+      { "level": 2, "power": 1.344, "desc": "威力 134.4%" },
+      { "level": 3, "power": 1.488, "desc": "威力 148.8%" },
+      { "level": 4, "power": 1.632, "desc": "威力 163.2%" },
+      { "level": 5, "power": 1.776, "desc": "威力 177.6%" }
+    ]
+  },
+  {
+    "id": "sk_jianyi", "name": "剑意凝形", "type": "mind", "class": "sword",
+    "mods": { "crit": 0.08, "atkPct": 0.06 },
+    "desc": "剑意凝结成形，暴击与攻击同步攀升。",
+    "upgrades": [
+      { "level": 1, "mods": { "crit": 0.080, "atkPct": 0.060 }, "desc": "暴击 +8%，攻击 +6%" },
+      { "level": 2, "mods": { "crit": 0.096, "atkPct": 0.072 }, "desc": "暴击 +9.6%，攻击 +7.2%" },
+      { "level": 3, "mods": { "crit": 0.112, "atkPct": 0.084 }, "desc": "暴击 +11.2%，攻击 +8.4%" },
+      { "level": 4, "mods": { "crit": 0.128, "atkPct": 0.096 }, "desc": "暴击 +12.8%，攻击 +9.6%" },
+      { "level": 5, "mods": { "crit": 0.144, "atkPct": 0.108 }, "desc": "暴击 +14.4%，攻击 +10.8%" }
+    ]
+  },
+  {
+    "id": "sk_jianxin", "name": "剑心通明", "type": "mind", "class": "sword",
+    "mods": { "skillPct": 0.12, "cdPct": 0.08 },
+    "desc": "剑心澄明通达，功法威力与冷却双重优化。",
+    "upgrades": [
+      { "level": 1, "mods": { "skillPct": 0.120, "cdPct": 0.080 }, "desc": "技能伤害 +12%，冷却缩减 +8%" },
+      { "level": 2, "mods": { "skillPct": 0.144, "cdPct": 0.096 }, "desc": "技能伤害 +14.4%，冷却缩减 +9.6%" },
+      { "level": 3, "mods": { "skillPct": 0.168, "cdPct": 0.112 }, "desc": "技能伤害 +16.8%，冷却缩减 +11.2%" },
+      { "level": 4, "mods": { "skillPct": 0.192, "cdPct": 0.128 }, "desc": "技能伤害 +19.2%，冷却缩减 +12.8%" },
+      { "level": 5, "mods": { "skillPct": 0.216, "cdPct": 0.144 }, "desc": "技能伤害 +21.6%，冷却缩减 +14.4%" }
+    ]
+  },
+  {
+    "id": "sk_qianjian", "name": "千剑归宗", "type": "art", "class": "sword",
+    "power": 2.5, "cd": 9000, "artMode": "sword_storm",
+    "desc": "召唤漫天飞剑归宗，万剑齐发覆盖全场。高阶追加剑气数量。",
+    "upgrades": [
+      { "level": 1, "power": 2.500, "cd": 9000, "desc": "七道剑气扇形齐发，威力 250%" },
+      { "level": 2, "power": 2.800, "cd": 9000, "desc": "威力 280%，冷却 9 秒" },
+      { "level": 3, "power": 3.100, "cd": 9000, "desc": "十道剑气齐发，威力 310%" },
+      { "level": 4, "power": 3.400, "cd": 9000, "desc": "十道剑气 + 扇形扩散，威力 340%" },
+      { "level": 5, "power": 3.700, "cd": 9000, "desc": "十四道剑气 + 扇形扩散，威力 370%" }
+    ]
+  },
+  {
+    "id": "sk_lieyan", "name": "烈焰弹", "type": "style", "class": "fairy",
+    "attackMode": "bolt_fire", "power": 1.15,
+    "desc": "凝聚高浓度火元素为弹，命中后灼烧目标。",
+    "upgrades": [
+      { "level": 1, "power": 1.150, "desc": "威力 115%" },
+      { "level": 2, "power": 1.288, "desc": "威力 128.8%" },
+      { "level": 3, "power": 1.426, "desc": "威力 142.6%" },
+      { "level": 4, "power": 1.564, "desc": "威力 156.4%" },
+      { "level": 5, "power": 1.702, "desc": "威力 170.2%" }
+    ]
+  },
+  {
+    "id": "sk_lingyan", "name": "灵焰术", "type": "mind", "class": "fairy",
+    "mods": { "atk": 4, "skillPct": 0.10 },
+    "desc": "灵焰附体，攻击与技能伤害双重提升。",
+    "upgrades": [
+      { "level": 1, "mods": { "atk": 4.0, "skillPct": 0.100 }, "desc": "攻击 +4，技能伤害 +10%" },
+      { "level": 2, "mods": { "atk": 4.8, "skillPct": 0.120 }, "desc": "攻击 +4.8，技能伤害 +12%" },
+      { "level": 3, "mods": { "atk": 5.6, "skillPct": 0.140 }, "desc": "攻击 +5.6，技能伤害 +14%" },
+      { "level": 4, "mods": { "atk": 6.4, "skillPct": 0.160 }, "desc": "攻击 +6.4，技能伤害 +16%" },
+      { "level": 5, "mods": { "atk": 7.2, "skillPct": 0.180 }, "desc": "攻击 +7.2，技能伤害 +18%" }
+    ]
+  },
+  {
+    "id": "sk_huofeng", "name": "火凤之体", "type": "mind", "class": "fairy",
+    "mods": { "lifesteal": 0.06, "hpPct": 0.12 },
+    "desc": "火凤血脉觉醒，生命汲取与上限齐增。",
+    "upgrades": [
+      { "level": 1, "mods": { "lifesteal": 0.060, "hpPct": 0.120 }, "desc": "吸血 +6%，气血 +12%" },
+      { "level": 2, "mods": { "lifesteal": 0.072, "hpPct": 0.144 }, "desc": "吸血 +7.2%，气血 +14.4%" },
+      { "level": 3, "mods": { "lifesteal": 0.084, "hpPct": 0.168 }, "desc": "吸血 +8.4%，气血 +16.8%" },
+      { "level": 4, "mods": { "lifesteal": 0.096, "hpPct": 0.192 }, "desc": "吸血 +9.6%，气血 +19.2%" },
+      { "level": 5, "mods": { "lifesteal": 0.108, "hpPct": 0.216 }, "desc": "吸血 +10.8%，气血 +21.6%" }
+    ]
+  },
+  {
+    "id": "sk_yuhuo", "name": "浴火重生", "type": "art", "class": "fairy",
+    "power": 2.8, "cd": 9500, "artMode": "fire_phoenix",
+    "desc": "召唤火凤凰从天而降，烈焰焚尽一切。",
+    "upgrades": [
+      { "level": 1, "power": 2.800, "cd": 9500, "desc": "威力 280%，冷却 9.5 秒" },
+      { "level": 2, "power": 3.136, "cd": 9500, "desc": "威力 313.6%，冷却 9.5 秒" },
+      { "level": 3, "power": 3.472, "cd": 9500, "desc": "威力 347.2%，冷却 9.5 秒" },
+      { "level": 4, "power": 3.808, "cd": 9500, "desc": "威力 380.8%，冷却 9.5 秒" },
+      { "level": 5, "power": 4.144, "cd": 9500, "desc": "威力 414.4%，冷却 9.5 秒" }
+    ]
+  },
+  {
+    "id": "sk_suiyan", "name": "碎岩击", "type": "style", "class": "sword_new",
+    "attackMode": "slash_heavy", "power": 1.5,
+    "desc": "以重剑碎岩之力劈下，造成大范围毁灭伤害。",
+    "upgrades": [
+      { "level": 1, "power": 1.500, "desc": "威力 150%" },
+      { "level": 2, "power": 1.680, "desc": "威力 168%" },
+      { "level": 3, "power": 1.860, "desc": "威力 186%" },
+      { "level": 4, "power": 2.040, "desc": "威力 204%" },
+      { "level": 5, "power": 2.220, "desc": "威力 222%" }
+    ]
+  },
+  {
+    "id": "sk_shanhe", "name": "山河之力", "type": "mind", "class": "sword_new",
+    "mods": { "def": 6, "maxHp": 25 },
+    "desc": "山河之力灌注己身，防御与生命大幅提升。",
+    "upgrades": [
+      { "level": 1, "mods": { "def": 6.0, "maxHp": 25.0 }, "desc": "防御 +6，生命 +25" },
+      { "level": 2, "mods": { "def": 7.2, "maxHp": 30.0 }, "desc": "防御 +7.2，生命 +30" },
+      { "level": 3, "mods": { "def": 8.4, "maxHp": 35.0 }, "desc": "防御 +8.4，生命 +35" },
+      { "level": 4, "mods": { "def": 9.6, "maxHp": 40.0 }, "desc": "防御 +9.6，生命 +40" },
+      { "level": 5, "mods": { "def": 10.8, "maxHp": 45.0 }, "desc": "防御 +10.8，生命 +45" }
+    ]
+  },
+  {
+    "id": "sk_houtu", "name": "厚土之躯", "type": "mind", "class": "sword_new",
+    "mods": { "maxHp": 35, "defPct": 0.12 },
+    "desc": "厚土凝聚成躯，生命上限与减伤并行。",
+    "upgrades": [
+      { "level": 1, "mods": { "maxHp": 35.0, "defPct": 0.120 }, "desc": "生命 +35，减伤 +12%" },
+      { "level": 2, "mods": { "maxHp": 42.0, "defPct": 0.144 }, "desc": "生命 +42，减伤 +14.4%" },
+      { "level": 3, "mods": { "maxHp": 49.0, "defPct": 0.168 }, "desc": "生命 +49，减伤 +16.8%" },
+      { "level": 4, "mods": { "maxHp": 56.0, "defPct": 0.192 }, "desc": "生命 +56，减伤 +19.2%" },
+      { "level": 5, "mods": { "maxHp": 63.0, "defPct": 0.216 }, "desc": "生命 +63，减伤 +21.6%" }
+    ]
+  },
+  {
+    "id": "sk_wuyue", "name": "五岳镇域", "type": "art", "class": "sword_new",
+    "power": 3.0, "cd": 10000, "artMode": "mountain_seal",
+    "desc": "召唤五岳之重镇压范围内敌人，使其无法动弹。",
+    "upgrades": [
+      { "level": 1, "power": 3.000, "cd": 10000, "desc": "威力 300%，冷却 10 秒" },
+      { "level": 2, "power": 3.360, "cd": 10000, "desc": "威力 336%，冷却 10 秒" },
+      { "level": 3, "power": 3.720, "cd": 10000, "desc": "威力 372%，冷却 10 秒" },
+      { "level": 4, "power": 4.080, "cd": 10000, "desc": "威力 408%，冷却 10 秒" },
+      { "level": 5, "power": 4.440, "cd": 10000, "desc": "威力 444%，冷却 10 秒" }
+    ]
+  },
+  {
+    "id": "sk_meiying", "name": "魅影针", "type": "style", "class": "fairy_new",
+    "attackMode": "bolt_needle", "power": 0.9,
+    "desc": "无影之针穿梭暗处，削弱目标攻击与防御。",
+    "upgrades": [
+      { "level": 1, "power": 0.900, "desc": "威力 90%" },
+      { "level": 2, "power": 1.008, "desc": "威力 100.8%" },
+      { "level": 3, "power": 1.116, "desc": "威力 111.6%" },
+      { "level": 4, "power": 1.224, "desc": "威力 122.4%" },
+      { "level": 5, "power": 1.332, "desc": "威力 133.2%" }
+    ]
+  },
+  {
+    "id": "sk_huanxin", "name": "幻心术", "type": "mind", "class": "fairy_new",
+    "mods": { "crit": 0.10, "aspd": 0.08 },
+    "desc": "幻心之术扰乱敌意，暴击与攻速双重提升。",
+    "upgrades": [
+      { "level": 1, "mods": { "crit": 0.100, "aspd": 0.080 }, "desc": "暴击 +10%，攻速 +8%" },
+      { "level": 2, "mods": { "crit": 0.120, "aspd": 0.096 }, "desc": "暴击 +12%，攻速 +9.6%" },
+      { "level": 3, "mods": { "crit": 0.140, "aspd": 0.112 }, "desc": "暴击 +14%，攻速 +11.2%" },
+      { "level": 4, "mods": { "crit": 0.160, "aspd": 0.128 }, "desc": "暴击 +16%，攻速 +12.8%" },
+      { "level": 5, "mods": { "crit": 0.180, "aspd": 0.144 }, "desc": "暴击 +18%，攻速 +14.4%" }
+    ]
+  },
+  {
+    "id": "sk_shehun", "name": "摄魂之术", "type": "mind", "class": "fairy_new",
+    "mods": { "skillPct": 0.14, "lifesteal": 0.04 },
+    "desc": "摄魂夺魄之力加持，功法威力与吸血共增。",
+    "upgrades": [
+      { "level": 1, "mods": { "skillPct": 0.140, "lifesteal": 0.040 }, "desc": "技能伤害 +14%，吸血 +4%" },
+      { "level": 2, "mods": { "skillPct": 0.168, "lifesteal": 0.048 }, "desc": "技能伤害 +16.8%，吸血 +4.8%" },
+      { "level": 3, "mods": { "skillPct": 0.196, "lifesteal": 0.056 }, "desc": "技能伤害 +19.6%，吸血 +5.6%" },
+      { "level": 4, "mods": { "skillPct": 0.224, "lifesteal": 0.064 }, "desc": "技能伤害 +22.4%，吸血 +6.4%" },
+      { "level": 5, "mods": { "skillPct": 0.252, "lifesteal": 0.072 }, "desc": "技能伤害 +25.2%，吸血 +7.2%" }
+    ]
+  },
+  {
+    "id": "sk_baime", "name": "百魅夜行", "type": "art", "class": "fairy_new",
+    "power": 2.3, "cd": 8500, "artMode": "shadow_swarm",
+    "desc": "释放百道魅影分身，每个分身对随机敌人造成伤害。",
+    "upgrades": [
+      { "level": 1, "power": 2.300, "cd": 8500, "desc": "威力 230%，冷却 8.5 秒" },
+      { "level": 2, "power": 2.576, "cd": 8500, "desc": "威力 257.6%，冷却 8.5 秒" },
+      { "level": 3, "power": 2.852, "cd": 8500, "desc": "威力 285.2%，冷却 8.5 秒" },
+      { "level": 4, "power": 3.128, "cd": 8500, "desc": "威力 312.8%，冷却 8.5 秒" },
+      { "level": 5, "power": 3.404, "cd": 8500, "desc": "威力 340.4%，冷却 8.5 秒" }
+    ]
+  },
+  {
+    "id": "sk_hanbing", "name": "寒冰刺", "type": "style", "class": "mage",
+    "attackMode": "slash_ice", "power": 0.9,
+    "desc": "凝水成刺贯穿敌阵，命中后减速目标。",
+    "upgrades": [
+      { "level": 1, "power": 0.900, "desc": "威力 90%" },
+      { "level": 2, "power": 1.008, "desc": "威力 100.8%" },
+      { "level": 3, "power": 1.116, "desc": "威力 111.6%" },
+      { "level": 4, "power": 1.224, "desc": "威力 122.4%" },
+      { "level": 5, "power": 1.332, "desc": "威力 133.2%" }
+    ]
+  },
+  {
+    "id": "sk_leiling", "name": "雷灵之体", "type": "mind", "class": "mage",
+    "mods": { "aspd": 0.10, "skillPct": 0.08 },
+    "desc": "雷灵之力灌注经脉，攻速与技能伤害齐增。",
+    "upgrades": [
+      { "level": 1, "mods": { "aspd": 0.100, "skillPct": 0.080 }, "desc": "攻速 +10%，技能伤害 +8%" },
+      { "level": 2, "mods": { "aspd": 0.120, "skillPct": 0.096 }, "desc": "攻速 +12%，技能伤害 +9.6%" },
+      { "level": 3, "mods": { "aspd": 0.140, "skillPct": 0.112 }, "desc": "攻速 +14%，技能伤害 +11.2%" },
+      { "level": 4, "mods": { "aspd": 0.160, "skillPct": 0.128 }, "desc": "攻速 +16%，技能伤害 +12.8%" },
+      { "level": 5, "mods": { "aspd": 0.180, "skillPct": 0.144 }, "desc": "攻速 +18%，技能伤害 +14.4%" }
+    ]
+  },
+  {
+    "id": "sk_xuanbing", "name": "玄冰诀", "type": "mind", "class": "mage",
+    "mods": { "cdPct": 0.12, "defPct": 0.08 },
+    "desc": "玄冰之力护体，冷却缩减与减伤并行。",
+    "upgrades": [
+      { "level": 1, "mods": { "cdPct": 0.120, "defPct": 0.080 }, "desc": "冷却缩减 +12%，减伤 +8%" },
+      { "level": 2, "mods": { "cdPct": 0.144, "defPct": 0.096 }, "desc": "冷却缩减 +14.4%，减伤 +9.6%" },
+      { "level": 3, "mods": { "cdPct": 0.168, "defPct": 0.112 }, "desc": "冷却缩减 +16.8%，减伤 +11.2%" },
+      { "level": 4, "mods": { "cdPct": 0.192, "defPct": 0.128 }, "desc": "冷却缩减 +19.2%，减伤 +12.8%" },
+      { "level": 5, "mods": { "cdPct": 0.216, "defPct": 0.144 }, "desc": "冷却缩减 +21.6%，减伤 +14.4%" }
+    ]
+  },
+  {
+    "id": "sk_bingle", "name": "冰雷双生", "type": "art", "class": "mage",
+    "power": 2.6, "cd": 9000, "artMode": "ice_thunder",
+    "desc": "冰与雷同时降临，冰冻后雷击造成额外伤害。",
+    "upgrades": [
+      { "level": 1, "power": 2.600, "cd": 9000, "desc": "威力 260%，冷却 9 秒" },
+      { "level": 2, "power": 2.912, "cd": 9000, "desc": "威力 291.2%，冷却 9 秒" },
+      { "level": 3, "power": 3.224, "cd": 9000, "desc": "威力 322.4%，冷却 9 秒" },
+      { "level": 4, "power": 3.536, "cd": 9000, "desc": "威力 353.6%，冷却 9 秒" },
+      { "level": 5, "power": 3.848, "cd": 9000, "desc": "威力 384.8%，冷却 9 秒" }
+    ]
+  },
+  {
+    "id": "sk_anying", "name": "暗影刃斩", "type": "style", "class": "sword",
+    "attackMode": "shadow_blade", "power": 1.0,
+    "desc": "暗影凝为月牙刃，飞射穿透前方敌阵。",
+    "upgrades": [
+      { "level": 1, "power": 1.000, "desc": "威力 100%" },
+      { "level": 2, "power": 1.120, "desc": "威力 112%" },
+      { "level": 3, "power": 1.240, "desc": "威力 124%" },
+      { "level": 4, "power": 1.360, "desc": "威力 136%" },
+      { "level": 5, "power": 1.480, "desc": "威力 148%" }
+    ]
+  },
+  {
+    "id": "sk_shengguangshu", "name": "圣光束", "type": "style", "class": "sword",
+    "attackMode": "light_beam", "power": 1.0,
+    "desc": "凝聚圣光为柱，直线贯穿所有阻挡之物。",
+    "upgrades": [
+      { "level": 1, "power": 1.000, "desc": "威力 100%" },
+      { "level": 2, "power": 1.120, "desc": "威力 112%" },
+      { "level": 3, "power": 1.240, "desc": "威力 124%" },
+      { "level": 4, "power": 1.360, "desc": "威力 136%" },
+      { "level": 5, "power": 1.480, "desc": "威力 148%" }
+    ]
+  },
+  {
+    "id": "sk_jianhuan", "name": "剑环万象", "type": "art", "class": "sword",
+    "power": 1.6, "cd": 7000, "artMode": "blade_orbit",
+    "desc": "召唤飞剑环绕周身，剑气所及之处皆受斩击。",
+    "upgrades": [
+      { "level": 1, "power": 1.600, "cd": 7000, "desc": "威力 160%，冷却 7 秒" },
+      { "level": 2, "power": 1.792, "cd": 7000, "desc": "威力 179.2%，冷却 7 秒" },
+      { "level": 3, "power": 1.984, "cd": 7000, "desc": "威力 198.4%，冷却 7 秒" },
+      { "level": 4, "power": 2.176, "cd": 7000, "desc": "威力 217.6%，冷却 7 秒" },
+      { "level": 5, "power": 2.368, "cd": 7000, "desc": "威力 236.8%，冷却 7 秒" }
+    ]
+  },
+  {
+    "id": "sk_xukong", "name": "虚空裂隙", "type": "art", "class": "sword",
+    "power": 2.0, "cd": 11000, "artMode": "void_rift",
+    "desc": "撕裂虚空，暗紫裂隙在敌群中绽开，吞噬一切。",
+    "upgrades": [
+      { "level": 1, "power": 2.000, "cd": 11000, "desc": "威力 200%，冷却 11 秒" },
+      { "level": 2, "power": 2.240, "cd": 11000, "desc": "威力 224%，冷却 11 秒" },
+      { "level": 3, "power": 2.480, "cd": 11000, "desc": "威力 248%，冷却 11 秒" },
+      { "level": 4, "power": 2.720, "cd": 11000, "desc": "威力 272%，冷却 11 秒" },
+      { "level": 5, "power": 2.960, "cd": 11000, "desc": "威力 296%，冷却 11 秒" }
+    ]
+  },
+  {
+    "id": "sk_fengren", "name": "风刃连斩", "type": "style", "class": "fairy",
+    "attackMode": "wind_slash", "power": 0.85,
+    "desc": "风元素凝成多道风刃，扇形齐发切割敌群。",
+    "upgrades": [
+      { "level": 1, "power": 0.850, "desc": "威力 85%" },
+      { "level": 2, "power": 0.952, "desc": "威力 95.2%" },
+      { "level": 3, "power": 1.054, "desc": "威力 105.4%" },
+      { "level": 4, "power": 1.156, "desc": "威力 115.6%" },
+      { "level": 5, "power": 1.258, "desc": "威力 125.8%" }
+    ]
+  },
+  {
+    "id": "sk_hunhuo", "name": "魂火弹", "type": "style", "class": "fairy",
+    "attackMode": "soul_flame", "power": 1.0,
+    "desc": "幽蓝魂火追踪最近敌人，灼烧其精魂。",
+    "upgrades": [
+      { "level": 1, "power": 1.000, "desc": "威力 100%" },
+      { "level": 2, "power": 1.120, "desc": "威力 112%" },
+      { "level": 3, "power": 1.240, "desc": "威力 124%" },
+      { "level": 4, "power": 1.360, "desc": "威力 136%" },
+      { "level": 5, "power": 1.480, "desc": "威力 148%" }
+    ]
+  },
+  {
+    "id": "sk_yunshi", "name": "陨石天降", "type": "art", "class": "fairy",
+    "power": 2.0, "cd": 10000, "artMode": "meteor_storm",
+    "desc": "召唤天外陨石，五枚火陨轰击全场目标。",
+    "upgrades": [
+      { "level": 1, "power": 2.000, "cd": 10000, "desc": "威力 200%，冷却 10 秒" },
+      { "level": 2, "power": 2.240, "cd": 10000, "desc": "威力 224%，冷却 10 秒" },
+      { "level": 3, "power": 2.480, "cd": 10000, "desc": "威力 248%，冷却 10 秒" },
+      { "level": 4, "power": 2.720, "cd": 10000, "desc": "威力 272%，冷却 10 秒" },
+      { "level": 5, "power": 2.960, "cd": 10000, "desc": "威力 296%，冷却 10 秒" }
+    ]
+  },
+  {
+    "id": "sk_fenghuang", "name": "凤凰涅槃", "type": "art", "class": "fairy",
+    "power": 2.8, "cd": 14000, "artMode": "phoenix_rebirth",
+    "desc": "召唤火凤降世，烈焰焚尽方圆一切生灵。",
+    "upgrades": [
+      { "level": 1, "power": 2.800, "cd": 14000, "desc": "威力 280%，冷却 14 秒" },
+      { "level": 2, "power": 3.136, "cd": 14000, "desc": "威力 313.6%，冷却 14 秒" },
+      { "level": 3, "power": 3.472, "cd": 14000, "desc": "威力 347.2%，冷却 14 秒" },
+      { "level": 4, "power": 3.808, "cd": 14000, "desc": "威力 380.8%，冷却 14 秒" },
+      { "level": 5, "power": 4.144, "cd": 14000, "desc": "威力 414.4%，冷却 14 秒" }
+    ]
+  },
+  {
+    "id": "sk_dici", "name": "地刺术", "type": "style", "class": "sword_new",
+    "attackMode": "stone_spike", "power": 1.1,
+    "desc": "引地脉之力，岩刺沿前方路径逐一突起。",
+    "upgrades": [
+      { "level": 1, "power": 1.100, "desc": "威力 110%" },
+      { "level": 2, "power": 1.232, "desc": "威力 123.2%" },
+      { "level": 3, "power": 1.364, "desc": "威力 136.4%" },
+      { "level": 4, "power": 1.496, "desc": "威力 149.6%" },
+      { "level": 5, "power": 1.628, "desc": "威力 162.8%" }
+    ]
+  },
+  {
+    "id": "sk_lingsuo", "name": "灵锁链", "type": "style", "class": "sword_new",
+    "attackMode": "spirit_chain", "power": 1.1,
+    "desc": "灵力凝成锁链，向前延伸贯穿直线敌群。",
+    "upgrades": [
+      { "level": 1, "power": 1.100, "desc": "威力 110%" },
+      { "level": 2, "power": 1.232, "desc": "威力 123.2%" },
+      { "level": 3, "power": 1.364, "desc": "威力 136.4%" },
+      { "level": 4, "power": 1.496, "desc": "威力 149.6%" },
+      { "level": 5, "power": 1.628, "desc": "威力 162.8%" }
+    ]
+  },
+  {
+    "id": "sk_shengguang", "name": "圣光审判", "type": "art", "class": "sword_new",
+    "power": 2.2, "cd": 12000, "artMode": "light_pillar",
+    "desc": "降下四道金色光柱，审判范围内所有敌人。",
+    "upgrades": [
+      { "level": 1, "power": 2.200, "cd": 12000, "desc": "威力 220%，冷却 12 秒" },
+      { "level": 2, "power": 2.464, "cd": 12000, "desc": "威力 246.4%，冷却 12 秒" },
+      { "level": 3, "power": 2.728, "cd": 12000, "desc": "威力 272.8%，冷却 12 秒" },
+      { "level": 4, "power": 2.992, "cd": 12000, "desc": "威力 299.2%，冷却 12 秒" },
+      { "level": 5, "power": 3.256, "cd": 12000, "desc": "威力 325.6%，冷却 12 秒" }
+    ]
+  },
+  {
+    "id": "sk_xueling", "name": "血镰斩", "type": "style", "class": "fairy_new",
+    "attackMode": "blood_scythe", "power": 1.2,
+    "desc": "血气凝成镰刀弧，前方扇形范围内撕裂敌人。",
+    "upgrades": [
+      { "level": 1, "power": 1.200, "desc": "威力 120%" },
+      { "level": 2, "power": 1.344, "desc": "威力 134.4%" },
+      { "level": 3, "power": 1.488, "desc": "威力 148.8%" },
+      { "level": 4, "power": 1.632, "desc": "威力 163.2%" },
+      { "level": 5, "power": 1.776, "desc": "威力 177.6%" }
+    ]
+  },
+  {
+    "id": "sk_duya", "name": "毒爪裂击", "type": "style", "class": "fairy_new",
+    "attackMode": "venom_claw", "power": 0.95,
+    "desc": "近身毒爪三连击，命中后令敌人迟缓。",
+    "upgrades": [
+      { "level": 1, "power": 0.950, "desc": "威力 95%" },
+      { "level": 2, "power": 1.064, "desc": "威力 106.4%" },
+      { "level": 3, "power": 1.178, "desc": "威力 117.8%" },
+      { "level": 4, "power": 1.292, "desc": "威力 129.2%" },
+      { "level": 5, "power": 1.406, "desc": "威力 140.6%" }
+    ]
+  },
+  {
+    "id": "sk_wandu", "name": "万毒瘴气", "type": "art", "class": "fairy_new",
+    "power": 1.8, "cd": 8000, "artMode": "poison_cloud",
+    "desc": "释放毒瘴弥漫全场，范围内敌人持续受损迟缓。",
+    "upgrades": [
+      { "level": 1, "power": 1.800, "cd": 8000, "desc": "威力 180%，冷却 8 秒" },
+      { "level": 2, "power": 2.016, "cd": 8000, "desc": "威力 201.6%，冷却 8 秒" },
+      { "level": 3, "power": 2.232, "cd": 8000, "desc": "威力 223.2%，冷却 8 秒" },
+      { "level": 4, "power": 2.448, "cd": 8000, "desc": "威力 244.8%，冷却 8 秒" },
+      { "level": 5, "power": 2.664, "cd": 8000, "desc": "威力 266.4%，冷却 8 秒" }
+    ]
+  },
+  {
+    "id": "sk_xueyu", "name": "血域降临", "type": "art", "class": "fairy_new",
+    "power": 1.8, "cd": 9000, "artMode": "blood_domain",
+    "desc": "展开深红血域，汲取范围内所有敌人精血。",
+    "upgrades": [
+      { "level": 1, "power": 1.800, "cd": 9000, "desc": "威力 180%，冷却 9 秒" },
+      { "level": 2, "power": 2.016, "cd": 9000, "desc": "威力 201.6%，冷却 9 秒" },
+      { "level": 3, "power": 2.232, "cd": 9000, "desc": "威力 223.2%，冷却 9 秒" },
+      { "level": 4, "power": 2.448, "cd": 9000, "desc": "威力 244.8%，冷却 9 秒" },
+      { "level": 5, "power": 2.664, "cd": 9000, "desc": "威力 266.4%，冷却 9 秒" }
+    ]
+  },
+  {
+    "id": "sk_xingyu", "name": "星雨连弩", "type": "style", "class": "mage",
+    "attackMode": "star_barrage", "power": 0.85,
+    "desc": "金色星刃四连发，扇形覆盖前方敌群。",
+    "upgrades": [
+      { "level": 1, "power": 0.850, "desc": "威力 85%" },
+      { "level": 2, "power": 0.952, "desc": "威力 95.2%" },
+      { "level": 3, "power": 1.054, "desc": "威力 105.4%" },
+      { "level": 4, "power": 1.156, "desc": "威力 115.6%" },
+      { "level": 5, "power": 1.258, "desc": "威力 125.8%" }
+    ]
+  },
+  {
+    "id": "sk_jingsui", "name": "晶碎飞刃", "type": "style", "class": "mage",
+    "attackMode": "crystal_shard", "power": 0.9,
+    "desc": "凝水成晶，四片晶碎片散射穿透敌阵。",
+    "upgrades": [
+      { "level": 1, "power": 0.900, "desc": "威力 90%" },
+      { "level": 2, "power": 1.008, "desc": "威力 100.8%" },
+      { "level": 3, "power": 1.116, "desc": "威力 111.6%" },
+      { "level": 4, "power": 1.224, "desc": "威力 122.4%" },
+      { "level": 5, "power": 1.332, "desc": "威力 133.2%" }
+    ]
+  },
+  {
+    "id": "sk_bingfeng", "name": "冰封领域", "type": "art", "class": "mage",
+    "power": 2.0, "cd": 10000, "artMode": "frozen_domain",
+    "desc": "展开冰封领域，范围内敌人冰冻减速并受创。",
+    "upgrades": [
+      { "level": 1, "power": 2.000, "cd": 10000, "desc": "威力 200%，冷却 10 秒" },
+      { "level": 2, "power": 2.240, "cd": 10000, "desc": "威力 224%，冷却 10 秒" },
+      { "level": 3, "power": 2.480, "cd": 10000, "desc": "威力 248%，冷却 10 秒" },
+      { "level": 4, "power": 2.720, "cd": 10000, "desc": "威力 272%，冷却 10 秒" },
+      { "level": 5, "power": 2.960, "cd": 10000, "desc": "威力 296%，冷却 10 秒" }
+    ]
+  },
+  {
+    "id": "sk_yuanshen", "name": "元神风暴", "type": "art", "class": "mage",
+    "power": 1.8, "cd": 8000, "artMode": "spirit_vortex",
+    "desc": "元神之力化为灵力旋涡，席卷范围内所有敌人。",
+    "upgrades": [
+      { "level": 1, "power": 1.800, "cd": 8000, "desc": "威力 180%，冷却 8 秒" },
+      { "level": 2, "power": 2.016, "cd": 8000, "desc": "威力 201.6%，冷却 8 秒" },
+      { "level": 3, "power": 2.232, "cd": 8000, "desc": "威力 223.2%，冷却 8 秒" },
+      { "level": 4, "power": 2.448, "cd": 8000, "desc": "威力 244.8%，冷却 8 秒" },
+      { "level": 5, "power": 2.664, "cd": 8000, "desc": "威力 266.4%，冷却 8 秒" }
+    ]
+  },
+  {
+    "id": "sk_zhongli", "name": "重力深渊", "type": "art", "class": "mage",
+    "power": 2.2, "cd": 11000, "artMode": "gravity_crush",
+    "desc": "制造引力深渊，范围内敌人被压塌减速。",
+    "upgrades": [
+      { "level": 1, "power": 2.200, "cd": 11000, "desc": "威力 220%，冷却 11 秒" },
+      { "level": 2, "power": 2.464, "cd": 11000, "desc": "威力 246.4%，冷却 11 秒" },
+      { "level": 3, "power": 2.728, "cd": 11000, "desc": "威力 272.8%，冷却 11 秒" },
+      { "level": 4, "power": 2.992, "cd": 11000, "desc": "威力 299.2%，冷却 11 秒" },
+      { "level": 5, "power": 3.256, "cd": 11000, "desc": "威力 325.6%，冷却 11 秒" }
+    ]
+  }
+]

@@ -1,0 +1,69 @@
+{
+  "set_qm": {
+    "id": "set_qm",
+    "name": "青冥剑套",
+    "pieces": ["w_qm", "h_qm", "a_qm", "b_qm"],
+    "bonuses": [
+      { "count": 2, "mods": { "atkPct": 0.1 }, "desc": "2件：攻击 +10%" },
+      { "count": 4, "attackMode": "flying_sword_burst", "fxTags": ["sword_split"], "desc": "4件：攻击化为飞剑齐射（三柄飞剑穿透敌阵）" }
+    ]
+  },
+  "set_xm": {
+    "id": "set_xm",
+    "name": "玄冥法套",
+    "pieces": ["w_xm", "h_xm", "a_xm", "b_xm"],
+    "bonuses": [
+      { "count": 2, "mods": { "skillPct": 0.12 }, "desc": "2件：技能伤害 +12%" },
+      { "count": 4, "attackMode": "frost_nova_burst", "fxTags": ["delayed_burst"], "desc": "4件：攻击化为玄冰爆发（大范围冰环并强力迟缓敌人）" }
+    ]
+  },
+  "set_zx": {
+    "id": "set_zx",
+    "name": "紫霄雷套",
+    "pieces": ["w_zx", "h_zx", "a_zx", "b_zx"],
+    "bonuses": [
+      { "count": 2, "mods": { "aspd": 0.08, "crit": 0.04 }, "desc": "2件：攻速 +8%，会心 +4%" },
+      { "count": 4, "attackMode": "thunder_chain", "fxTags": ["array_mine"], "desc": "4件：攻击化为紫霄雷链（雷电在敌群间跳跃传导）" }
+    ]
+  },
+  "set_fr": {
+    "id": "set_fr",
+    "name": "凡人套",
+    "pieces": ["w_fr", "h_fr", "a_fr", "b_fr"],
+    "bonuses": [
+      { "count": 2, "mods": { "atkPct": 0.15, "speed": 8 }, "desc": "2件：攻击 +15%，速度 +8" },
+      { "count": 4, "attackMode": "giant_sword", "artMode": "dageng", "fxTags": ["fire_burst"], "desc": "4件：招式化为巨剑术（巨剑气贯穿全屏），神通化为大庚剑阵（七十二剑气全图索敌）" }
+    ]
+  },
+  "set_test_flying": { "id": "set_test_flying", "name": "测试飞剑套", "pieces": ["w_test_flying", "h_test_flying", "a_test_flying", "b_test_flying"], "bonuses": [{ "count": 4, "attackMode": "flying_sword_burst", "fxTags": ["test_sword_visual"], "desc": "测试：飞剑爆发" }] },
+  "set_test_frost": { "id": "set_test_frost", "name": "测试冰法套", "pieces": ["w_test_frost", "h_test_frost", "a_test_frost", "b_test_frost"], "bonuses": [{ "count": 4, "attackMode": "frost_nova_burst", "fxTags": ["test_frost_visual"], "desc": "测试：冰霜爆发" }] },
+  "set_test_thunder": { "id": "set_test_thunder", "name": "测试雷链套", "pieces": ["w_test_thunder", "h_test_thunder", "a_test_thunder", "b_test_thunder"], "bonuses": [{ "count": 4, "attackMode": "thunder_chain", "fxTags": ["test_thunder_visual"], "desc": "测试：雷链" }] },
+  "set_test_giant": { "id": "set_test_giant", "name": "测试巨剑套", "pieces": ["w_test_giant", "h_test_giant", "a_test_giant", "b_test_giant"], "bonuses": [{ "count": 4, "attackMode": "giant_sword", "fxTags": ["test_giant_visual"], "desc": "测试：巨剑" }] },
+  "set_honor_warrior": {
+    "id": "set_honor_warrior",
+    "name": "斗战圣铠",
+    "pieces": ["w_honor1", "h_honor1", "a_honor1", "b_honor1"],
+    "bonuses": [
+      { "count": 2, "mods": { "atkPct": 0.15 }, "desc": "2件：攻击 +15%" },
+      { "count": 4, "attackMode": "flame_slash", "fxTags": ["fire_burst"], "desc": "4件：攻击化为烈焰斩（前方扇形范围灼烧）" }
+    ]
+  },
+  "set_honor_guardian": {
+    "id": "set_honor_guardian",
+    "name": "守护灵铠",
+    "pieces": ["w_honor2", "h_honor2", "a_honor2", "b_honor2"],
+    "bonuses": [
+      { "count": 2, "mods": { "defPct": 0.2, "hpPct": 0.15 }, "desc": "2件：防御 +20%，气血 +15%" },
+      { "count": 4, "mods": { "lifesteal": 0.12, "defPct": 0.1 }, "desc": "4件：荆棘反伤（受击反弹，吸血 +12%，防御再 +10%）" }
+    ]
+  },
+  "set_honor_hunter": {
+    "id": "set_honor_hunter",
+    "name": "猎神之翼",
+    "pieces": ["w_honor3", "h_honor3", "a_honor3", "b_honor3"],
+    "bonuses": [
+      { "count": 2, "mods": { "aspd": 0.2, "crit": 0.08 }, "desc": "2件：攻速 +20%，会心 +8%" },
+      { "count": 4, "attackMode": "flying_sword_split", "fxTags": ["sword_split"], "desc": "4件：攻击化为穿甲连射（三柄飞剑穿透敌阵）" }
+    ]
+  }
+}

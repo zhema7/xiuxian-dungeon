@@ -1,0 +1,622 @@
+{
+  "sword_new_down_idle": {
+    "key": "sword_new_down_idle",
+    "frames": [
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_down_idle_00"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_down_idle_01"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_down_idle_02"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_down_idle_03"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_down_idle_04"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_down_idle_05"
+      }
+    ],
+    "frameRate": 6,
+    "repeat": -1
+  },
+  "sword_new_down_walk": {
+    "key": "sword_new_down_walk",
+    "frames": [
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_down_walk_00"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_down_walk_01"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_down_walk_02"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_down_walk_03"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_down_walk_04"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_down_walk_05"
+      }
+    ],
+    "frameRate": 10,
+    "repeat": -1
+  },
+  "sword_new_down_attack": {
+    "key": "sword_new_down_attack",
+    "frames": [
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_down_attack_00"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_down_attack_01"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_down_attack_02"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_down_attack_03"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_down_attack_04"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_down_attack_05"
+      }
+    ],
+    "frameRate": 12,
+    "repeat": 0
+  },
+  "sword_new_down_cast": {
+    "key": "sword_new_down_cast",
+    "frames": [
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_down_cast_00"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_down_cast_01"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_down_cast_02"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_down_cast_03"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_down_cast_04"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_down_cast_05"
+      }
+    ],
+    "frameRate": 12,
+    "repeat": 0
+  },
+  "sword_new_down_hit": {
+    "key": "sword_new_down_hit",
+    "frames": [
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_down_hit_00"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_down_hit_01"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_down_hit_02"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_down_hit_03"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_down_hit_04"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_down_hit_05"
+      }
+    ],
+    "frameRate": 10,
+    "repeat": 0
+  },
+  "sword_new_left_idle": {
+    "key": "sword_new_left_idle",
+    "frames": [
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_left_idle_00"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_left_idle_01"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_left_idle_02"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_left_idle_03"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_left_idle_04"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_left_idle_05"
+      }
+    ],
+    "frameRate": 6,
+    "repeat": -1
+  },
+  "sword_new_left_walk": {
+    "key": "sword_new_left_walk",
+    "frames": [
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_left_walk_00"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_left_walk_01"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_left_walk_02"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_left_walk_03"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_left_walk_04"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_left_walk_05"
+      }
+    ],
+    "frameRate": 10,
+    "repeat": -1
+  },
+  "sword_new_left_attack": {
+    "key": "sword_new_left_attack",
+    "frames": [
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_left_attack_00"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_left_attack_01"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_left_attack_02"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_left_attack_03"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_left_attack_04"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_left_attack_05"
+      }
+    ],
+    "frameRate": 12,
+    "repeat": 0
+  },
+  "sword_new_left_cast": {
+    "key": "sword_new_left_cast",
+    "frames": [
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_left_cast_00"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_left_cast_01"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_left_cast_02"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_left_cast_03"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_left_cast_04"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_left_cast_05"
+      }
+    ],
+    "frameRate": 12,
+    "repeat": 0
+  },
+  "sword_new_left_hit": {
+    "key": "sword_new_left_hit",
+    "frames": [
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_left_hit_00"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_left_hit_01"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_left_hit_02"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_left_hit_03"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_left_hit_04"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_left_hit_05"
+      }
+    ],
+    "frameRate": 10,
+    "repeat": 0
+  },
+  "sword_new_right_idle": {
+    "key": "sword_new_right_idle",
+    "frames": [
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_right_idle_00"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_right_idle_01"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_right_idle_02"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_right_idle_03"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_right_idle_04"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_right_idle_05"
+      }
+    ],
+    "frameRate": 6,
+    "repeat": -1
+  },
+  "sword_new_right_walk": {
+    "key": "sword_new_right_walk",
+    "frames": [
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_right_walk_00"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_right_walk_01"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_right_walk_02"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_right_walk_03"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_right_walk_04"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_right_walk_05"
+      }
+    ],
+    "frameRate": 10,
+    "repeat": -1
+  },
+  "sword_new_right_attack": {
+    "key": "sword_new_right_attack",
+    "frames": [
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_right_attack_00"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_right_attack_01"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_right_attack_02"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_right_attack_03"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_right_attack_04"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_right_attack_05"
+      }
+    ],
+    "frameRate": 12,
+    "repeat": 0
+  },
+  "sword_new_right_cast": {
+    "key": "sword_new_right_cast",
+    "frames": [
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_right_cast_00"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_right_cast_01"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_right_cast_02"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_right_cast_03"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_right_cast_04"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_right_cast_05"
+      }
+    ],
+    "frameRate": 12,
+    "repeat": 0
+  },
+  "sword_new_right_hit": {
+    "key": "sword_new_right_hit",
+    "frames": [
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_right_hit_00"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_right_hit_01"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_right_hit_02"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_right_hit_03"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_right_hit_04"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_right_hit_05"
+      }
+    ],
+    "frameRate": 10,
+    "repeat": 0
+  },
+  "sword_new_up_idle": {
+    "key": "sword_new_up_idle",
+    "frames": [
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_up_idle_00"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_up_idle_01"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_up_idle_02"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_up_idle_03"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_up_idle_04"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_up_idle_05"
+      }
+    ],
+    "frameRate": 6,
+    "repeat": -1
+  },
+  "sword_new_up_walk": {
+    "key": "sword_new_up_walk",
+    "frames": [
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_up_walk_00"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_up_walk_01"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_up_walk_02"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_up_walk_03"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_up_walk_04"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_up_walk_05"
+      }
+    ],
+    "frameRate": 10,
+    "repeat": -1
+  },
+  "sword_new_up_attack": {
+    "key": "sword_new_up_attack",
+    "frames": [
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_up_attack_00"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_up_attack_01"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_up_attack_02"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_up_attack_03"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_up_attack_04"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_up_attack_05"
+      }
+    ],
+    "frameRate": 12,
+    "repeat": 0
+  },
+  "sword_new_up_cast": {
+    "key": "sword_new_up_cast",
+    "frames": [
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_up_cast_00"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_up_cast_01"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_up_cast_02"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_up_cast_03"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_up_cast_04"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_up_cast_05"
+      }
+    ],
+    "frameRate": 12,
+    "repeat": 0
+  },
+  "sword_new_up_hit": {
+    "key": "sword_new_up_hit",
+    "frames": [
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_up_hit_00"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_up_hit_01"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_up_hit_02"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_up_hit_03"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_up_hit_04"
+      },
+      {
+        "key": "sword_new_atlas",
+        "frame": "sword_new_up_hit_05"
+      }
+    ],
+    "frameRate": 10,
+    "repeat": 0
+  }
+}

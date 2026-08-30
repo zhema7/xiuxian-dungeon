@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 491" font-family="SimSun, 宋体, serif">
+  <defs>
+    <marker id="ah" markerWidth="12" markerHeight="12" refX="9" refY="4" orient="auto">
+      <path d="M0,0 L9,4 L0,8 z" fill="#000"/>
+    </marker>
+    <style>
+      .box{fill:#fff;stroke:#000;stroke-width:1.6}
+      .dash{fill:none;stroke:#000;stroke-width:1.2;stroke-dasharray:6 4}
+      .edge{stroke:#000;stroke-width:1.4;fill:none}
+      .lbl{font-size:14px;fill:#000;text-anchor:middle}
+      .lblb{font-size:14px;fill:#000;text-anchor:middle;font-weight:bold}
+      .sm{font-size:11px;fill:#000;text-anchor:middle}
+      .cap{font-size:11px;fill:#000;text-anchor:start}
+    </style>
+  </defs>
+  <g transform="scale(0.9444)">
+    <text x="360" y="34" class="lblb" font-size="17">图 1　系统模块图</text>
+
+    <rect class="box" x="30" y="215" width="150" height="80" rx="4"/>
+    <text x="105" y="245" class="lbl">词池与</text>
+    <text x="105" y="265" class="lbl">规则模板</text>
+    <text x="105" y="283" class="sm">（词汇 / 修饰参数）</text>
+
+    <rect class="box" x="250" y="215" width="170" height="80" rx="4"/>
+    <text x="335" y="248" class="lbl">程序化生成器</text>
+    <text x="335" y="270" class="sm">（基于种子随机数）</text>
+
+    <rect class="box" x="500" y="110" width="200" height="75" rx="4"/>
+    <text x="600" y="140" class="lbl">运行时动态</text>
+    <text x="600" y="162" class="lbl">注册模块</text>
+
+    <rect class="dash" x="488" y="218" width="224" height="200"/>
+    <text x="600" y="212" class="sm">静态配置表</text>
+
+    <rect class="box" x="500" y="235" width="200" height="45" rx="3"/>
+    <text x="600" y="262" class="lbl">套装表 SETS</text>
+
+    <rect class="box" x="500" y="295" width="200" height="45" rx="3"/>
+    <text x="600" y="322" class="lbl">装备基座表 ITEM_BASES</text>
+
+    <rect class="box" x="500" y="355" width="200" height="45" rx="3"/>
+    <text x="600" y="382" class="lbl">功法表 SKILLS</text>
+
+    <rect class="box" x="30" y="410" width="210" height="70" rx="4"/>
+    <text x="135" y="438" class="lblb">玩家存档</text>
+    <text x="135" y="460" class="sm">（持久化 / 读档重建）</text>
+
+    <line class="edge" x1="180" y1="255" x2="248" y2="255" marker-end="url(#ah)"/>
+    <path class="edge" d="M420,255 L498,150" marker-end="url(#ah)"/>
+
+    <line class="edge" x1="600" y1="185" x2="600" y2="233" marker-end="url(#ah)"/>
+    <line class="edge" x1="600" y1="280" x2="600" y2="293" marker-end="url(#ah)"/>
+    <line class="edge" x1="600" y1="340" x2="600" y2="353" marker-end="url(#ah)"/>
+    <text x="612" y="262" class="cap">依次注入</text>
+
+    <path class="edge" d="M500,150 C 340,175 320,395 240,408" marker-end="url(#ah)"/>
+    <text x="338" y="200" class="cap">持久化</text>
+    <path class="edge" d="M240,418 C 320,448 345,165 500,168" marker-end="url(#ah)"/>
+    <text x="340" y="442" class="cap">读档重建</text>
+  </g>
+</svg>

@@ -1,0 +1,129 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 560" width="680" height="560" font-family="宋体" font-size="12">
+  <!-- 背景 -->
+  <rect x="0" y="0" width="680" height="560" fill="#ffffff"/>
+  <text x="340" y="30" text-anchor="middle" font-size="15" font-weight="bold">图 3  攻击形态（AttackMode）映射表</text>
+
+  <!-- 表头 -->
+  <g stroke="#000000" fill="#ffffff">
+    <rect x="20" y="60" width="50" height="40"/>
+    <rect x="70" y="60" width="160" height="40"/>
+    <rect x="230" y="60" width="200" height="40"/>
+    <rect x="430" y="60" width="230" height="40"/>
+  </g>
+  <g text-anchor="middle">
+    <text x="45" y="86">序号</text>
+    <text x="150" y="86">攻击形态</text>
+    <text x="330" y="86">触发来源</text>
+    <text x="545" y="86">说明</text>
+  </g>
+
+  <!-- 行数据 -->
+  <!-- row generator -->
+  <g stroke="#000000" fill="#ffffff">
+    <rect x="20" y="100" width="50" height="38"/>
+    <rect x="70" y="100" width="160" height="38"/>
+    <rect x="230" y="100" width="200" height="38"/>
+    <rect x="430" y="100" width="230" height="38"/>
+
+    <rect x="20" y="138" width="50" height="38"/>
+    <rect x="70" y="138" width="160" height="38"/>
+    <rect x="230" y="138" width="200" height="38"/>
+    <rect x="430" y="138" width="230" height="38"/>
+
+    <rect x="20" y="176" width="50" height="38"/>
+    <rect x="70" y="176" width="160" height="38"/>
+    <rect x="230" y="176" width="200" height="38"/>
+    <rect x="430" y="176" width="230" height="38"/>
+
+    <rect x="20" y="214" width="50" height="38"/>
+    <rect x="70" y="214" width="160" height="38"/>
+    <rect x="230" y="214" width="200" height="38"/>
+    <rect x="430" y="214" width="230" height="38"/>
+
+    <rect x="20" y="252" width="50" height="38"/>
+    <rect x="70" y="252" width="160" height="38"/>
+    <rect x="230" y="252" width="200" height="38"/>
+    <rect x="430" y="252" width="230" height="38"/>
+
+    <rect x="20" y="290" width="50" height="38"/>
+    <rect x="70" y="290" width="160" height="38"/>
+    <rect x="230" y="290" width="200" height="38"/>
+    <rect x="430" y="290" width="230" height="38"/>
+
+    <rect x="20" y="328" width="50" height="38"/>
+    <rect x="70" y="328" width="160" height="38"/>
+    <rect x="230" y="328" width="200" height="38"/>
+    <rect x="430" y="328" width="230" height="38"/>
+
+    <rect x="20" y="366" width="50" height="38"/>
+    <rect x="70" y="366" width="160" height="38"/>
+    <rect x="230" y="366" width="200" height="38"/>
+    <rect x="430" y="366" width="230" height="38"/>
+
+    <rect x="20" y="404" width="50" height="38"/>
+    <rect x="70" y="404" width="160" height="38"/>
+    <rect x="230" y="404" width="200" height="38"/>
+    <rect x="430" y="404" width="230" height="38"/>
+
+    <rect x="20" y="442" width="50" height="38"/>
+    <rect x="70" y="442" width="160" height="38"/>
+    <rect x="230" y="442" width="200" height="38"/>
+    <rect x="430" y="442" width="230" height="38"/>
+  </g>
+
+  <!-- 单元格文字 -->
+  <g text-anchor="middle">
+    <text x="45" y="124">1</text>
+    <text x="150" y="124">近战弧击</text>
+    <text x="330" y="124">职业默认/招式</text>
+    <text x="545" y="124">剑修基础普攻弧形挥击</text>
+
+    <text x="45" y="162">2</text>
+    <text x="150" y="162">旋风</text>
+    <text x="330" y="162">主修招式</text>
+    <text x="545" y="162">招式自带旋转范围攻击</text>
+
+    <text x="45" y="200">3</text>
+    <text x="150" y="200">飞剑</text>
+    <text x="330" y="200">青冥剑套 4 件</text>
+    <text x="545" y="200">套装改写：攻击化为飞剑齐射</text>
+
+    <text x="45" y="238">4</text>
+    <text x="150" y="238">飞剑爆</text>
+    <text x="330" y="238">青冥剑套 + 招式</text>
+    <text x="545" y="238">飞剑穿透后爆发伤害</text>
+
+    <text x="45" y="276">5</text>
+    <text x="150" y="276">法弹</text>
+    <text x="330" y="276">仙子招式</text>
+    <text x="545" y="276">射出魔法弹幕</text>
+
+    <text x="45" y="314">6</text>
+    <text x="150" y="314">冰环</text>
+    <text x="330" y="314">玄冥法套 4 件</text>
+    <text x="545" y="314">套装改写：大范围冰环冻结</text>
+
+    <text x="45" y="352">7</text>
+    <text x="150" y="352">冰爆</text>
+    <text x="330" y="352">玄冥法套 + 招式</text>
+    <text x="545" y="352">冰环后深度冻结爆发</text>
+
+    <text x="45" y="390">8</text>
+    <text x="150" y="390">雷链</text>
+    <text x="330" y="390">紫霄雷套 4 件</text>
+    <text x="545" y="390">套装改写：闪电链跳跃</text>
+
+    <text x="45" y="428">9</text>
+    <text x="150" y="428">剑阵</text>
+    <text x="330" y="428">凡人套 4 件(神通)</text>
+    <text x="545" y="428">套装改写神通：大庚剑阵</text>
+
+    <text x="45" y="466">10</text>
+    <text x="150" y="466">巨剑</text>
+    <text x="330" y="466">主修招式</text>
+    <text x="545" y="466">招式重劈巨型剑气</text>
+  </g>
+
+  <text x="20" y="510" font-size="11" fill="#555555">说明：攻击形态由优先级链求值得出；标"套装 N 件"者为套装达件数阈值改写，</text>
+  <text x="20" y="528" font-size="11" fill="#555555">标"神通"者经 resolveSetArtMode 同步改写神通形态。具体映射以配置数据为准（数据驱动）。</text>
+</svg>

@@ -1,0 +1,122 @@
+[
+  {
+    "id": "east_city",
+    "name": "碧波城",
+    "type": "city",
+    "x": 600,
+    "y": 850,
+    "icon": "city",
+    "description": "东域海滨大城，海族与修士共处。特产海晶珠。",
+    "domain": "east",
+    "unlockCondition": { "level": 25 }
+  },
+  {
+    "id": "haishi_entrance",
+    "name": "海市蜃楼",
+    "type": "dungeon",
+    "x": 280,
+    "y": 1050,
+    "icon": "dungeon",
+    "description": "幻象迷离的海市蜃楼，虚实的界限在此模糊。",
+    "domain": "east",
+    "dungeonData": { "region": "haishi", "startFloor": 15, "difficulty": 1 },
+    "unlockCondition": { "level": 25 }
+  },
+  {
+    "id": "jiaolong_entrance",
+    "name": "蛟龙渊",
+    "type": "dungeon",
+    "x": 920,
+    "y": 1050,
+    "icon": "dungeon",
+    "description": "深海蛟龙巢穴，传说有真龙遗蜕。高难度水域秘境。",
+    "domain": "east",
+    "dungeonData": { "region": "jiaolong", "startFloor": 15, "difficulty": 2 },
+    "unlockCondition": { "level": 35 }
+  },
+  {
+    "id": "shanhu_lingmai",
+    "name": "珊瑚灵脉",
+    "type": "resource",
+    "x": 200,
+    "y": 750,
+    "icon": "resource",
+    "resourceType": "spirit_stone",
+    "resourceLevel": 3,
+    "description": "海底珊瑚丛中的灵脉，灵石品质上乘。",
+    "domain": "east",
+    "unlockCondition": { "level": 25 }
+  },
+  {
+    "id": "hailingzhi_yuan",
+    "name": "海灵芝园",
+    "type": "resource",
+    "x": 980,
+    "y": 750,
+    "icon": "resource",
+    "resourceType": "herb",
+    "resourceLevel": 3,
+    "description": "海中灵芝生长之地，炼丹极品材料。",
+    "domain": "east",
+    "unlockCondition": { "level": 28 }
+  },
+  {
+    "id": "east_wudao",
+    "name": "沧海悟道石",
+    "type": "resource",
+    "x": 450,
+    "y": 400,
+    "icon": "resource",
+    "resourceType": "insight",
+    "resourceLevel": 2,
+    "description": "海潮冲刷千年之悟道石，蕴含沧海桑田之理。",
+    "domain": "east",
+    "unlockCondition": { "realm": 3 }
+  },
+  {
+    "id": "east_teleport",
+    "name": "碧波传送阵",
+    "type": "teleport",
+    "x": 600,
+    "y": 950,
+    "icon": "teleport",
+    "description": "连接东域各地的传送法阵。",
+    "domain": "east",
+    "unlockCondition": null
+  },
+  {
+    "id": "landmark_haitian",
+    "name": "海天一线",
+    "type": "landmark",
+    "x": 600,
+    "y": 300,
+    "icon": "landmark",
+    "description": "东域尽头，海天相接之处。传说渡海可至仙界。",
+    "domain": "east",
+    "unlockCondition": { "level": 25 }
+  },
+  {
+    "id": "gate_east_to_south",
+    "name": "通往南域",
+    "type": "domain_gate",
+    "x": 100,
+    "y": 1650,
+    "icon": "teleport",
+    "description": "西南行返回南域。",
+    "domain": "east",
+    "domainGateTarget": "south",
+    "unlockCondition": null
+  },
+  {
+    "id": "gate_east_to_central",
+    "name": "通往中域",
+    "type": "domain_gate",
+    "x": 100,
+    "y": 850,
+    "icon": "teleport",
+    "description": "西行至中域。",
+    "domain": "east",
+    "domainGateTarget": "central",
+    "unlockCondition": null
+  }
+]

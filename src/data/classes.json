@@ -1,0 +1,47 @@
+{
+  "sword": {
+    "id": "sword",
+    "name": "剑修",
+    "base": { "hp": 110, "atk": 14, "def": 5, "speed": 118, "crit": 0.08 },
+    "growth": { "hp": 14, "atk": 3.2, "def": 1.1 },
+    "defaultStyle": "sk_sanlian",
+    "tint": null,
+    "dirRemap": { "left": "right", "right": "left", "up": "down" }
+  },
+  "fairy": {
+    "id": "fairy",
+    "name": "仙子",
+    "base": { "hp": 90, "atk": 17, "def": 4, "speed": 112, "crit": 0.05 },
+    "growth": { "hp": 11, "atk": 3.8, "def": 0.9 },
+    "defaultStyle": "sk_huodan",
+    "tint": null,
+    "dirRemap": { "up": "down" }
+  },
+  "sword_new": {
+    "id": "sword_new",
+    "name": "道修",
+    "base": { "hp": 120, "atk": 13, "def": 6, "speed": 115, "crit": 0.06 },
+    "growth": { "hp": 15, "atk": 3.0, "def": 1.2 },
+    "defaultStyle": "sk_jujian",
+    "tint": null,
+    "dirRemap": { "left": "right", "right": "left", "up": "down" }
+  },
+  "fairy_new": {
+    "id": "fairy_new",
+    "name": "合欢",
+    "base": { "hp": 95, "atk": 18, "def": 3, "speed": 110, "crit": 0.10 },
+    "growth": { "hp": 10, "atk": 4.0, "def": 0.8 },
+    "defaultStyle": "sk_xiangsi",
+    "tint": null,
+    "dirRemap": { "up": "down" }
+  },
+  "mage": {
+    "id": "mage",
+    "name": "法修",
+    "base": { "hp": 100, "atk": 16, "def": 4, "speed": 108, "crit": 0.07 },
+    "growth": { "hp": 12, "atk": 3.5, "def": 1.0 },
+    "defaultStyle": "sk_shandian",
+    "tint": null,
+    "dirRemap": { "left": "right", "right": "left", "up": "down" }
+  }
+}

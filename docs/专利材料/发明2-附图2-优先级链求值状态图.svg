@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 560" width="680" height="560" font-family="宋体" font-size="13">
+  <!-- 背景 -->
+  <rect x="0" y="0" width="680" height="560" fill="#ffffff"/>
+  <text x="340" y="30" text-anchor="middle" font-size="15" font-weight="bold">图 2  攻击形态优先级链求值状态图</text>
+
+  <!-- 起点 -->
+  <rect x="290" y="50" width="120" height="40" rx="20" fill="#ffffff" stroke="#000000"/>
+  <text x="350" y="75" text-anchor="middle">触发攻击</text>
+
+  <!-- 判定1 套装改写 -->
+  <polygon points="350,110 420,140 350,170 280,140" fill="#ffffff" stroke="#000000"/>
+  <text x="350" y="135" text-anchor="middle" font-size="11">已装备套装且</text>
+  <text x="350" y="150" text-anchor="middle" font-size="11">件数达阈值？</text>
+
+  <line x1="350" y1="90" x2="350" y2="110" stroke="#000000"/>
+  <text x="430" y="125" font-size="11">是</text>
+  <text x="270" y="125" font-size="11">否</text>
+
+  <!-- 套装形态 -->
+  <rect x="440" y="120" width="180" height="40" fill="#ffffff" stroke="#000000"/>
+  <text x="530" y="145" text-anchor="middle">① 套装改写攻击形态</text>
+  <line x1="420" y1="140" x2="440" y2="140" stroke="#000000"/>
+
+  <!-- 判定2 主修招式 -->
+  <polygon points="350,200 420,230 350,260 280,230" fill="#ffffff" stroke="#000000"/>
+  <text x="350" y="225" text-anchor="middle" font-size="11">主修招式</text>
+  <text x="350" y="240" text-anchor="middle" font-size="11">匹配职业？</text>
+  <line x1="280" y1="140" x2="230" y2="200" stroke="#000000"/>
+  <line x1="230" y1="200" x2="280" y2="230" stroke="#000000"/>
+  <text x="200" y="205" font-size="11">否</text>
+
+  <!-- 招式形态 -->
+  <rect x="440" y="210" width="180" height="40" fill="#ffffff" stroke="#000000"/>
+  <text x="530" y="235" text-anchor="middle">② 招式攻击形态</text>
+  <line x1="420" y1="230" x2="440" y2="230" stroke="#000000"/>
+  <text x="430" y="215" font-size="11">是</text>
+
+  <!-- 判定3 默认 -->
+  <polygon points="350,290 420,320 350,350 280,320" fill="#ffffff" stroke="#000000"/>
+  <text x="350" y="315" text-anchor="middle" font-size="11">使用</text>
+  <text x="350" y="330" text-anchor="middle" font-size="11">职业默认形态？</text>
+  <line x1="280" y1="230" x2="230" y2="290" stroke="#000000"/>
+  <line x1="230" y1="290" x2="280" y2="320" stroke="#000000"/>
+  <text x="200" y="295" font-size="11">否</text>
+
+  <!-- 默认形态 -->
+  <rect x="440" y="300" width="180" height="40" fill="#ffffff" stroke="#000000"/>
+  <text x="530" y="325" text-anchor="middle">③ 职业默认形态</text>
+  <line x1="420" y1="320" x2="440" y2="320" stroke="#000000"/>
+  <text x="430" y="305" font-size="11">是</text>
+
+  <!-- 三条分支汇聚 -->
+  <line x1="530" y1="160" x2="530" y2="380" stroke="#000000"/>
+  <line x1="530" y1="250" x2="530" y2="380" stroke="#000000"/>
+  <line x1="530" y1="340" x2="530" y2="380" stroke="#000000"/>
+  <line x1="350" y1="350" x2="350" y2="380" stroke="#000000"/>
+  <line x1="350" y1="380" x2="530" y2="380" stroke="#000000"/>
+
+  <!-- 最终形态 -->
+  <rect x="350" y="380" width="200" height="40" fill="#ffffff" stroke="#000000"/>
+  <text x="450" y="405" text-anchor="middle">当前攻击形态输出</text>
+
+  <!-- 单键 -->
+  <rect x="350" y="440" width="200" height="40" rx="20" fill="#ffffff" stroke="#000000"/>
+  <text x="450" y="465" text-anchor="middle">单一攻击键触发</text>
+  <line x1="450" y1="420" x2="450" y2="440" stroke="#000000"/>
+
+  <!-- 神通同步 虚线 -->
+  <rect x="40" y="120" width="200" height="40" fill="#ffffff" stroke="#000000" stroke-dasharray="6 4"/>
+  <text x="140" y="145" text-anchor="middle">resolveSetArtMode</text>
+  <line x1="140" y1="160" x2="140" y2="185" stroke="#000000" stroke-dasharray="4 3"/>
+  <rect x="40" y="185" width="200" height="40" fill="#ffffff" stroke="#000000" stroke-dasharray="6 4"/>
+  <text x="140" y="210" text-anchor="middle">神通形态（套装改写）</text>
+  <text x="140" y="270" text-anchor="middle" font-size="11" fill="#555555">套装同时改写普攻形态</text>
+  <text x="140" y="288" text-anchor="middle" font-size="11" fill="#555555">与神通形态（件数阈值）</text>
+
+  <text x="20" y="540" font-size="11" fill="#555555">说明：优先级链为 ① 套装改写 > ② 主修招式 > ③ 职业默认；虚线为神通形态同步求值。</text>
+</svg>

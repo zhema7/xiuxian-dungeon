@@ -1,0 +1,143 @@
+    :root { --ink:#e8e3d3; --dim:#9a937f; --line:#3a4356; --bg:#10141d; }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0; height: 100%; overflow: hidden;
+      background: #0b0e14; touch-action: none;
+      -webkit-user-select: none; user-select: none;
+      font-family: "Courier New", "SimSun", monospace;
+      color: var(--ink);
+    }
+    #app { position: fixed; inset: 0; }
+    #game { position: absolute; inset: 0; }
+    #game canvas { image-rendering: pixelated; }
+
+    /* ---------- HUD ---------- */
+    #hud {
+      position: absolute; top: 0; left: 0; right: 0;
+      padding: max(8px, env(safe-area-inset-top)) 10px 0 10px;
+      pointer-events: none; z-index: 10; font-size: 12px;
+      text-shadow: 1px 1px 0 #000;
+    }
+    #hud .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    #hud .tag { color: var(--dim); }
+    .bar { height: 9px; background: #1c2230; border: 1px solid var(--line); margin: 3px 0 6px; position: relative; }
+    .bar > i { position: absolute; left: 0; top: 0; bottom: 0; transition: width .15s; }
+    #hpbar > i { background: linear-gradient(#e74c3c,#a93226); }
+    #expbar > i { background: linear-gradient(#9b59b6,#6c3483); }
+    .bar > b { position: absolute; inset: 0; text-align: center; font-size: 8px; line-height: 9px; font-weight: normal; color: #fff; }
+
+    /* ---------- 触控 ---------- */
+    #controls { position: absolute; inset: 0; z-index: 20; pointer-events: none; }
+    #joy {
+      position: absolute; left: 18px; bottom: calc(24px + env(safe-area-inset-bottom));
+      width: 110px; height: 110px; border-radius: 50%;
+      background: rgba(40,48,66,.35); border: 1px solid rgba(120,132,160,.4);
+      pointer-events: auto;
+    }
+    #joyKnob {
+      position: absolute; left: 50%; top: 50%; width: 46px; height: 46px;
+      border-radius: 50%; transform: translate(-50%,-50%);
+      background: rgba(150,164,196,.5); border: 1px solid rgba(200,210,235,.6);
+    }
+    .btn {
+      position: absolute; border-radius: 50%; pointer-events: auto;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; color: var(--ink); text-shadow: 1px 1px 0 #000;
+      border: 1px solid rgba(200,210,235,.45); background: rgba(40,48,66,.45);
+    }
+    .btn:active { background: rgba(90,104,140,.6); }
+    #btnAtk { right: 20px; bottom: calc(30px + env(safe-area-inset-bottom)); width: 76px; height: 76px; font-size: 15px; border-color: #c0392b; }
+    #btnPot { right: 108px; bottom: calc(24px + env(safe-area-inset-bottom)); width: 52px; height: 52px; }
+    #btnBag { right: 24px; bottom: calc(126px + env(safe-area-inset-bottom)); width: 52px; height: 52px; }
+    #btnSkill { right: 106px; bottom: calc(96px + env(safe-area-inset-bottom)); width: 56px; height: 56px; border-color: #8e44ad; }
+    #btnSkill.cd { opacity: .45; }
+    #btnAct { right: 108px; bottom: calc(160px + env(safe-area-inset-bottom)); width: 52px; height: 52px; border-color: #d4ac0d; display: none; }
+    #btnRetreat {
+      position: absolute; right: 10px; top: calc(92px + env(safe-area-inset-top));
+      width: auto; height: auto; padding: 6px 12px; border-radius: 6px;
+      font-size: 12px; border-color: #48c9b0; display: none;
+    }
+
+    /* ---------- 面板 ---------- */
+    #panel {
+      position: absolute; inset: 0; z-index: 30; display: none;
+      background: rgba(5,8,14,.72); align-items: center; justify-content: center;
+    }
+    #panel.open { display: flex; }
+    .card {
+      width: min(86vw, 340px); max-height: 78vh; overflow-y: auto;
+      background: var(--bg); border: 2px solid var(--line); padding: 14px;
+      box-shadow: 0 0 0 2px #0b0e14, 0 8px 30px rgba(0,0,0,.6);
+    }
+    .card h3 { margin: 0 0 8px; font-size: 15px; color: #f0d98c; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+    .card p { font-size: 12px; line-height: 1.7; margin: 6px 0; }
+    .card .dim { color: var(--dim); }
+    .card button {
+      font-family: inherit; font-size: 13px; color: var(--ink);
+      background: #232c3f; border: 1px solid var(--line); padding: 8px 14px;
+      margin: 8px 6px 0 0; cursor: pointer;
+    }
+    .card button:active { background: #34405c; }
+    .item {
+      display: flex; justify-content: space-between; align-items: center; gap: 6px;
+      border: 1px solid var(--line); padding: 6px 8px; margin-top: 6px; font-size: 12px;
+    }
+    .item button { margin: 0; padding: 4px 10px; font-size: 12px; }
+    .item .sub { display: block; font-size: 10px; color: var(--dim); margin-top: 2px; }
+    .q0 { color: #cfd3da; } .q1 { color: #58d68d; } .q2 { color: #5dade2; } .q3 { color: #af7ac5; }
+    .equipped-tag { color: #f0d98c; font-size: 11px; }
+
+    /* 页签 */
+    .tabs { display: flex; gap: 4px; margin-bottom: 8px; }
+    .tabs button { flex: 1; margin: 0 !important; padding: 6px 0; }
+    .tabs button.active { background: #34405c; color: #f0d98c; border-color: #f0d98c; }
+    .tbranch { border: 1px solid var(--line); padding: 6px 8px; margin-top: 8px; }
+    .tbranch h4 { margin: 0 0 4px; font-size: 12px; color: #5dade2; }
+    .tnode { display: flex; justify-content: space-between; align-items: center; font-size: 12px; padding: 4px 0; border-top: 1px dashed #28303f; }
+    .tnode .pips { color: #f0d98c; letter-spacing: 2px; }
+    .tnode button { margin: 0; padding: 2px 10px; }
+
+    /* ---------- 开机画面 ---------- */
+    #titleVideo {
+      position: absolute; inset: 0; z-index: 5; display: none;
+      width: 100%; height: 100%; object-fit: cover; pointer-events: none;
+    }
+    #title {
+      position: absolute; inset: 0; z-index: 15; display: none;
+      flex-direction: column; align-items: center; pointer-events: none;
+      padding: max(8px, env(safe-area-inset-top)) 16px calc(14vh + env(safe-area-inset-bottom));
+    }
+    #titleName {
+      margin-top: 13vh; font-size: 34px; letter-spacing: 6px; color: #f0d98c;
+      text-shadow: 0 0 12px rgba(240,217,140,.45), 2px 2px 0 #4a3510, 3px 3px 0 #000;
+      writing-mode: horizontal-tb;
+    }
+    #titleSub { margin-top: 10px; font-size: 11px; color: var(--dim); letter-spacing: 3px; text-shadow: 1px 1px 0 #000; }
+    #titleBtns { margin-top: auto; display: flex; flex-direction: column; gap: 12px; width: 200px; }
+    #titleBtns button {
+      pointer-events: auto; font-family: inherit; font-size: 16px; letter-spacing: 4px;
+      color: var(--ink); background: rgba(28,36,54,.85); border: 1px solid var(--line);
+      padding: 11px 0; cursor: pointer; text-shadow: 1px 1px 0 #000;
+      box-shadow: 0 0 0 2px #0b0e14, 0 4px 14px rgba(0,0,0,.5);
+    }
+    #titleBtns button:active { background: #34405c; }
+    #titleBtns button:disabled { opacity: .4; }
+    #titleBtns button.primary { border-color: #f0d98c; color: #f0d98c; }
+    #titleVer { margin-top: 14px; font-size: 10px; color: #565e73; letter-spacing: 2px; text-shadow: 1px 1px 0 #000; }
+    #titleAuthor { margin-top: 6px; font-size: 9px; color: #3a4152; letter-spacing: 3px; text-shadow: 1px 1px 0 #000; }
+
+    /* ---------- 提示 ---------- */
+    #toast {
+      position: absolute; left: 50%; top: 18%; transform: translateX(-50%);
+      z-index: 40; pointer-events: none; font-size: 13px; text-align: center;
+      text-shadow: 1px 1px 0 #000; opacity: 0; transition: opacity .25s;
+    }
+    #dialog {
+      position: absolute; left: 0; right: 0; bottom: 0; z-index: 25; display: none;
+      padding: 0 10px calc(10px + env(safe-area-inset-bottom));
+    }
+    #dialog.open { display: block; }
+    #dialog .card { width: 100%; max-height: 34vh; }
+    #dialogName { color: #f0d98c; font-size: 13px; margin-bottom: 4px; }
+    #dialogText { font-size: 13px; line-height: 1.8; min-height: 40px; }
+    #dialogHint { text-align: right; color: var(--dim); font-size: 11px; margin-top: 6px; }

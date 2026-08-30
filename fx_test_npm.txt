@@ -1,0 +1,16 @@
+
+> xiuxian-dungeon@0.1.0 test
+> node ../vitest-env/node_modules/vitest/vitest.mjs run --root . --config ./vitest.config.ts
+
+
+[1m[46m RUN [49m[22m [36mv3.2.7 [39m[90mc:/kimi/修仙与地上城[39m
+
+ [32m✓[39m tests/anim-guard.test.ts [2m([22m[2m6 tests[22m[2m)[22m[32m 4[2mms[22m[39m
+ [32m✓[39m tests/state.test.ts [2m([22m[2m7 tests[22m[2m)[22m[32m 34[2mms[22m[39m
+ [32m✓[39m tests/core.test.ts [2m([22m[2m22 tests[22m[2m)[22m[32m 77[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m3 passed[39m[22m[90m (3)[39m
+[2m      Tests [22m [1m[32m35 passed[39m[22m[90m (35)[39m
+[2m   Start at [22m 16:05:17
+[2m   Duration [22m 1.29s[2m (transform 389ms, setup 0ms, collect 710ms, tests 116ms, environment 1ms, prepare 822ms)[22m
+

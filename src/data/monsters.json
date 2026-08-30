@@ -1,0 +1,112 @@
+{
+  "slime": {
+    "id": "slime", "name": "腐液兽", "tex": "m_slime",
+    "hp": 34, "atk": 8, "def": 2, "speed": 42, "exp": 12, "gold": [3, 8],
+    "ai": "melee", "cd": 1300
+  },
+  "bat": {
+    "id": "bat", "name": "阴蝠", "tex": "m_bat",
+    "hp": 22, "atk": 6, "def": 1, "speed": 86, "exp": 10, "gold": [2, 6],
+    "ai": "melee", "cd": 1000
+  },
+  "spitter": {
+    "id": "spitter", "name": "吐息蟾", "tex": "m_spitter",
+    "hp": 28, "atk": 11, "def": 2, "speed": 34, "exp": 17, "gold": [4, 9],
+    "ai": "ranged", "range": 170, "cd": 2300
+  },
+  "boss": {
+    "id": "boss", "name": "守关魔将", "tex": "m_boss",
+    "hp": 190, "atk": 17, "def": 5, "speed": 58, "exp": 90, "gold": [40, 80],
+    "ai": "boss", "cd": 1500, "scale": 1.3
+  },
+  "wraith": {
+    "id": "wraith", "name": "沼泽魑魅", "tex": "m_wraith",
+    "hp": 46, "atk": 13, "def": 3, "speed": 74, "exp": 22, "gold": [6, 12],
+    "ai": "melee", "cd": 1100
+  },
+  "flower": {
+    "id": "flower", "name": "蚀骨花", "tex": "m_flower",
+    "hp": 60, "atk": 16, "def": 4, "speed": 0, "exp": 28, "gold": [8, 14],
+    "ai": "ranged", "range": 190, "cd": 2000
+  },
+  "tortoise": {
+    "id": "tortoise", "name": "泥甲玄龟", "tex": "m_tortoise",
+    "hp": 95, "atk": 12, "def": 9, "speed": 26, "exp": 30, "gold": [8, 15],
+    "ai": "melee", "cd": 1600
+  },
+  "boss2": {
+    "id": "boss2", "name": "泽主玄冥", "tex": "m_boss2",
+    "hp": 300, "atk": 24, "def": 8, "speed": 52, "exp": 150, "gold": [70, 120],
+    "ai": "boss", "cd": 1400, "scale": 1.45
+  },
+  "eagle": {
+    "id": "eagle", "name": "雷鹰", "tex": "m_eagle",
+    "hp": 70, "atk": 20, "def": 4, "speed": 96, "exp": 40, "gold": [10, 18],
+    "ai": "melee", "cd": 900
+  },
+  "golem": {
+    "id": "golem", "name": "碎石魔像", "tex": "m_golem",
+    "hp": 170, "atk": 22, "def": 14, "speed": 24, "exp": 55, "gold": [12, 20],
+    "ai": "melee", "cd": 1800
+  },
+  "moth": {
+    "id": "moth", "name": "幽萤蝶", "tex": "m_moth",
+    "hp": 60, "atk": 26, "def": 5, "speed": 40, "exp": 48, "gold": [10, 18],
+    "ai": "ranged", "range": 200, "cd": 1900
+  },
+  "boss3": {
+    "id": "boss3", "name": "深渊魔尊", "tex": "m_boss3",
+    "hp": 520, "atk": 34, "def": 12, "speed": 60, "exp": 260, "gold": [120, 200],
+    "ai": "boss", "cd": 1300, "scale": 1.55
+  },
+  "skeleton": {
+    "id": "skeleton", "name": "枯骨修罗", "tex": "m_wraith",
+    "hp": 52, "atk": 24, "def": 2, "speed": 82, "exp": 26, "gold": [5, 11],
+    "ai": "melee", "cd": 950
+  },
+  "phantom": {
+    "id": "phantom", "name": "幽魂", "tex": "m_wraith",
+    "hp": 38, "atk": 20, "def": 1, "speed": 88, "exp": 32, "gold": [6, 13],
+    "ai": "ranged", "range": 180, "cd": 1700
+  },
+  "brute": {
+    "id": "brute", "name": "蛮荒兽", "tex": "m_golem",
+    "hp": 140, "atk": 26, "def": 10, "speed": 32, "exp": 50, "gold": [10, 17],
+    "ai": "melee", "cd": 1650
+  },
+  "spirit_fox": {
+    "id": "spirit_fox", "name": "灵狐", "tex": "m_spirit_fox",
+    "hp": 55, "atk": 18, "def": 3, "speed": 92, "exp": 35, "gold": [8, 16],
+    "ai": "melee", "cd": 800
+  },
+  "stone_guardian": {
+    "id": "stone_guardian", "name": "石甲守卫", "tex": "m_stone_guardian",
+    "hp": 220, "atk": 20, "def": 20, "speed": 20, "exp": 60, "gold": [12, 22],
+    "ai": "melee", "cd": 2000, "scale": 1.2
+  },
+  "demon_general": {
+    "id": "demon_general", "name": "魔将", "tex": "m_demon_general",
+    "hp": 480, "atk": 38, "def": 14, "speed": 56, "exp": 240, "gold": [100, 180],
+    "ai": "boss", "cd": 1300, "scale": 1.6
+  },
+  "dark_sword": {
+    "id": "dark_sword", "name": "魔剑修", "tex": "e_dark_sword",
+    "hp": 120, "atk": 28, "def": 8, "speed": 70, "exp": 1, "gold": [0, 0],
+    "ai": "melee", "cd": 1000
+  },
+  "fire_mage": {
+    "id": "fire_mage", "name": "火法修士", "tex": "e_fire_mage",
+    "hp": 80, "atk": 32, "def": 4, "speed": 50, "exp": 1, "gold": [0, 0],
+    "ai": "ranged", "range": 200, "cd": 1800
+  },
+  "beast_tamer": {
+    "id": "beast_tamer", "name": "驭兽师", "tex": "e_beast_tamer",
+    "hp": 100, "atk": 22, "def": 6, "speed": 48, "exp": 1, "gold": [0, 0],
+    "ai": "ranged", "range": 180, "cd": 2000
+  },
+  "shadow_assassin": {
+    "id": "shadow_assassin", "name": "暗影刺客", "tex": "e_shadow_assassin",
+    "hp": 70, "atk": 34, "def": 2, "speed": 110, "exp": 1, "gold": [0, 0],
+    "ai": "melee", "cd": 700
+  }
+}

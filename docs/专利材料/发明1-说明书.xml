@@ -1,0 +1,224 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  发明专利申请说明书（发明 1）
+  发明名称：一种游戏内容的程序化生成与运行时动态注册方法
+  对应文件：发明1-说明书.md（同一内容的结构化 XML 版）
+  附图引用：发明1-附图1-系统模块图.svg / 附图2-读档重建时序图.svg / 附图3-现世策略流程图.svg
+  说明：本 XML 为说明书的结构化表达，供代理机构与文档系统解析使用；提交 CNIPA 时仍需由代理师排
+        版为法定文本并附正式申请图。实施例中代码以 CDATA 节保存原文，避免转义污染。
+-->
+<patent-description
+  xmlns="http://www.wipo.int/standards/XMLSchema/ST.36"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.wipo.int/standards/XMLSchema/ST.36"
+  lang="zh"
+  doc-type="description">
+
+  <invention-title>一种游戏内容的程序化生成与运行时动态注册方法</invention-title>
+
+  <technical-field>
+    本发明涉及计算机游戏软件技术领域，具体涉及一种在运行时基于词池与规则模板程序化生成游戏内容（装备套装、功法心法、名器）并将生成内容动态注册至静态配置表、随玩家存档持久化与读档重建的方法。
+  </technical-field>
+
+  <background-art>
+    随着计算机游戏尤其是 Roguelike（程序化随机生成类）与 ARPG（动作角色扮演）游戏的发展，游戏内的装备、套装、技能等内容规模日益庞大。现有技术方案存在以下缺陷：
+    <defect id="d1">
+      <title>静态配置表内容有限，扩展成本高</title>
+      <text>传统游戏（如 Diablo 类 ARPG 及多数 Roguelike 游戏）的装备、套装、技能均由策划预先在静态配置表中手工定义。当需要扩充内容时，策划必须手工编写大量数据并重新发布游戏版本，内容迭代慢、运营成本高，尤其难以支撑"无尽（endless）"类玩法对无限内容的需求。</text>
+    </defect>
+    <defect id="d2">
+      <title>生成内容与静态内容解析链路割裂</title>
+      <text>部分游戏虽引入了程序化生成（如随机词缀、随机掉落），但其生成物通常仅作为"临时实例"存在，不参与静态配置表的解析流程。这导致生成内容难以与静态内容共用同一套数值计算、掉落分发与图鉴系统，往往需要在代码中为生成物编写独立的特殊分支，增加了系统复杂度与维护成本。</text>
+    </defect>
+    <defect id="d3">
+      <title>存档无法承载与重建生成内容</title>
+      <text>在游戏内容于运行时被无限扩展后，传统"仅保存玩家角色状态"的存档方案无法重建这些动态内容，造成读档后生成物丢失、数值错乱，或被迫将生成内容固化为版本的一部分而丧失"随玩家进度个性化生成"的特性。</text>
+    </defect>
+    <summary>因此，亟需一种能够在<highlight>不修改代码、不重新发布版本</highlight>的前提下使游戏内容可无限扩展，并使生成内容与静态内容走同一解析与数值链路、随存档持久化与读档精确重建的技术方案。</summary>
+  </background-art>
+
+  <summary-of-invention>
+    <object>
+      本发明的目的在于克服上述现有技术的不足，提供一种游戏内容的程序化生成与运行时动态注册方法，使得：
+      <goal>（1）游戏内容（套装/心法/名器）可在不发布新版本、不修改代码的前提下无限扩展；</goal>
+      <goal>（2）程序化生成的内容与静态配置内容经由同一解析与数值聚合链路被统一处理，无特殊分支；</goal>
+      <goal>（3）生成内容随玩家存档持久化，并在读档时精确重建，且不污染原始静态配置数据。</goal>
+    </object>
+
+    <technical-solution>
+      为实现上述目的，本发明采用如下技术方案：一种游戏内容的程序化生成与运行时动态注册方法，包括以下步骤：
+      <step id="S1">
+        <title>预置词池与规则模板</title>
+        <text>预置至少一组词池与规则模板，所述词池包含用于组合生成内容名称的词汇集合以及用于确定数值的修饰参数集合；所述规则模板定义游戏内容项的结构。例如：套装主题词池、功法前后缀词池、装备槽位后缀词池，以及"套装=四件装备基座+第二件/第四件阶梯加成""心法=一至两条随机数值加成"等结构模板。</text>
+      </step>
+      <step id="S2">
+        <title>程序化生成内容项</title>
+        <text>基于种子随机数从词池中抽取词汇与修饰参数并填充规则模板，生成游戏内容项，所述游戏内容项包括装备套装、功法心法与名器中的至少一种。其中，装备套装由若干件装备基座与按件数触发的阶梯加成（如第二件触发、第四件触发）构成；功法心法包括一至两条随机数值加成；名器由前缀词汇与装备槽位后缀词汇随机组合命名。</text>
+      </step>
+      <step id="S3">
+        <title>运行时动态注册至静态配置表</title>
+        <text>将生成的游戏内容项动态注册至游戏的静态配置表中，使后续解析、数值聚合、掉落分发与图鉴均"无感知"地将其当作普通静态内容处理。具体地：将套装写入套装配置表；将套装所包含的若干装备基座追加至装备基座表并标记其所属套装标识；将功法写入功法配置表；写入前分别进行去重判断，当静态配置表中已存在相同标识的内容项时跳过写入，以避免重复注册与内存膨胀。</text>
+      </step>
+      <step id="S4">
+        <title>随存档持久化</title>
+        <text>将生成的游戏内容项作为玩家存档的一部分进行序列化持久化，所述游戏内容项的完整数据随玩家存档一并保存，而非仅保存其标识引用，从而使得生成内容归属于该玩家存档，并在任意终端读档时均可被完整重建。</text>
+      </step>
+      <step id="S5">
+        <title>读档时重建并重新注册</title>
+        <text>在加载玩家存档时，从存档反序列化游戏内容项，并重新执行步骤 S3 的动态注册，将运行期静态配置表恢复至该存档所记录的状态，从而保证读档前后生成内容与数值链路完全一致。</text>
+      </step>
+      <refinement id="r1">
+        <title>无尽模式现世策略</title>
+        <text>进一步地，本发明还包括无尽模式的现世策略步骤：当运行至无尽模式且满足现世触发条件时，若已存在动态游戏内容项，则以高于新建的概率沿用已有动态游戏内容项之一，否则生成新的游戏内容项；并对动态游戏内容项的数量设定上限（如 12 套），以抑制数值膨胀。优选地，所述沿用概率与动态内容项数量相关，且在达到数量上限时强制沿用已有内容之一而非新建（即"补全优先于新建"策略）。</text>
+      </refinement>
+      <refinement id="r2">
+        <title>种子确定性</title>
+        <text>进一步地，所述种子随机数采用确定性随机函数，相同种子产生相同的生成序列，从而保证生成结果可复现，便于对生成、持久化与重建过程进行自动化测试与排错。</text>
+      </refinement>
+    </technical-solution>
+
+    <advantageous-effects>
+      与现有技术相比，本发明具有如下有益效果：
+      <effect>（1）游戏内容可在不发布新版本、不修改代码的前提下无限扩展，显著降低内容运营成本，尤其适合无尽类玩法；</effect>
+      <effect>（2）生成内容与静态内容共用同一套解析与数值聚合链路（统一修饰向量），系统无割裂、无特殊分支，降低维护复杂度；</effect>
+      <effect>（3）生成内容随玩家存档持久化、读档精确重建，玩家个性化进度不丢失；</effect>
+      <effect>（4）种子化随机保证生成结果可复现，便于测试与排错；</effect>
+      <effect>（5）"补全优先于新建 + 数量上限"的现世策略，在内容扩展与数值平衡之间提供可控折中，防止数值膨胀破坏游戏平衡。</effect>
+    </advantageous-effects>
+  </summary-of-invention>
+
+  <brief-description-of-drawings>
+    <figure id="fig1" ref="发明1-附图1-系统模块图.svg">
+      图 1 为本发明一实施例的系统模块图，示出了词池/模板、生成器、运行时注册模块与静态配置表及存档之间的关系。
+    </figure>
+    <figure id="fig2" ref="发明1-附图2-读档重建时序图.svg">
+      图 2 为本发明一实施例的读档重建时序图，示出了 loadGame 到 registerDynamicContent 的调用过程。
+    </figure>
+    <figure id="fig3" ref="发明1-附图3-现世策略流程图.svg">
+      图 3 为本发明一实施例的无尽模式现世策略流程图，示出了 pickDynamicSetId 的补全优先判定逻辑。
+    </figure>
+  </brief-description-of-drawings>
+
+  <detailed-description>
+    <intro>以下结合附图与一个具体实施例（基于 TypeScript 实现，应用于一款竖屏像素风修仙 Roguelike 网页游戏）对本发明作进一步详细说明。应当理解，此处所描述的具体实施方式仅用于解释本发明，并不用于限定本发明的保护范围。</intro>
+
+    <embodiment id="e1">
+      <title>词池与规则模板的定义及程序化生成</title>
+      <text>本发明预置若干词池与规则模板。以机缘套装（动态生成的装备套装）为例，预置套装主题词池与阶梯修饰候选池。基于种子随机数（mulberry32 确定性随机函数），从词池抽取主题词、按槽位生成四件装备基座、并为第二件与第四件触发分别生成阶梯加成，组装出一套机缘套装。</text>
+      <code-sample lang="ts"><![CDATA[// 套装主题词池
+const SET_THEMES = ['青元','玄骨','虚天','魔银','惊蛰', /* … */ ]
+// 阶梯修饰候选（min, max）
+const SET_MOD_POOL: Array<[ModKey, number, number]> = [
+  ['atkPct',0.10,0.18], ['defPct',0.12,0.20], ['hpPct',0.10,0.18],
+  ['crit',0.03,0.06], ['aspd',0.05,0.10], ['skillPct',0.10,0.18],
+  ['lifesteal',0.03,0.06], ['speed',6,12], ['cdPct',0.06,0.12],
+]
+
+// 由种子随机数生成一套机缘套装（4 件基座 + 2/4 件阶梯效果）
+export function genDynamicSet(rng, seq, existing): DynamicSetRecord {
+  const used = new Set(existing.map(r => r.set.name.replace(/套$/,'')))
+  const free = SET_THEMES.filter(t => !used.has(t))
+  const theme = free.length>0 ? pick(rng,free) : pick(rng,SET_THEMES)+seq
+  const setId = `set_dy${seq}`
+  const tier = 1 + Math.min(0.5, seq*0.06)        // 越往后生成的基座越强
+  const bases = SET_PIECE_SLOTS.map(slot => { /* 按槽位生成基座数值 */ })
+  const m2 = rollSetMods(rng, ri(rng,1,2), 1)      // 第二件触发加成
+  const m4 = rollSetMods(rng, 2, 1.8)             // 第四件触发加成
+  const set: SetDef = { id:setId, name:`${theme}套`, pieces:bases.map(b=>b.id),
+    bonuses:[ {count:2,mods:m2,desc:`2件：${modsDesc(m2)}`},
+              {count:4,mods:m4,desc:`4件：${modsDesc(m4)}`} ] }
+  return { set, bases }
+}]]></code-sample>
+      <note>上述生成过程完全由种子随机数驱动，相同种子产生相同序列，保证可复现。</note>
+    </embodiment>
+
+    <embodiment id="e2">
+      <title>运行时动态注册至静态配置表</title>
+      <text>生成的内容项通过 registerDynamicContent 注入全局静态配置表（SETS、ITEM_BASES、SKILLS）。写入前进行去重判断，避免重复注册。注册完成后，该动态内容在后续的数值聚合（Mods 统一修饰向量）、掉落、图鉴等环节中，与策划预先定义的静态内容被完全一致地解析处理，系统无需任何特殊分支。</text>
+      <code-sample lang="ts"><![CDATA[// 将存档中的动态内容注入静态配置表，使其与静态内容统一解析
+export function registerDynamicContent(sets, skills) {
+  for (const rec of sets ?? []) {
+    if (!rec?.set?.id) continue
+    if (!SETS[rec.set.id]) SETS[rec.set.id] = rec.set        // 注册进套装表
+    for (const base of rec.bases ?? []) {
+      if (!base?.id || ITEM_BASE_MAP.has(base.id)) continue
+      base.set = rec.set.id
+      ITEM_BASES.push(base)                                  // 注册进装备基座表
+      ITEM_BASE_MAP.set(base.id, base)
+    }
+  }
+  for (const sk of skills ?? []) {
+    if (sk?.id && !SKILLS.has(sk.id)) SKILLS.set(sk.id, sk)   // 注册进功法表
+  }
+}]]></code-sample>
+    </embodiment>
+
+    <embodiment id="e3">
+      <title>随存档持久化与读档重建</title>
+      <text>游戏状态 GameState 中专门容纳动态内容，使其作为玩家存档的一部分被完整序列化。读档时，从存档反序列化出动态内容，并再次调用 registerDynamicContent 完成运行时注册，使运行期配置表精确恢复至存档时刻的状态。由于存档保存的是生成内容的完整数据而非引用，玩家在任意终端读档均可获得一致的生成内容与数值表现，且原始静态配置数据不被修改。</text>
+      <code-sample lang="ts"><![CDATA[interface GameState {
+  // …
+  dynamicSets: DynamicSetRecord[]   // 机缘套装（运行时注册进 SETS）
+  dynamicSkills: SkillDef[]         // 无名古卷功法（运行时注册进 SKILLS）
+}
+
+export function loadGame(): GameState {
+  const parsed = JSON.parse(localStorage.getItem(SAVE_KEY)!)
+  if (parsed.version === SAVE_VERSION) {
+    const s = parsed as unknown as GameState
+    // …规范化装备/库存…
+    s.dynamicSets = s.dynamicSets ?? []
+    s.dynamicSkills = s.dynamicSkills ?? []
+    registerDynamicContent(s.dynamicSets, s.dynamicSkills)   // 关键：读档重建
+    return s
+  }
+  if (typeof parsed.version==='number' && parsed.version<SAVE_VERSION) return migrate(parsed)
+  return newGame()
+}]]></code-sample>
+    </embodiment>
+
+    <embodiment id="e4">
+      <title>无尽模式现世策略</title>
+      <text>在无尽模式（如"无尽妖域"）中，机缘套装按概率"现世"。本发明采用"补全优先于新建"策略并设数量上限，控制数值膨胀。当已存在动态套装且数量达到上限（12 套）或超过一定概率时，强制沿用已有套装，避免数值无节制膨胀；否则生成新套装并即时注册。</text>
+      <code-sample lang="ts"><![CDATA[// 无尽妖域机缘套装：优先补齐已有套装，否则生成新套（上限 12 套）
+private pickDynamicSetId(): string {
+  const sets = this.state.dynamicSets ?? []
+  if (sets.length>0 && (sets.length>=12 || this.rng()<0.6)) {
+    return sets[randInt(this.rng,0,sets.length-1)].set.id   // 补全优先于新建
+  }
+  const rec = genDynamicSet(this.rng, sets.length+1, sets)  // 新建
+  this.state.dynamicSets = [...sets, rec]
+  registerDynamicContent([rec], [])
+  toast(`天机降临！机缘套装【${rec.set.name}】现世`, '#ffd54a')
+  return rec.set.id
+}]]></code-sample>
+    </embodiment>
+
+    <embodiment id="e5">
+      <title>种子确定性</title>
+      <text>本发明采用 mulberry32 确定性随机函数，保证相同种子产生相同生成序列，支撑生成结果的可复现与自动化测试。</text>
+      <code-sample lang="ts"><![CDATA[export function makeRng(seed: number) {
+  let a = seed >>> 0
+  return function () {
+    a |= 0; a = (a + 0x6d2b79f5) | 0
+    let t = Math.imul(a ^ (a >>> 15), 1 | a)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}]]></code-sample>
+      <note>上述五个实施例共同实现了权利要求 1 所限定的"生成—注册—持久化—读档重建"完整方法，并揭示了从属权利要求 2~7 所进一步限定的各项技术特征。</note>
+    </embodiment>
+
+    <application-scenario>
+      本发明可广泛应用于需要大量可扩展内容的游戏类型，包括但不限于 Roguelike、ARPG、MMORPG 的装备/技能/套装系统，以及任何需要在不发布新版本前提下动态扩充配置内容、并要求生成内容可随用户存档持久化与重建的计算机应用场景。
+    </application-scenario>
+
+    <drafting-notes>
+      <note>（1）本说明书与前述权利要求书（发明 1）一一对应，公开了权利要求各技术特征的具体实现，满足"清楚、完整"的公开要求。</note>
+      <note>（2）实施例中代码摘自项目 src/lore.ts、src/state.ts、src/scenes/DungeonScene.ts、src/core.ts，作为支持权利要求的实施例依据。</note>
+      <note>（3）附图（图 1~图 3）需由专利代理师依本说明书绘制为正式申请附图后提交。</note>
+      <note>（4）"具体实施方式"部分应避免仅以代码替代文字说明；当前代码用于佐证，代理机构定稿时建议补充等价的流程化文字描述。</note>
+    </drafting-notes>
+  </detailed-description>
+
+</patent-description>
