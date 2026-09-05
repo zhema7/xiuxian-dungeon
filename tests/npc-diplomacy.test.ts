@@ -17,7 +17,7 @@ vi.mock('../src/input', () => ({ input: { clearQueues: vi.fn() } }))
 
 import {
   NPC_DEFS, RELATION_THRESHOLDS, STORIES, getNpcDef, getNpcsByLocation, createNpcState,
-  npcCultivate, changeFavor, getRelation, npcExpToNext, npcBreakthroughChance, getStory,
+  npcCultivate, changeFavor, getRelation, npcExpToNext, npcLevelExp, npcBreakthroughChance, getStory,
   type NpcLocation, type NpcRole, type NpcState, type RelationLevel,
 } from '../src/npc-data'
 import { initNpcStates, updateNpcGrowth, getNpcDisplayInfo, getLocationNpcs, talkToNpc, syncNpcStoryAvailability } from '../src/npc-system'
@@ -177,8 +177,9 @@ describe('NPC 修炼与好感', () => {
     const ns = createNpcState(elder)
     expect(ns.id).toBe(elder.id)
     expect(ns.realm).toBe(elder.baseRealm)
+    expect(ns.level).toBe(0)
     expect(ns.exp).toBe(0)
-    expect(ns.expToNext).toBe(npcExpToNext(elder.baseRealm))
+    expect(ns.expToNext).toBe(npcLevelExp(elder.baseRealm))
     expect(ns.favor).toBe(elder.baseFavor)
     expect(ns.storyProgress).toBe(0)
     expect(ns.lastInteract).toBe(0)
@@ -188,39 +189,44 @@ describe('NPC 修炼与好感', () => {
     expect(createNpcState(getNpcDef('npc_merchant')!).storyStage).toBe('locked')
   })
 
-  it('npcCultivate 按 cultSpeed × 分钟累积经验；达标后尝试突破', () => {
-    const def = getNpcDef('npc_elder')! // baseRealm 3, cultSpeed 2 → expToNext 1100
+  it('npcCultivate 按 cultSpeed × 分钟累积经验；满 10 级触发境界突破', () => {
+    const def = getNpcDef('npc_elder')! // baseRealm 3, cultSpeed 2 → levelExp 110
     const ns = createNpcState(def)
-    expect(ns.expToNext).toBe(1100)
+    expect(ns.expToNext).toBe(110)
 
-    // 未达标：只累积不突破
-    expect(npcCultivate(ns, def, 100, constRng(0))).toBe(false)
-    expect(ns.exp).toBe(200) // floor(2 * 100)
+    // 未达级：只累积不升级（50 min → exp 100 < 110）
+    expect(npcCultivate(ns, def, 50, constRng(0))).toBe('none')
+    expect(ns.exp).toBe(100)
+    expect(ns.level).toBe(0)
     expect(ns.realm).toBe(3)
 
-    // 达标且 rng 命中 → 突破成功
-    npcCultivate(ns, def, 450, constRng(0)) // exp 1100
-    expect(ns.realm).toBe(4)
-    expect(ns.exp).toBe(0)
-    expect(ns.expToNext).toBe(npcExpToNext(4))
+    // 550 min → exp 1100 → 恰好 10 级，rng 命中 → 突破成功
+    const ns2 = createNpcState(def)
+    expect(npcCultivate(ns2, def, 550, constRng(0))).toBe('breakthrough')
+    expect(ns2.realm).toBe(4)
+    expect(ns2.level).toBe(0)
+    expect(ns2.exp).toBe(0)
+    expect(ns2.expToNext).toBe(npcLevelExp(4))
   })
 
-  it('突破失败时经验减半而非清零', () => {
+  it('突破失败时级别回退、经验折损', () => {
     const def = getNpcDef('npc_elder')!
     const ns = createNpcState(def)
-    npcCultivate(ns, def, 550, constRng(0.999999)) // exp 1100，chance 0.57，rng 0.999999 不中
+    // 550 min → 10 级，chance 0.57，rng 0.999999 不中
+    expect(npcCultivate(ns, def, 550, constRng(0.999999))).toBe('breakfail')
     expect(ns.realm).toBe(3)
-    expect(ns.exp).toBe(Math.floor(1100 * 0.5))
+    expect(ns.level).toBe(9)
+    expect(ns.exp).toBe(Math.floor(110 * 0.5))
   })
 
   it('已故 NPC 不再修炼；境界达上限（6）后不再突破', () => {
     const def = getNpcDef('npc_elder')!
     const dead: NpcState = { ...createNpcState(def), alive: false }
-    expect(npcCultivate(dead, def, 10000, constRng(0))).toBe(false)
+    expect(npcCultivate(dead, def, 10000, constRng(0))).toBe('none')
     expect(dead.exp).toBe(0)
 
     const capped: NpcState = { ...createNpcState(def), realm: 6, exp: 99999, expToNext: 1 }
-    expect(npcCultivate(capped, def, 1, constRng(0))).toBe(false)
+    expect(npcCultivate(capped, def, 1, constRng(0))).toBe('none')
     expect(capped.realm).toBe(6)
   })
 
@@ -422,9 +428,9 @@ describe('故事线逐条可开启（B27 回归）', () => {
 
     expect(ns.storyStage).toBe('available')
     expect(ns.storyProgress).toBe(0)
-    // 提示里应说明差的是好感还是等级
-    const lines = vi.mocked(showDialog).mock.calls.at(-1)?.[1] as string[]
-    expect(lines.join('\n')).toMatch(/需要(好感|等级)/)
+    // 提示里应说明差的是好感还是等级（交互菜单循环下可能在非最后一次调用）
+    const allLines = vi.mocked(showDialog).mock.calls.map(c => (c[1] as string[]).join('\n'))
+    expect(allLines.some(l => /需要(好感|等级)/.test(l))).toBe(true)
   })
 })
 
@@ -437,15 +443,18 @@ describe('updateNpcGrowth', () => {
     expect(s.npcStates.npc_elder.exp).toBe(before)
   })
 
-  it('返回值为字符串数组，元素形如「<名字> 突破至 N 境！」', () => {
+  it('返回值为字符串数组，元素均为修炼进展文案', () => {
     const s = makeState({ npcStates: {} })
     initNpcStates(s)
     const events = updateNpcGrowth(s, 100000)
     expect(Array.isArray(events)).toBe(true)
+    expect(events.length).toBeGreaterThan(0)
     for (const e of events) {
       expect(typeof e).toBe('string')
-      expect(e).toMatch(/突破至 \d+ 境！$/)
+      expect(e.length).toBeGreaterThan(0)
     }
+    // 大幅推进后至少出现一次境界突破
+    expect(events.some(e => e.includes('突破至'))).toBe(true)
   })
 
   it('跳过已故 NPC 且不抛错', () => {

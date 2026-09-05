@@ -2,7 +2,7 @@ import Phaser from 'phaser'
 import { Enemy, Player, Ally, applyEliteAffix, rollEliteAffix, ELITE_AFFIX_NAMES, type CombatCtx } from '../entities'
 import { input } from '../input'
 import { calcDamage, makeItem, makeRng, randInt, rollDrop, rollEquip, rollSetPiece, type EquipItem } from '../core'
-import { ART_MODE_NAMES, CLASSES, controlledHitLinkageById, difficultyById, MONSTERS, QUALITY_COLORS, QUALITY_NAMES, regionOfFloor, getRegionById, SKILLS, spawnTableFor, spawnTableForRegion, type ControlledHitLinkage, type ControlledHitLinkageRecipeId, type DifficultyDef, type RegionDef } from '../data'
+import { ART_MODE_NAMES, CLASSES, controlledHitLinkageById, difficultyById, MONSTERS, QUALITY_COLORS, QUALITY_NAMES, regionOfFloor, getRegionById, SKILLS, spawnTableFor, spawnTableForRegion, V4_KIT_WHITELIST, V4_KIT_ABILITY_MAP, type ControlledHitLinkage, type ControlledHitLinkageRecipeId, type DifficultyDef, type RegionDef } from '../data'
 import { calcStats, controlledHitLinkageSourceFingerprint, currentHp, resolveArtPaletteV1, resolveAttackMode, resolveAttackPaletteV1, resolveProceduralArtVfx, resolveProceduralAttackVfx, resolveSetArtOverride, resolveSetEffectRuntime, resolveSetHitLinkageSource, stylePower, type SetEffectRuntime, type Stats } from '../effects'
 import { resolveEffectiveArtCast } from '../art-cast'
 import {
@@ -17,23 +17,28 @@ import {
 import { gainExp, recordCodexItem, saveGame, loadSaveSlot, type GameState } from '../state'
 import { artCooldown, learnSkill, skillPowerAt, unlearnedSkills } from '../skills'
 import { genDynamicSetFromSeed, genDynamicSkill, nextDynamicSetSequence, registerDynamicContent } from '../lore'
-import { BGM_DUNGEON, playBgm, sfx, stopBgm } from '../audio'
-import { closePanel, dialogOpen, modalPanel, openInventory, openSettings, panelOpen, setFloorText, setSettingsCallbacks, showDialog, showResult, toast, updateHUD } from '../ui'
+import { BGM_DUNGEON, BGM_SWAMP, BGM_XIAN, BGM_SY1, BGM_SY2, BGM_ARENA, BGM_LADDER, BGM_HUANGLONG, BGM_WANYAO, BGM_TIANJIAN, BGM_HAISHI, BGM_GUZHAN, BGM_LOULAN, BGM_BINGYUAN, BGM_SOUTH_ALT, playBgm, sfx, stopBgm } from '../audio'
+import { closePanel, dialogOpen, modalPanel, openInventory, openSettings, panelOpen, resetControls, setFloorText, setSettingsCallbacks, showDialog, showResult, toast, updateHUD } from '../ui'
 import { isSwordProjAnim } from './anim-guard'
 import { checkAchievements } from '../achievement-system'
 import { updateDailyProgress } from '../daily-quest'
 import { BEAST_SPECIES, BEAST_SPECIES_MAP, beastCombatStats, beastCapacity, captureRate, generateBeast, randomBeastEncounter, RARITY_NAMES, RARITY_COLORS, ELEMENT_NAMES, type Beast } from '../beast-data'
 import { FORMATION_MAP, createFormationEffect } from '../formation-data'
+import { getArtifactBuff, type ArtifactInstance } from '../artifact-data'
 import { advanceControlledHitLinkageEpoch, arrayMineExpired, controlledHitLinkageCooldownKey, createArrayMineEyes, createControlledHitLinkageAuthorization, delayedBurstParams, fireBurstParams, matchesControlledHitLinkageProjectileKind, orderedControlledHitCandidates, playModularOnce, swordSplitParams, triggerArrayMineEye, tryTriggerControlledHitLinkage, type ArrayMineEye, type ControlledHitLinkageAuthorizationSnapshot } from '../fx/modularFx'
 import { hasRegisteredSequenceAnimationPlayback } from '../fx/sequence-contract'
 import { inheritPaletteV1VisualContext, makePaletteV1VisualContext, paletteV1LightningColors, paletteV1Tint, safePaletteV1Overlay, type PaletteV1, type PaletteV1VisualContext } from '../palette-v1'
 import { createChainVisualGuard } from '../fx/branchFx'
 import { playProceduralVfx } from '../procedural-vfx'
 import { resolveAnyKitAbility, resolveAnyKitArtAbility, resolveAnyKitArtOverride } from '../v4/runtime'
+import { v4SetId } from '../v4/kit-data'
 import { FogSystem } from '../fog'
+import { DungeonLightSystem } from '../dungeon-light'
+import { generateTerrainTextures } from '../terrain-textures'
 import { executeKitNormal, executeKitArt, type KitCombatContext } from '../v4/executor'
 import { executeV4NormalInScene, executeV4ArtInScene, type V4SceneContext } from '../v4/scene-adapter'
-import type { KitAbility } from '../data'
+import { ladderDifficulty, ladderReward, LADDER } from '../tribulation-data'
+import type { KitAbility, KitId } from '../data'
 
 const ARENA = { x: OX, y: OY, w: COLS * TILE, h: ROWS * TILE }  // 整张地图（800×960，相机跟随）
 const COMBO_MULT = [1, 1.15, 1.55]
@@ -212,10 +217,15 @@ export class DungeonScene extends Phaser.Scene {
   private xianMaxFloor = 1     // 本次挑战达到的最高层
   private xianEnemyRuntime = new Map<string, XianEnemyDef>()  // 每个敌人的仙界配置
   private fogSystem: FogSystem | null = null
+  private lightSystem: DungeonLightSystem | null = null
+  private dustEmitter: Phaser.GameObjects.Particles.ParticleEmitter | null = null
+  private vignetteGfx: Phaser.GameObjects.Graphics | null = null
   private hitStopUntil = 0   // 攻击顿帧：此时刻前冻结怪物 AI
   // ---------- 擂台模式 ----------
   private arenaMode = false
   private arenaSubMode: '1v1' | '1vN' = '1v1'
+  // ---------- 天梯挑战 ----------
+  private ladderMode = false
   private arenaRank = 0
   private arenaWave = 0
   private arenaTotalWaves = 3
@@ -223,6 +233,10 @@ export class DungeonScene extends Phaser.Scene {
   private regionOverrideId: string | null = null
   private regionStartFloor = 0
   private regionMaxFloors = 3
+  // ---------- NPC 战斗模式（大地图劫掠/强攻） ----------
+  private npcCombatMode = false
+  private npcCombatSubMode: 'plunder' | 'attack' = 'attack'
+  private npcCombatNpcId: string | null = null
 
   constructor() { super('Dungeon') }
 
@@ -301,19 +315,31 @@ export class DungeonScene extends Phaser.Scene {
     this.tweens.add({ targets: g, alpha: 0, duration: kind === 'projectile' ? 150 : 120, onComplete: () => g.destroy() })
   }
 
-  create(data: { floor?: number; diff?: string; mode?: 'hl' | 'xian' | 'arena'; subMode?: '1v1' | '1vN'; rank?: number; regionOverride?: string }) {
+  create(data: { floor?: number; diff?: string; mode?: 'hl' | 'xian' | 'arena' | 'ladder' | 'npcCombat'; subMode?: '1v1' | '1vN' | 'plunder' | 'attack'; rank?: number; regionOverride?: string; npcId?: string }) {
     this.state = this.registry.get('state')
     this.setFx = resolveSetEffectRuntime(this.state)
     this.thunderFxGuard.clear()
     this.hlMode = data.mode === 'hl'
     this.xianMode = data.mode === 'xian'
     this.arenaMode = data.mode === 'arena'
-    this.arenaSubMode = data.subMode ?? '1v1'
+    this.ladderMode = data.mode === 'ladder'
+    this.npcCombatMode = data.mode === 'npcCombat'
+    this.npcCombatSubMode = (data.subMode === 'plunder' || data.subMode === 'attack') ? data.subMode : 'attack'
+    this.npcCombatNpcId = data.npcId ?? null
+    this.arenaSubMode = (data.subMode === '1v1' || data.subMode === '1vN') ? data.subMode : '1v1'
     this.arenaRank = data.rank ?? 0
     this.regionOverrideId = data.regionOverride ?? null
     this.regionStartFloor = data.floor ?? 1
-    this.floor = data.floor ?? (this.hlMode ? 7 : (this.xianMode ? XIAN_START_FLOOR : 1))
+    this.floor = data.floor ?? (this.hlMode ? 7 : (this.xianMode ? XIAN_START_FLOOR : (this.ladderMode ? Math.max(1, this.state.ladderFloor) : 1)))
     this.diff = difficultyById(data.diff)
+    // 退出时位置恢复：普通秘境/无尽妖域/破碎仙宫保存楼层，特殊模式回城
+    if (!data.mode || data.mode === 'hl' || data.mode === 'xian') {
+      this.state.lastScene = 'Dungeon'
+      this.state.lastSceneData = { floor: this.floor, diff: data.diff, mode: data.mode }
+    } else {
+      this.state.lastScene = data.mode === 'arena' ? 'City' : 'Town'
+      this.state.lastSceneData = {}
+    }
     this.rng = makeRng((Date.now() % 2147483647) + this.floor * 7919)
     this.over = false
     this.enemies = []
@@ -340,6 +366,12 @@ export class DungeonScene extends Phaser.Scene {
     this.xianEnemyRuntime.clear()
     this.xianMaxFloor = this.xianMode ? 1 : 0
     this.fogSystem = null
+    this.lightSystem?.destroy()
+    this.lightSystem = null
+    this.dustEmitter?.destroy()
+    this.dustEmitter = null
+    this.vignetteGfx?.destroy()
+    this.vignetteGfx = null
     this.hitStopUntil = 0
     this.arenaMode = data.mode === 'arena'
     this.arenaWave = 0
@@ -351,7 +383,7 @@ export class DungeonScene extends Phaser.Scene {
       this.state.syMaxDepth = this.floor - 6
       saveGame(this.state)
     }
-    this.level = (this.hlMode || this.arenaMode) ? generateArena(this.rng) : generateLevel(this.rng, { water: region.id !== 'qm' })
+    this.level = (this.hlMode || this.arenaMode || this.npcCombatMode) ? generateArena(this.rng, { water: this.npcCombatMode && region.id !== 'qm' }) : generateLevel(this.rng, { water: region.id !== 'qm' })
     this.buildArena()
     this.physics.world.setBounds(ARENA.x, ARENA.y, ARENA.w, ARENA.h)
 
@@ -431,27 +463,107 @@ export class DungeonScene extends Phaser.Scene {
     }
 
     if (this.hlMode) this.hlSetup()
+    else if (this.npcCombatMode) this.spawnNpcCombat()
     else if (this.arenaMode) this.spawnArena()
+    else if (this.ladderMode) this.spawnLadder()
     else this.spawnFloor()
     // 地图迷雾：仙界 + 无尽妖域启用，提升迷宫探索感
-    if (!this.hlMode && (this.xianMode || region.id === 'sy')) {
+    if (!this.hlMode && !this.ladderMode && (this.xianMode || region.id === 'sy')) {
       this.fogSystem = new FogSystem(this, COLS, ROWS)
       this.fogSystem.setMap(this.level.tiles)
       this.fogSystem.updateVisibility(this.player.sprite.x, this.player.sprite.y)
     }
+
+    // 动态光照系统：火把点光源 + 玩家光源
+    this.lightSystem = new DungeonLightSystem(this, ARENA.w + 100, ARENA.h + 100)
+    this.lightSystem.setAmbientAlpha(0.32)
+    this.lightSystem.setPlayerLightRadius(this.fogSystem ? 70 : 90)
+    for (const deco of this.level.wallDecos) {
+      if (deco.type === 1) {
+        this.lightSystem.addLight(deco.x, deco.y - 2, 55, 0xffaa33, true)
+      }
+    }
+    // 传送门光源
+    this.lightSystem.addLight(this.level.portal.x, this.level.portal.y, 60, 0x6a8aff, false)
+
+    // 氛围粒子：飘尘
+    if (!this.textures.exists('dust_particle')) {
+      const canvas = this.textures.createCanvas('dust_particle', 3, 3)
+      if (canvas) {
+        const ctx = canvas.getContext()
+        ctx.fillStyle = 'rgba(255,255,255,0.8)'
+        ctx.fillRect(1, 1, 1, 1)
+        ctx.fillStyle = 'rgba(255,255,255,0.3)'
+        ctx.fillRect(0, 0, 1, 1)
+        ctx.fillRect(2, 2, 1, 1)
+        canvas.refresh()
+      }
+    }
+    const camW = this.cameras.main.width || 360
+    this.dustEmitter = this.add.particles(0, 0, 'dust_particle', {
+      x: { min: 0, max: camW },
+      y: { min: 0, max: this.cameras.main.height || this.scale.gameSize.height },
+      speed: { min: 5, max: 20 },
+      angle: { min: 250, max: 290 },
+      lifespan: { min: 3000, max: 6000 },
+      alpha: { start: 0.15, end: 0 },
+      scale: { start: 0.6, end: 0.2 },
+      quantity: 1,
+      frequency: 200,
+      blendMode: 'NORMAL',
+    })
+    this.dustEmitter.setScrollFactor(0).setDepth(3)
+
+    // 暗角效果
+    this.vignetteGfx = this.add.graphics().setDepth(50)
+    this.vignetteGfx.setScrollFactor(0)
+    this.drawVignette()
     // 仙界模式使用专属背景色
-    const bgColor = this.hlMode ? 0x15211a : (this.arenaMode ? 0x1a1018 : (this.xianMode ? 0x0a1628 : region.bg))
+    const bgColor = this.hlMode ? 0x15211a : (this.arenaMode ? 0x1a1018 : (this.ladderMode ? 0x0a0a1a : (this.xianMode ? 0x0a1628 : region.bg)))
     this.cameras.main.setBackgroundColor(bgColor)
     this.cameras.main.setBounds(ARENA.x, ARENA.y, ARENA.w, ARENA.h)
     this.cameras.main.startFollow(this.player.sprite, true, 0.12, 0.12)
     if (this.hlMode) this.hlIntroPan()
     this.cameras.main.fadeIn(300, 0, 0, 0)
-    playBgm(BGM_DUNGEON)
+    // 按区域/模式选择BGM
+    if (this.xianMode) {
+      playBgm(BGM_XIAN)        // 破碎仙宫：碎穹仙途
+    } else if (this.hlMode) {
+      playBgm(BGM_HUANGLONG)   // 黄龙山：凡尘血战
+    } else if (this.arenaMode) {
+      playBgm(BGM_ARENA)       // 擂台：修仙擂台激战
+    } else if (this.ladderMode) {
+      playBgm(BGM_LADDER)      // 天梯：修仙擂台激战变奏
+    } else if (region.id === 'sy') {
+      // 无尽妖域：每3层切换一次BGM
+      const band = Math.floor((this.floor - 7) / 3) % 2
+      playBgm(band === 0 ? BGM_SY1 : BGM_SY2)
+    } else if (region.id === 'wanyao') {
+      playBgm(BGM_WANYAO)     // 万妖谷：万妖荒谷
+    } else if (region.id === 'tianjian') {
+      playBgm(BGM_TIANJIAN)   // 天剑冢：天剑冢·肃杀
+    } else if (region.id === 'haishi') {
+      playBgm(BGM_HAISHI)     // 海市蜃楼：蜃楼仙踪
+    } else if (region.id === 'guzhan') {
+      playBgm(BGM_GUZHAN)     // 古战场：仙陨古战
+    } else if (region.id === 'loulan') {
+      playBgm(BGM_LOULAN)     // 楼兰秘境：楼兰秘境迷踪
+    } else if (region.id === 'bingyuan') {
+      playBgm(BGM_BINGYUAN)   // 冰原秘境：冰原秘境
+    } else if (region.id.startsWith('rl_')) {
+      playBgm(BGM_SOUTH_ALT) // 日常随机秘境：通用秘境BGM
+    } else if (region.id === 'qm') {
+      playBgm(BGM_DUNGEON)     // 青冥山脉：初踏仙途
+    } else if (region.id === 'ym') {
+      playBgm(BGM_SWAMP)       // 幽冥沼泽：幽渊剑影
+    } else {
+      playBgm(BGM_DUNGEON)     // 其他区域暂用初踏仙途
+    }
     this.refreshFloorText()
     document.getElementById('hud')!.style.display = 'block'
-    document.getElementById('controls')!.style.display = 'block'
+    resetControls()
     document.getElementById('btnSkill')!.style.display = 'flex'
-    document.getElementById('btnRetreat')!.style.display = !this.hlMode && (region.id === 'sy' || this.arenaMode) ? 'block' : 'none'
+    document.getElementById('btnRetreat')!.style.display = !this.hlMode && (region.id === 'sy' || this.arenaMode || this.ladderMode || this.npcCombatMode) ? 'block' : 'none'
     document.getElementById('btnSettings')!.style.display = 'block'
     setSettingsCallbacks({
       onLoadSave: (slotIndex) => {
@@ -509,9 +621,19 @@ export class DungeonScene extends Phaser.Scene {
         : `破碎仙宫 · 第 ${xianFloor} 重${diffTag}${bossTag}`)
       return
     }
+    if (this.ladderMode) {
+      const left = this.enemies.filter((e) => e.alive).length
+      const bossTag = this.floor % LADDER.bossInterval === 0 ? ' · ☯ 守关BOSS' : ''
+      setFloorText(left > 0 ? `天梯 · 第 ${this.floor} 层${bossTag} · 余 ${left}` : `天梯 · 第 ${this.floor} 层${bossTag}`)
+      return
+    }
     const region = this.getRegion()
+    const secretRealmData = this.registry.get('secretRealmData') as { realmName?: string } | undefined
+    const realmName = secretRealmData?.realmName
     const base = this.regionOverrideId
-      ? `${region.name} · 第 ${this.getRegionFloor()} 层`
+      ? realmName
+        ? `${realmName} · 第 ${this.getRegionFloor()} 层`
+        : `${region.name} · 第 ${this.getRegionFloor()} 层`
       : region.id === 'sy'
         ? `${region.name} · 第 ${this.floor - 6} 层`
         : `${region.name} · 第 ${this.floor - region.floors[0] + 1} / ${region.floors[1] - region.floors[0] + 1} 层`
@@ -520,13 +642,85 @@ export class DungeonScene extends Phaser.Scene {
     setFloorText(left > 0 ? `${base}${diffTag} · 余 ${left}` : `${base}${diffTag}`)
   }
 
+  // ---------- NPC 战斗生成（大地图劫掠/强攻） ----------
+  private spawnNpcCombat() {
+    const combatData = this.registry.get('npcCombatData') as {
+      npcId: string
+      mode: string
+      npcName: string
+      npcHp: number
+      npcMaxHp: number
+      npcAtk: number
+      npcDef: number
+      npcRealm: number
+      npcMorality: number
+    } | undefined
+
+    if (!combatData) {
+      // 没有数据，直接退出
+      this.scene.start('World')
+      return
+    }
+
+    const pt = randomFloorPoint(this.level, this.rng, 120, this.level.spawn) ?? { x: this.level.portal.x, y: this.level.portal.y }
+
+    // NPC 战斗使用原始属性，不做 dungeon 动态缩放
+    // NPC 的 hp/atk/def 已由 procedural-npc.ts 按 realm/level 计算
+    const enemyCfg = {
+      id: combatData.npcId,
+      name: combatData.npcName,
+      tex: 'npc',
+      hp: combatData.npcMaxHp,
+      atk: combatData.npcAtk,
+      def: combatData.npcDef,
+      speed: 60,
+      exp: combatData.npcRealm * 30 + 20,
+      gold: [combatData.npcRealm * 15, combatData.npcRealm * 15 + 10] as [number, number],
+      ai: 'melee' as const,
+      range: 40,
+    }
+    const e = new Enemy(this, enemyCfg as any, pt.x, pt.y, 1)
+    e.elite = combatData.npcRealm >= 3
+    e.isBoss = combatData.mode === 'attack'
+    this.enemies.push(e)
+
+    const modeText = combatData.mode === 'plunder' ? '劫掠' : '强攻'
+    const moralityTag = combatData.npcMorality > 0 ? '正道修士' : combatData.npcMorality < -20 ? '魔修' : '散修'
+    toast(`${modeText}！对方是${moralityTag}${combatData.npcName}`, '#f87171')
+    setFloorText(`${modeText} · ${combatData.npcName}`)
+  }
+
   // ---------- 场景搭建（程序化瓦片地图 v2：自动拼接 + 多层装饰 + 水动画） ----------
   private waterTiles: Phaser.GameObjects.Image[] = []
   private waterFrame = 0
   private waterTimer = 0
 
+  private drawVignette(): void {
+    if (!this.vignetteGfx) return
+    const g = this.vignetteGfx
+    g.clear()
+    const cam = this.cameras.main
+    const w = cam.width || 360
+    const h = cam.height || this.scale.gameSize.height
+    // 四边渐变暗角
+    const steps = 6
+    for (let i = 0; i < steps; i++) {
+      const t = i / steps
+      const alpha = (1 - t) * 0.12
+      const inset = i * 3
+      g.fillStyle(0x000000, alpha)
+      g.fillRect(0, inset, w, 3)
+      g.fillRect(0, h - inset - 3, w, 3)
+      g.fillRect(inset, 0, 3, h)
+      g.fillRect(w - inset - 3, 0, 3, h)
+    }
+  }
+
   private buildArena() {
-    // 擂台模式：使用竞技场背景图增强氛围
+    // 生成 v2 地形纹理（如尚未生成）
+    generateTerrainTextures(this)
+
+    // 擂台模式：使用竞技场背景图增强氛围（NPC战斗不使用，由地形贴图体现域风格）
     if (this.arenaMode && this.textures.exists('arena_bg')) {
       this.add.image(ARENA.x + ARENA.w / 2, ARENA.y + ARENA.h / 2, 'arena_bg')
         .setDepth(-1).setDisplaySize(ARENA.w, ARENA.h)
@@ -620,18 +814,22 @@ export class DungeonScene extends Phaser.Scene {
     }
 
     this.walls = this.physics.add.staticGroup()
+    const WALL_COL_H = 16
     const mk = (cx: number, cy: number, w: number, h: number) => {
       const z = this.add.zone(cx, cy, w, h)
       this.physics.add.existing(z, true)
       this.walls.add(z)
     }
     // 地图外圈围栏
-    mk(ARENA.x + ARENA.w / 2, ARENA.y - 8, ARENA.w + 32, 16)
-    mk(ARENA.x + ARENA.w / 2, ARENA.y + ARENA.h + 8, ARENA.w + 32, 16)
-    mk(ARENA.x - 8, ARENA.y + ARENA.h / 2, 16, ARENA.h + 32)
-    mk(ARENA.x + ARENA.w + 8, ARENA.y + ARENA.h / 2, 16, ARENA.h + 32)
+    mk(ARENA.x + ARENA.w / 2, ARENA.y - 8, ARENA.w + 32, WALL_COL_H)
+    mk(ARENA.x + ARENA.w / 2, ARENA.y + ARENA.h + 8, ARENA.w + 32, WALL_COL_H)
+    mk(ARENA.x - 8, ARENA.y + ARENA.h / 2, WALL_COL_H, ARENA.h + 32)
+    mk(ARENA.x + ARENA.w + 8, ARENA.y + ARENA.h / 2, WALL_COL_H, ARENA.h + 32)
     // 内部岩石/石柱碰撞（已按行合并）
-    for (const r of this.level.wallRects) mk(r.x + r.w / 2, r.y + r.h / 2, r.w, r.h)
+    // 完整瓦片高度碰撞，防止玩家从侧面穿过墙体
+    for (const r of this.level.wallRects) {
+      mk(r.x + r.w / 2, r.y + r.h / 2, r.w, r.h)
+    }
   }
 
   /** 旧版渲染（v2 资源缺失时回退） */
@@ -665,16 +863,20 @@ export class DungeonScene extends Phaser.Scene {
       if (this.rng() < 0.5) img.setFlipX(true)
     }
     this.walls = this.physics.add.staticGroup()
+    const WALL_COL_H = 16
     const mk = (cx: number, cy: number, w: number, h: number) => {
       const z = this.add.zone(cx, cy, w, h)
       this.physics.add.existing(z, true)
       this.walls.add(z)
     }
-    mk(ARENA.x + ARENA.w / 2, ARENA.y - 8, ARENA.w + 32, 16)
-    mk(ARENA.x + ARENA.w / 2, ARENA.y + ARENA.h + 8, ARENA.w + 32, 16)
-    mk(ARENA.x - 8, ARENA.y + ARENA.h / 2, 16, ARENA.h + 32)
-    mk(ARENA.x + ARENA.w + 8, ARENA.y + ARENA.h / 2, 16, ARENA.h + 32)
-    for (const r of this.level.wallRects) mk(r.x + r.w / 2, r.y + r.h / 2, r.w, r.h)
+    mk(ARENA.x + ARENA.w / 2, ARENA.y - 8, ARENA.w + 32, WALL_COL_H)
+    mk(ARENA.x + ARENA.w / 2, ARENA.y + ARENA.h + 8, ARENA.w + 32, WALL_COL_H)
+    mk(ARENA.x - 8, ARENA.y + ARENA.h / 2, WALL_COL_H, ARENA.h + 32)
+    mk(ARENA.x + ARENA.w + 8, ARENA.y + ARENA.h / 2, WALL_COL_H, ARENA.h + 32)
+    // 完整瓦片高度碰撞
+    for (const r of this.level.wallRects) {
+      mk(r.x + r.w / 2, r.y + r.h / 2, r.w, r.h)
+    }
   }
 
   /** 岩石格是否与可行走区域相邻（只画看得见的墙）——旧版兼容 */
@@ -794,6 +996,11 @@ export class DungeonScene extends Phaser.Scene {
       }
     }
 
+    // Boss 层播放出现音效
+    if (table.some(([id]) => MONSTERS[id]?.ai === 'boss')) {
+      sfx('sfx_boss_spawn', 0.7)
+    }
+
     // 精英怪：晋升普通怪为精英（随机词缀修饰，必掉装备）
     // 无尽妖域深层精英更多、更强
     const candidates = this.enemies.filter((e) => !e.isBoss)
@@ -821,6 +1028,7 @@ export class DungeonScene extends Phaser.Scene {
         const affixName = ELITE_AFFIX_NAMES[affix]
         e.sprite.setData('label', this.add.text(e.x, e.y - 22, `${affixName}·${e.cfg.name}`, { fontSize: '8px', color: '#ffd54a' }).setOrigin(0.5).setDepth(11))
       }
+      sfx('sfx_elite_spawn', 0.6)
     }
 
     // 随机事件：宝箱 / 血池祭坛（Boss 层不刷；大地图彼此独立判定）
@@ -1035,6 +1243,25 @@ export class DungeonScene extends Phaser.Scene {
       sfx('sfx_portal')
       this.cameras.main.fadeOut(400, 0, 0, 0)
       this.time.delayedCall(420, () => this.scene.start('City'))
+      return
+    }
+    if (this.ladderMode) {
+      this.player.halt()
+      const choice = await showDialog('撤离天梯', [
+        `当前天梯第 ${this.floor} 层，确定撤离？`,
+        `（进度已保存，下次从第 ${this.state.ladderFloor} 层继续）`,
+      ], [
+        { label: '撤离', value: 'yes' },
+        { label: '继续挑战', value: 'no' },
+      ])
+      input.clearQueues()
+      if (choice !== 'yes') return
+      this.over = true
+      this.state.hp = -1
+      saveGame(this.state)
+      sfx('sfx_portal')
+      this.cameras.main.fadeOut(400, 0, 0, 0)
+      this.time.delayedCall(420, () => this.scene.start('Town'))
       return
     }
     if (this.getRegion().id !== 'sy') return
@@ -1267,6 +1494,26 @@ export class DungeonScene extends Phaser.Scene {
   }
 
   private onArenaWaveCleared() {
+    // NPC 战斗模式：击败NPC后返回大地图
+    if (this.npcCombatMode) {
+      this.over = true
+      const combatData = this.registry.get('npcCombatData') as any
+      if (combatData) {
+        combatData.victory = true
+        this.registry.set('npcCombatData', combatData)
+      }
+      const modeText = this.npcCombatSubMode === 'plunder' ? '劫掠成功' : '强攻得手'
+      const lines = [
+        `${modeText}！`,
+        `<span class="dim">战斗中获得灵石 ${this.runGold}</span>`,
+      ]
+      showResult(modeText, lines, '返回大地图', () => {
+        this.state.hp = -1
+        saveGame(this.state)
+        this.scene.start('World')
+      })
+      return
+    }
     if (this.arenaBetweenWaves) return
     this.arenaBetweenWaves = true
     if (this.arenaWave >= this.arenaTotalWaves) {
@@ -1305,6 +1552,61 @@ export class DungeonScene extends Phaser.Scene {
       this.state.hp = -1
       this.scene.start('City')
     })
+  }
+
+  private spawnLadder() {
+    const ladderScale = ladderDifficulty(this.floor)
+    const dynScale = this.dynamicEnemyScale('arena')
+    const totalScale = ladderScale * dynScale
+    const isBossFloor = this.floor % LADDER.bossInterval === 0
+
+    if (isBossFloor) {
+      const bossIds = ['golem', 'phantom', 'brute', 'spirit_fox', 'stone_guardian', 'dark_sword', 'fire_mage', 'shadow_assassin']
+      const bossId = bossIds[Math.floor(this.rng() * bossIds.length)]
+      const cfg = MONSTERS[bossId] ?? MONSTERS['golem']
+      const pt = randomFloorPoint(this.level, this.rng, 120, this.level.spawn) ?? { x: this.level.portal.x, y: this.level.portal.y }
+      const e = new Enemy(this, cfg, pt.x, pt.y, totalScale * 3.0)
+      e.elite = true
+      e.isBoss = true
+      e.maxHp = Math.round(e.maxHp * 3.5)
+      e.hp = e.maxHp
+      e.atk = Math.round(e.atk * 2.0)
+      e.def = Math.round(e.def * 1.8)
+      e.exp = Math.round(e.exp * 3)
+      e.sprite.setScale((e.cfg.scale ?? 1) * 1.6)
+      this.enemies.push(e)
+      this.enemyGroup.add(e.sprite)
+      toast(`天梯第 ${this.floor} 层 · 守关BOSS现身！`, '#ff6464')
+    } else {
+      const table = spawnTableFor(this.floor)
+      for (const [id, min, max] of table) {
+        const n = Math.ceil(randInt(this.rng, min, max) * 1.2)
+        for (let i = 0; i < n; i++) {
+          const pt = randomFloorPoint(this.level, this.rng, 120, this.level.spawn)
+            ?? { x: this.level.portal.x, y: this.level.portal.y }
+          const e = new Enemy(this, MONSTERS[id], pt.x, pt.y, totalScale)
+          if (this.diff.hp !== 1) { e.maxHp = Math.round(e.maxHp * this.diff.hp); e.hp = e.maxHp }
+          if (this.diff.atk !== 1) e.atk = Math.round(e.atk * this.diff.atk)
+          this.enemies.push(e)
+          this.enemyGroup.add(e.sprite)
+        }
+      }
+      const eliteChance = Math.min(0.9, 0.3 + this.floor * 0.01)
+      if (this.rng() < eliteChance) {
+        const eliteId = table[Math.floor(this.rng() * table.length)][0]
+        const pt = randomFloorPoint(this.level, this.rng, 120, this.level.spawn) ?? { x: this.level.portal.x, y: this.level.portal.y }
+        const e = new Enemy(this, MONSTERS[eliteId], pt.x, pt.y, totalScale * 1.8)
+        e.elite = true
+        e.maxHp = Math.round(e.maxHp * 1.8)
+        e.hp = e.maxHp
+        e.atk = Math.round(e.atk * 1.5)
+        e.def = Math.round(e.def * 1.3)
+        e.exp = Math.round(e.exp * 2.2)
+        e.sprite.setScale((e.cfg.scale ?? 1) * 1.35)
+        this.enemies.push(e)
+        this.enemyGroup.add(e.sprite)
+      }
+    }
   }
 
   /** 周期性兽潮：间隔 12s 一波（暴走期 6s），规模与强度随时间爬升，定期出 Boss */
@@ -1626,13 +1928,16 @@ export class DungeonScene extends Phaser.Scene {
     const finalMult = mult * (isSkill ? 1 + stats.skillPct : 1)
     const { dmg, crit } = calcDamage(stats.atk * (1 + this.buffAtkPct + this.formationAtkBonus), finalMult, stats.crit, e.def, Math.random)
     const killed = e.takeDamage(dmg, fromX ?? this.player.sprite.x, fromY ?? this.player.sprite.y)
-    // 打击感：顿帧 + 受击闪白 + 粒子迸发 + 震屏
+    // 打击感：顿帧 + 受击闪白 + 粒子迸发 + 震屏 + 音效
     this.hitStopUntil = this.time.now + (crit ? 70 : 40)
     e.sprite.setTintFill(0xffffff)
     this.time.delayedCall(60, () => { if (e.alive) e.sprite.clearTint() })
     this.hitFx(e.x, e.y, crit)
     this.cameras.main.shake(crit ? 80 : 40, Math.min(0.008, 0.002 + dmg * 0.0002))
     this.floatText(e.x, e.y - 12, String(dmg), crit ? '#ffd54a' : '#ffffff', crit ? 14 : 10)
+    if (crit) sfx('sfx_critical_hit', 0.5)
+    else if (isSkill) sfx('sfx_magic_hit', 0.35)
+    else sfx('sfx_sword_hit', 0.3)
     if (stats.lifesteal > 0) {
       const heal = Math.max(1, Math.round(dmg * stats.lifesteal))
       this.state.hp = Math.min(stats.maxHp, currentHp(this.state) + heal)
@@ -1722,7 +2027,7 @@ export class DungeonScene extends Phaser.Scene {
   }
 
   // ---------- v4 Kit 场景旁路（ADR §2 S4/S5 旁路） ----------
-  private buildV4SceneContext(stats: Stats): V4SceneContext {
+  private buildV4SceneContext(stats: Stats, kitId?: string): V4SceneContext {
     const p = this.player
     return {
       scene: this,
@@ -1738,6 +2043,7 @@ export class DungeonScene extends Phaser.Scene {
         this.floatText(x, y, text, color, size)
       },
       buffAtkPct: this.buffAtkPct,
+      kitId,
     }
   }
 
@@ -1781,7 +2087,7 @@ export class DungeonScene extends Phaser.Scene {
     }
     this.artReadyAt = time + Math.round(artOverride.cooldownMs * (1 - stats.cdPct))
     const behavior = executeKitArt(ability, ctx)
-    executeV4ArtInScene(this.buildV4SceneContext(stats), behavior)
+    executeV4ArtInScene(this.buildV4SceneContext(stats, ability.kitId), behavior)
     p.playCast(time)
     this.cameras.main.shake(70, 0.004)
     sfx('sfx_art')
@@ -1824,8 +2130,8 @@ export class DungeonScene extends Phaser.Scene {
     const attackLinkageSourceSetId = activeLinkage.sourceSetId
     const attackLinkageAuthorization = activeLinkage.authorization
     // 攻击音效：近战挥砍 / 法术与飞剑施放（剑阵开关自带音效）
-    if (mode === 'melee_arc' || mode === 'whirlwind' || mode === 'slash_pierce' || mode === 'slash_heavy' || mode === 'slash_ice' || mode === 'flying_sword_split' || mode === 'flame_slash') sfx('sfx_swing', 0.5)
-    else if (mode !== 'sword_array') sfx('sfx_magic', 0.45)
+    if (mode === 'melee_arc' || mode === 'whirlwind' || mode === 'slash_pierce' || mode === 'slash_heavy' || mode === 'slash_ice' || mode === 'flying_sword_split' || mode === 'flame_slash') sfx('sfx_sword_swing', 0.5)
+    else if (mode !== 'sword_array') sfx('sfx_magic_cast', 0.45)
     const p = this.player
     const px = p.sprite.x, py = p.sprite.y
     const dirAngle = p.dir.angle()
@@ -2217,7 +2523,7 @@ export class DungeonScene extends Phaser.Scene {
       for (const off of [-0.25, 0, 0.25]) {
         const ang = dirAngle + off
         const spr = this.textures.exists('fx_wind_1')
-          ? this.add.sprite(px, py, 'fx_wind_1').setDepth(12).setRotation(ang + rotOff).setScale(0.5).setTint(windTint).play('fx_wind')
+          ? this.add.sprite(px, py, 'fx_wind_1').setDepth(12).setRotation(ang + rotOff).setScale(0.7).setTint(windTint).play('fx_wind')
           : this.add.image(px, py, 'proj').setDepth(12).setRotation(ang + PROJ_ROT_OFFSETS['proj']).setScale(0.38).setTint(windTint)
         const v = 220
         this.pprojs.push({ spr, vx: Math.cos(ang) * v, vy: Math.sin(ang) * v, power: 0.8 * power, kind: 'bolt', bornAt: time, hits: new Set(), linkage: attackLinkage, linkageSourceSetId: attackLinkageSourceSetId, linkageAuthorization: attackLinkageAuthorization, visualContext: attackVisualContext, creationOrder: this.projectileCreationSequence++ })
@@ -2276,8 +2582,8 @@ export class DungeonScene extends Phaser.Scene {
       for (const off of [-0.2, -0.07, 0.07, 0.2]) {
         const ang = dirAngle + off
         const spr = this.textures.exists('fx_star_1')
-          ? this.add.sprite(px, py, 'fx_star_1').setDepth(12).setRotation(ang + rotOff).setScale(0.4).setTint(starTint).play('fx_star')
-          : this.add.image(px, py, 'proj').setDepth(12).setRotation(ang + PROJ_ROT_OFFSETS['proj']).setScale(0.35).setTint(starTint)
+          ? this.add.sprite(px, py, 'fx_star_1').setDepth(12).setRotation(ang + rotOff).setScale(0.65).setTint(starTint).play('fx_star')
+          : this.add.image(px, py, 'proj').setDepth(12).setRotation(ang + PROJ_ROT_OFFSETS['proj']).setScale(0.5).setTint(starTint)
         const v = 260
         this.pprojs.push({ spr, vx: Math.cos(ang) * v, vy: Math.sin(ang) * v, power: 0.7 * power, kind: 'bolt', bornAt: time, hits: new Set(), linkage: attackLinkage, linkageSourceSetId: attackLinkageSourceSetId, linkageAuthorization: attackLinkageAuthorization, visualContext: attackVisualContext, creationOrder: this.projectileCreationSequence++ })
       }
@@ -2333,8 +2639,8 @@ export class DungeonScene extends Phaser.Scene {
       const baseAngle = target ? Phaser.Math.Angle.Between(px, py, target.x, target.y) : dirAngle
       const rotOff = PROJ_ROT_OFFSETS['fx_soul']
       const spr = this.textures.exists('fx_soul_1')
-        ? this.add.sprite(px, py, 'fx_soul_1').setDepth(12).setRotation(baseAngle + rotOff).setScale(0.5).setTint(soulTint).play('fx_soul')
-        : this.add.image(px, py, 'proj').setDepth(12).setRotation(baseAngle + PROJ_ROT_OFFSETS['proj']).setScale(0.4).setTint(soulTint)
+        ? this.add.sprite(px, py, 'fx_soul_1').setDepth(12).setRotation(baseAngle + rotOff).setScale(0.7).setTint(soulTint).play('fx_soul')
+        : this.add.image(px, py, 'proj').setDepth(12).setRotation(baseAngle + PROJ_ROT_OFFSETS['proj']).setScale(0.5).setTint(soulTint)
       const v = 180
       this.pprojs.push({ spr, vx: Math.cos(baseAngle) * v, vy: Math.sin(baseAngle) * v, power: 1.0 * power, kind: 'bolt', bornAt: time, hits: new Set(), linkage: attackLinkage, linkageSourceSetId: attackLinkageSourceSetId, linkageAuthorization: attackLinkageAuthorization, visualContext: attackVisualContext, creationOrder: this.projectileCreationSequence++ })
       return
@@ -2347,7 +2653,7 @@ export class DungeonScene extends Phaser.Scene {
       for (const off of [-0.3, -0.1, 0.1, 0.3]) {
         const ang = dirAngle + off
         const spr = this.textures.exists('fx_crystal_1')
-          ? this.add.sprite(px, py, 'fx_crystal_1').setDepth(12).setRotation(ang + rotOff).setScale(0.45).setTint(crystalTint).play('fx_crystal')
+          ? this.add.sprite(px, py, 'fx_crystal_1').setDepth(12).setRotation(ang + rotOff).setScale(0.65).setTint(crystalTint).play('fx_crystal')
           : this.add.image(px, py, 'proj').setDepth(12).setRotation(ang + PROJ_ROT_OFFSETS['proj']).setScale(0.35).setTint(crystalTint)
         const v = 230
         this.pprojs.push({ spr, vx: Math.cos(ang) * v, vy: Math.sin(ang) * v, power: 0.75 * power, kind: 'bolt', bornAt: time, hits: new Set(), linkage: attackLinkage, linkageSourceSetId: attackLinkageSourceSetId, linkageAuthorization: attackLinkageAuthorization, visualContext: attackVisualContext, creationOrder: this.projectileCreationSequence++ })
@@ -2364,6 +2670,18 @@ export class DungeonScene extends Phaser.Scene {
     }
     for (const off of spread) {
       this.spawnPlayerProj(px, py, dirAngle + off, per, 'sword', false, false, attackLinkage, attackLinkageSourceSetId, undefined, attackLinkageAuthorization, attackVisualContext)
+    }
+    // 法宝buff：额外召唤飞剑（个人法宝 + 宗门圣物）
+    const relicArts = (this.state.sect?.relics ?? []).filter(Boolean) as ArtifactInstance[]
+    const allArts = [...(this.state.artifacts ?? []), ...relicArts]
+    const artBuff = getArtifactBuff(allArts, this.state.classId)
+    if (artBuff?.type === 'flying_sword') {
+      const extra = Math.ceil(artBuff.value)
+      const extraPer = per * 0.6
+      for (let i = 0; i < extra; i++) {
+        const off = (i - (extra - 1) / 2) * 0.18
+        this.spawnPlayerProj(px, py, dirAngle + off, extraPer, 'sword', false, true, attackLinkage, attackLinkageSourceSetId, undefined, attackLinkageAuthorization, attackVisualContext)
+      }
     }
   }
 
@@ -3237,6 +3555,7 @@ export class DungeonScene extends Phaser.Scene {
     this.state.totalKills = (this.state.totalKills ?? 0) + 1
     updateDailyProgress(this.state, 'kills', 1)
     sfx('sfx_die', 0.45)
+    if (e.isBoss) sfx('sfx_boss_death', 0.7)
     // 死亡粒子迸发
     this.deathFx(e.x, e.y, e.elite ?? false)
     // 经验与升级
@@ -3255,18 +3574,30 @@ export class DungeonScene extends Phaser.Scene {
       this.state.insight += 10
       const stones = randInt(this.rng, 1, 2)
       this.state.materials.tupo = (this.state.materials.tupo ?? 0) + stones
-      // Boss 必掉套装部件（无尽妖域随机掉落三套套装；另有概率掉落机缘套装部件）
+      // Boss 必掉套装部件（无尽妖域随机掉落三套套装 + 机缘套装 + v4 Kit）
       const region = this.getRegion()
       let setId: string
+      let v4KitId: KitId | null = null
       if (region.id === 'sy') {
-        if (this.rng() < 0.3) setId = this.pickDynamicSetId()
-        else setId = ['set_qm', 'set_xm', 'set_zx'][randInt(this.rng, 0, 2)]
+        const r = this.rng()
+        if (r < 0.2) {
+          v4KitId = V4_KIT_WHITELIST[randInt(this.rng, 0, V4_KIT_WHITELIST.length - 1)]
+          setId = v4SetId(v4KitId)
+        } else if (r < 0.5) {
+          setId = this.pickDynamicSetId()
+        } else {
+          setId = ['set_qm', 'set_xm', 'set_zx'][randInt(this.rng, 0, 2)]
+        }
       } else {
         setId = region.setId
       }
       const piece = rollSetPiece(this.rng, setId, effFloor, this.diff.luck, this.state.level)
       if (piece) this.spawnDrop('equip', e.x + 10, e.y, 0, piece)
       toast(`击败守关魔将！悟道 +10，突破石 +${stones}`, '#e8c86a')
+      if (v4KitId) {
+        const kit = V4_KIT_ABILITY_MAP.get(v4KitId)
+        toast(`天机降临！【${kit?.name ?? v4KitId}】现世`, '#ffd54a')
+      }
     }
     // 普通掉落
     const roll = rollDrop(this.rng, e.gold, effFloor, e.isBoss, this.diff.luck, this.diff.gold, this.state.level)
@@ -3372,6 +3703,10 @@ export class DungeonScene extends Phaser.Scene {
       const beam = this.add.image(x, y - 10, 'd_equip').setDepth(4).setTint(QUALITY_COLORS[item.quality]).setAlpha(0.35).setScale(0.6, 2.2)
       this.tweens.add({ targets: beam, alpha: 0.15, duration: 500, yoyo: true, repeat: -1 })
       spr.setData('beam', beam)
+      // 高品质装备掉落音效
+      if (item.quality >= 4) sfx('sfx_drop_legend', 0.6)
+      else if (item.quality >= 3) sfx('sfx_drop_epic', 0.5)
+      else if (item.quality >= 2) sfx('sfx_drop_rare', 0.4)
     }
     if (kind === 'book') {
       this.tweens.add({ targets: spr, y: y - 3, duration: 500, yoyo: true, repeat: -1 })
@@ -3672,12 +4007,44 @@ export class DungeonScene extends Phaser.Scene {
       })
       return
     }
+    if (this.npcCombatMode) {
+      const combatData = this.registry.get('npcCombatData') as any
+      if (combatData) {
+        combatData.victory = false
+        this.registry.set('npcCombatData', combatData)
+      }
+      showResult('战斗失利', [
+        `你未能击败对方，铩羽而归。`,
+        `<span class="dim">遗失灵石 ${lost}。</span>`,
+      ], '返回大地图', () => {
+        this.state.hp = -1
+        saveGame(this.state)
+        this.cameras.main.fadeOut(400, 0, 0, 0)
+        this.time.delayedCall(420, () => this.scene.start('World'))
+      })
+      return
+    }
     if (this.xianMode) {
       const xianFloor = xianFloorDisplay(this.floor)
       showResult('仙途折戟', [
         `你在仙界第 ${xianFloor} 重被击败，仙力溃散坠回凡尘。`,
         `<span class="dim">本次仙旅击败 ${this.runKills} 名仙兵灵兽，遗失灵石 ${lost}。</span>`,
         `<span class="dim">境界、功法与装备已保留，休整后再登仙途。</span>`,
+      ], '返回洞府', () => {
+        this.state.hp = -1
+        this.scene.start('Town')
+      })
+      return
+    }
+    if (this.ladderMode) {
+      if (this.floor > this.state.ladderMaxFloor) {
+        this.state.ladderMaxFloor = this.floor
+      }
+      saveGame(this.state)
+      showResult('天梯折戟', [
+        `你在天梯第 ${this.floor} 层被击败，坠落凡尘。`,
+        `<span class="dim">本次挑战击败 ${this.runKills} 只敌人，遗失灵石 ${lost}。</span>`,
+        `<span class="dim">历史最高：第 ${this.state.ladderMaxFloor} 层。可从第 ${this.state.ladderFloor} 层继续挑战。</span>`,
       ], '返回洞府', () => {
         this.state.hp = -1
         this.scene.start('Town')
@@ -3695,6 +4062,26 @@ export class DungeonScene extends Phaser.Scene {
   }
 
   private onFloorCleared() {
+    // 天梯模式：无通关上限，每层都开传送门，发放奖励
+    if (this.ladderMode) {
+      if (this.floor > this.state.ladderMaxFloor) {
+        this.state.ladderMaxFloor = this.floor
+      }
+      this.state.ladderFloor = this.floor + 1
+      const reward = ladderReward(this.floor)
+      this.state.gold += reward.gold
+      this.runGold += reward.gold
+      if (reward.materials > 0) {
+        this.state.materials.tupo = (this.state.materials.tupo ?? 0) + reward.materials
+      }
+      saveGame(this.state)
+      this.portal = this.add.sprite(this.level.portal.x, this.level.portal.y, 'portal').setDepth(3)
+      this.tweens.add({ targets: this.portal, alpha: 0.5, duration: 600, yoyo: true, repeat: -1 })
+      const bossTag = (this.floor + 1) % LADDER.bossInterval === 0 ? ' · ☯BOSS层' : ''
+      this.add.text(this.level.portal.x, this.level.portal.y - 22, `通往第 ${this.floor + 1} 层${bossTag}`, { fontSize: '9px', color: '#c8a2ff' }).setOrigin(0.5).setDepth(3)
+      toast(`天梯第 ${this.floor} 层已肃清！灵石 +${reward.gold}${reward.materials > 0 ? ` · 突破石 +${reward.materials}` : ''}`, '#c8a2ff')
+      return
+    }
     const region = this.getRegion()
     // 域特色秘境：按相对楼层判断是否通关
     if (this.regionOverrideId && this.getRegionFloor() >= this.regionMaxFloors) {
@@ -3711,7 +4098,8 @@ export class DungeonScene extends Phaser.Scene {
         `<span class="dim">装备：${items}</span>`,
       ], '返回大地图', () => {
         saveGame(this.state)
-        this.scene.start('World')
+        this.cameras.main.fadeOut(400, 0, 0, 0)
+        this.time.delayedCall(420, () => this.scene.start('World'))
       })
       return
     }
@@ -3737,7 +4125,8 @@ export class DungeonScene extends Phaser.Scene {
         `<span class="dim">装备：${items}</span>`,
       ], '返回洞府', () => {
         saveGame(this.state)
-        this.scene.start('Town')
+        this.cameras.main.fadeOut(400, 0, 0, 0)
+        this.time.delayedCall(420, () => this.scene.start('Town'))
       })
       return
     }
@@ -3810,19 +4199,18 @@ export class DungeonScene extends Phaser.Scene {
     this.player.move(input, stats, time, delta)
 
     // 防穿墙：碰撞体被怪物/击退挤进实心瓦片时，回拉到最近安全位置
-    // 增强版：连续卡墙时启动智能脱困，在周围8个方向寻找安全点
+    // 使用身体中心检测，避免边界误判导致频繁卡墙
     {
       const body = this.player.sprite.body as Phaser.Physics.Arcade.Body
       const px = this.player.sprite.x
       const py = this.player.sprite.y
-      const solid = isSolidPixel(this.level, body.x, body.y)
-        || isSolidPixel(this.level, body.x + body.width, body.y)
-        || isSolidPixel(this.level, body.x, body.y + body.height)
-        || isSolidPixel(this.level, body.x + body.width, body.y + body.height)
+      const bcx = body.x + body.width / 2
+      const bcy = body.y + body.height / 2
+      const solid = isSolidPixel(this.level, bcx, bcy)
       if (solid) {
         this.playerStuckCount++
-        if (this.playerStuckCount >= 3 && time > this.playerUnstuckUntil) {
-          // 连续卡墙3次以上：启动智能脱困，在周围寻找最近安全点
+        if (this.playerStuckCount >= 5 && time > this.playerUnstuckUntil) {
+          // 连续卡墙5次以上：启动智能脱困，在周围寻找最近安全点
           this.playerUnstuckUntil = time + 1000
           let found = false
           const searchRadii = [12, 20, 30, 45, 60]
@@ -3875,6 +4263,11 @@ export class DungeonScene extends Phaser.Scene {
         const label = e.sprite.getData('label')
         if (label) label.setAlpha(vis ? 1 : 0)
       }
+    }
+
+    // 动态光照更新
+    if (this.lightSystem) {
+      this.lightSystem.update(this.player.sprite.x, this.player.sprite.y)
     }
 
     // 吃丹
@@ -4188,8 +4581,8 @@ export class DungeonScene extends Phaser.Scene {
     }
 
     // 清层判定（黄龙山无清层概念，坚守到底）
-    if (this.arenaMode && !this.portal && this.enemies.every((e) => !e.alive)) this.onArenaWaveCleared()
-    else if (!this.hlMode && !this.arenaMode && !this.portal && this.enemies.every((e) => !e.alive)) this.onFloorCleared()
+    if ((this.arenaMode || this.npcCombatMode) && !this.portal && this.enemies.every((e) => !e.alive)) this.onArenaWaveCleared()
+    else if (!this.hlMode && !this.arenaMode && !this.npcCombatMode && !this.portal && this.enemies.every((e) => !e.alive)) this.onFloorCleared()
 
     // 符箓存档点交互（破碎仙宫每 5 重）
     if (this.xianMode && this.talisman && this.talisman.active) {
@@ -4206,7 +4599,7 @@ export class DungeonScene extends Phaser.Scene {
       sfx('sfx_portal')
       this.cameras.main.fadeOut(300, 0, 0, 0)
       const nextFloor = this.floor + 1
-      const mode = this.xianMode ? 'xian' : undefined
+      const mode = this.xianMode ? 'xian' : this.ladderMode ? 'ladder' : undefined
       // 仙界记录最深层
       if (this.xianMode) {
         recordXianDepth(this.state, xianFloorDisplay(nextFloor))
@@ -4230,16 +4623,18 @@ export class DungeonScene extends Phaser.Scene {
   }
 
   private collectDrop(d: Drop) {
-    sfx('sfx_pickup', 0.5)
     if (d.kind === 'gold') {
+      sfx('sfx_gold_drop', 0.5)
       this.state.gold += d.gold
       this.runGold += d.gold
       this.floatText(d.spr.x, d.spr.y - 8, `+${d.gold} 灵石`, '#f1c40f', 9)
     } else if (d.kind === 'potion') {
+      sfx('sfx_pickup', 0.5)
       this.state.potions = (this.state.potions ?? 0) + 1
       this.state.consumables.hp_pill = (this.state.consumables?.hp_pill ?? 0) + 1
       this.floatText(d.spr.x, d.spr.y - 8, '+1 丹药', '#e74c3c', 9)
     } else if (d.kind === 'book' && d.skillId === '__dyn__') {
+      sfx('sfx_pickup', 0.5)
       // 无名古卷：现场生成随机心法并习得
       const seq = (this.state.dynamicSkills?.length ?? 0) + 1
       const def = genDynamicSkill(this.rng, seq)
@@ -4248,9 +4643,11 @@ export class DungeonScene extends Phaser.Scene {
       learnSkill(this.state, def.id)
       toast(`参悟无名古卷，悟得心法《${def.name}》！`, '#ffd54a')
     } else if (d.kind === 'book' && d.skillId) {
+      sfx('sfx_pickup', 0.5)
       learnSkill(this.state, d.skillId)
       toast(`习得功法《${SKILLS.get(d.skillId)?.name}》！去背包装配`, '#af7ac5')
     } else if (d.item) {
+      sfx('sfx_equip', 0.5)
       this.state.inventory.push(d.item)
       recordCodexItem(this.state, d.item)
       this.runItems.push(`[${QUALITY_NAMES[d.item.quality]}]${d.item.name} Lv.${d.item.itemLevel}`)

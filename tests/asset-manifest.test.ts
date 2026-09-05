@@ -72,18 +72,13 @@ describe('资源清单从源码解析（不硬编码）', () => {
     const v4 = manifest.groups.find((g) => g.id === 'v4-kit')
     expect(v4).toBeDefined()
     const k01 = v4!.entries[0].files.map((f) => f.rel)
-    // manifest.ts: iconKeys → `v4/${kitId}_icon_${i}`（i 从 0 起）
-    expect(k01.slice(0, 4)).toEqual([
-      'v4/k01_icon_0.png',
-      'v4/k01_icon_1.png',
-      'v4/k01_icon_2.png',
-      'v4/k01_icon_3.png',
-    ])
+    // manifest.ts: iconKeys → `v4/${kitId}_icon_${i}`（i 从 0 起，仅 1 张）
+    expect(k01.slice(0, 1)).toEqual(['v4/k01_icon_0.png'])
     // FRAME_BUDGET.normal = { start:4, main:6, mid:4 }；art = { start:4, main:8, mid:8 }
     expect(k01).toContain('v4/k01_atk_main_6.png')
     expect(k01).toContain('v4/k01_art_main_8.png')
     expect(k01).not.toContain('v4/k01_atk_main_7.png')
-    expect(k01).toHaveLength(38) // 4 图标 + 14 普攻帧 + 20 神通帧
+    expect(k01).toHaveLength(35) // 1 图标 + 14 普攻帧 + 20 神通帧
   })
 })
 
@@ -103,12 +98,8 @@ const report = validateAssetTree(PROJECT_ROOT)
  */
 const APPROVED_OPTIONAL_MISSING: Record<string, { files: string[]; reason: string }> = {
   'sprite-keys': {
-    files: ['sprites/player.png', 'sprites/npc.png'],
+    files: ['sprites/player.png'],
     reason: 'src/textures.ts 的 generateMissing 程序化兜底，属预期设计',
-  },
-  'named-static': {
-    files: ['sprites/sect_bg.jpg'],
-    reason: '宗门背景：AI 源素材在 assets/scenes/sect_bg.jpg，尚未合成进 public/；SectScene 有 Graphics 兜底',
   },
 }
 
@@ -270,7 +261,7 @@ const FIXTURE_V4_MANIFEST = [
   '  }',
   '}',
   'function iconKeys(kitId: KitId): string[] {',
-  '  return Array.from({ length: 4 }, (_, i) => `v4/${kitId}_icon_${i}`)',
+  '  return Array.from({ length: 1 }, (_, i) => `v4/${kitId}_icon_${i}`)',
   '}',
 ].join('\n')
 

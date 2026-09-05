@@ -809,11 +809,11 @@ let count = 0
 for (const kit of KITS) {
   const baseColor = ELEMENT_COLORS[kit.element] ?? [200, 200, 200]
 
-  // Icons (4 × 32px)
-  for (let i = 0; i < 4; i++) {
+  // Icon (1 × 32px)
+  {
     const canvas = createCanvas(ICON_SIZE, ICON_SIZE)
     drawIcon(canvas, kit.normalPrimitive, baseColor)
-    const path = join(outDir, `${kit.kitId}_icon_${i}.png`)
+    const path = join(outDir, `${kit.kitId}_icon_0.png`)
     writePng(path, ICON_SIZE, ICON_SIZE, canvas.px)
     count++
   }
@@ -838,7 +838,7 @@ for (const kit of KITS) {
 }
 
 console.log(`生成完成：${count} 个 PNG 资产 → ${outDir}`)
-console.log(`  图标: ${KITS.length * 4} 个 (${ICON_SIZE}×${ICON_SIZE})`)
+console.log(`  图标: ${KITS.length} 个 (${ICON_SIZE}×${ICON_SIZE})`)
 console.log(`  动画帧: ${KITS.length * (14 + 20)} 个 (${FRAME_SIZE}×${FRAME_SIZE})`)
 console.log(`  Kit: ${KITS.map((k) => k.kitId).join(', ')}`)
 console.log(`  版本: v2（多层渐变 / 发光晕 / 抗锯齿 / 粒子特效 / 8 原语专属视觉）`)

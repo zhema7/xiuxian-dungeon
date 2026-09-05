@@ -133,7 +133,16 @@ export class TitleScene extends Phaser.Scene {
     hideTitleMenu()
     this.stopVideoBackground()
     this.cameras.main.fadeOut(300, 0, 0, 0)
-    this.time.delayedCall(320, () => this.scene.start('Town'))
+    const lastScene = this.state.lastScene
+    const lastData = this.state.lastSceneData
+    const validScenes = ['Town', 'City', 'World', 'Sect', 'Dungeon']
+    this.time.delayedCall(320, () => {
+      if (lastScene && validScenes.includes(lastScene) && (lastData as Record<string, unknown>)?.mode !== 'arena' && (lastData as Record<string, unknown>)?.mode !== 'ladder' && (lastData as Record<string, unknown>)?.mode !== 'npcCombat') {
+        this.scene.start(lastScene, lastData && Object.keys(lastData).length > 0 ? lastData : undefined)
+      } else {
+        this.scene.start('Town')
+      }
+    })
   }
 
   /**
@@ -160,7 +169,7 @@ export class TitleScene extends Phaser.Scene {
   private buildBackground() {
     if (this.textures.exists('title_bg')) {
       const img = this.add.image(180, 320, 'title_bg').setDepth(0)
-      const s = Math.max(360 / img.width, 640 / img.height)  // cover 竖屏视口
+      const s = Math.max(this.scale.gameSize.width / img.width, this.scale.gameSize.height / img.height)  // cover 竖屏视口
       img.setScale(s)
       return
     }
@@ -171,13 +180,13 @@ export class TitleScene extends Phaser.Scene {
       const c = Phaser.Display.Color.Interpolate.ColorWithColor(
         new Phaser.Display.Color(7, 10, 24), new Phaser.Display.Color(43, 58, 96), steps - 1, i)
       g.fillStyle(Phaser.Display.Color.GetColor(Math.round(c.r), Math.round(c.g), Math.round(c.b)), 1)
-      g.fillRect(0, (i / steps) * 640, 360, 640 / steps + 1)
+      g.fillRect(0, (i / steps) * this.scale.gameSize.height, this.scale.gameSize.width, this.scale.gameSize.height / steps + 1)
     }
     // 星点
     for (let i = 0; i < 70; i++) {
       g.fillStyle(0xffffff, 0.15 + Math.random() * 0.65)
       const s = Math.random() < 0.12 ? 2 : 1
-      g.fillRect(Math.floor(Math.random() * 360), Math.floor(Math.random() * 380), s, s)
+      g.fillRect(Math.floor(Math.random() * this.scale.gameSize.width), Math.floor(Math.random() * 380), s, s)
     }
     // 圆月与月晕
     g.fillStyle(0xf5e6b8, 0.15).fillCircle(282, 104, 40)
@@ -186,14 +195,14 @@ export class TitleScene extends Phaser.Scene {
     g.fillCircle(289, 110, 3)
     // 远山剪影（三重）
     g.fillStyle(0x141b2e, 1)
-    g.fillTriangle(-20, 640, 70, 360, 180, 640)
-    g.fillTriangle(120, 640, 230, 400, 340, 640)
+    g.fillTriangle(-20, this.scale.gameSize.height, 70, this.scale.gameSize.width, 180, this.scale.gameSize.height)
+    g.fillTriangle(120, this.scale.gameSize.height, 230, 400, 340, this.scale.gameSize.height)
     g.fillStyle(0x0e1424, 1)
-    g.fillTriangle(40, 640, 150, 440, 270, 640)
-    g.fillTriangle(220, 640, 310, 460, 400, 640)
+    g.fillTriangle(40, this.scale.gameSize.height, 150, 440, 270, this.scale.gameSize.height)
+    g.fillTriangle(220, this.scale.gameSize.height, 310, 460, 400, this.scale.gameSize.height)
     // 主峰（青冥山）与山门灯火
     g.fillStyle(0x0a0f1d, 1)
-    g.fillTriangle(90, 640, 195, 330, 310, 640)
+    g.fillTriangle(90, this.scale.gameSize.height, 195, 330, 310, this.scale.gameSize.height)
     g.fillStyle(0xf0c987, 0.9)
     g.fillRect(193, 420, 3, 3)
     g.fillRect(188, 468, 2, 2)

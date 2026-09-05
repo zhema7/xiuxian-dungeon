@@ -8,9 +8,9 @@ import { CLASSES, ITEM_BASES, ITEM_BASE_MAP, QUALITY_NAMES, SETS, SLOT_KEYS, typ
 import { calcStats, currentHp } from '../effects'
 import { saveGame, type GameState } from '../state'
 import {
-  dialogOpen, modalPanel, openInventory, panelOpen, setFloorText, showDialog, toast, updateHUD, closePanel,
+  dialogOpen, modalPanel, openInventory, panelOpen, resetControls, setFloorText, showDialog, toast, updateHUD, closePanel,
 } from '../ui'
-import { BGM_TOWN, playBgm, sfx } from '../audio'
+import { BGM_CITY, playBgm, sfx } from '../audio'
 import { initNpcStates, updateNpcGrowth } from '../npc-system'
 import { tryCompleteQuest, getQuestHudText } from '../storyline-system'
 
@@ -126,8 +126,10 @@ export class CityScene extends Phaser.Scene {
   create() {
     this.state = this.registry.get('state')
     this.state.hp = -1
+    this.state.lastScene = 'City'
+    this.state.lastSceneData = {}
     saveGame(this.state)
-    playBgm(BGM_TOWN)
+    playBgm(BGM_CITY)
     setFloorText('天枢城')
     this.entering = false
     this.npcs = []
@@ -161,12 +163,12 @@ export class CityScene extends Phaser.Scene {
       fontSize: '11px', color: '#f0e8d0',
       stroke: '#000', strokeThickness: 3,
     }
-    this.add.text(360, 50, '城主府', labelStyle).setOrigin(0.5).setDepth(1)
+    this.add.text(WORLD_W / 2, 50, '城主府', labelStyle).setOrigin(0.5).setDepth(1)
     this.add.text(120, 190, '悬赏堂', { ...labelStyle, fontSize: '10px' }).setOrigin(0.5).setDepth(1)
     this.add.text(600, 190, '荣誉阁', { ...labelStyle, fontSize: '10px' }).setOrigin(0.5).setDepth(1)
     this.add.text(150, 560, '坊  市', { ...labelStyle, fontSize: '10px', color: '#e8c86a' }).setOrigin(0.5).setDepth(1)
     this.add.text(570, 560, '擂  台', { ...labelStyle, fontSize: '10px', color: '#ff8866' }).setOrigin(0.5).setDepth(1)
-    this.add.text(360, 460, '中央广场', { ...labelStyle, fontSize: '9px', color: '#a3e4d7' }).setOrigin(0.5).setDepth(1)
+    this.add.text(WORLD_W / 2, 460, '中央广场', { ...labelStyle, fontSize: '9px', color: '#a3e4d7' }).setOrigin(0.5).setDepth(1)
 
     this.physics.world.setBounds(BOUNDS.x, BOUNDS.y, BOUNDS.w, BOUNDS.h)
     this.cameras.main.setBounds(0, 0, WORLD_W, WORLD_H)
@@ -174,14 +176,14 @@ export class CityScene extends Phaser.Scene {
     // 建筑物理碰撞体积
     this.addBuildingColliders()
 
-    // 回洞府传送门（城门方向，底部中央）
-    this.portal = this.add.sprite(360, 880, 'portal').setDepth(2)
+    // 传送阵（城门方向，底部中央）
+    this.portal = this.add.sprite(WORLD_W / 2, 880, 'portal').setDepth(2)
     this.tweens.add({ targets: this.portal, alpha: 0.55, duration: 700, yoyo: true, repeat: -1 })
-    this.add.text(360, 856, '回洞府', { fontSize: '10px', color: '#a3e4d7' }).setOrigin(0.5).setDepth(2)
+    this.add.text(WORLD_W / 2, 856, '传送阵', { fontSize: '10px', color: '#a3e4d7' }).setOrigin(0.5).setDepth(2)
 
     // NPC 布局（按俯视大地图功能区域定位）
     // 城主府（正北中轴）
-    this.addCityNpc('city_lord', '天枢城主', 360, 220, this.npcTex('npc_city_lord'))
+    this.addCityNpc('city_lord', '天枢城主', WORLD_W / 2, 280, this.npcTex('npc_city_lord'))
     // 悬赏堂（西北）
     this.addCityNpc('quest1', '悬赏长老', 120, 300, this.npcTex('npc_quest1'))
     this.addCityNpc('quest2', '游历散人', 120, 480, this.npcTex('npc_quest2'))
@@ -195,7 +197,7 @@ export class CityScene extends Phaser.Scene {
     this.addCityNpc('champion', '擂台霸主', 540, 480, this.npcTex('npc_arena_champion'))
 
     // 玩家（出生在城门入口）
-    this.player = new Player(this, 360, 820, this.state.classId)
+    this.player = new Player(this, WORLD_W / 2, 820, this.state.classId)
     // 城池中角色放大一倍
     const baseScale = this.player.sprite.scaleX
     this.player.sprite.setScale(baseScale * 2)
@@ -208,7 +210,7 @@ export class CityScene extends Phaser.Scene {
 
     this.cameras.main.setBackgroundColor('#0e1a2e')
     document.getElementById('hud')!.style.display = 'block'
-    document.getElementById('controls')!.style.display = 'block'
+    resetControls()
     document.getElementById('btnSkill')!.style.display = 'none'
     document.getElementById('btnRetreat')!.style.display = 'none'
     updateHUD()
@@ -218,7 +220,7 @@ export class CityScene extends Phaser.Scene {
   /** 添加建筑/装饰碰撞体积 */
   private addBuildingColliders() {
     // 城主府建筑群
-    this.addCollider(360, 110, 280, 120)
+    this.addCollider(WORLD_W / 2, 110, 280, 120)
     // 城主府台阶/石狮
     this.addCollider(310, 190, 30, 20)
     this.addCollider(410, 190, 30, 20)
@@ -227,7 +229,7 @@ export class CityScene extends Phaser.Scene {
     // 荣誉阁
     this.addCollider(600, 240, 130, 90)
     // 中央纪念碑
-    this.addCollider(360, 460, 50, 50)
+    this.addCollider(WORLD_W / 2, 460, 50, 50)
     // 坊市摊位群（多个小碰撞体）
     this.addCollider(100, 620, 60, 40)
     this.addCollider(200, 620, 60, 40)
@@ -237,7 +239,7 @@ export class CityScene extends Phaser.Scene {
     // 擂台圆形竞技场
     this.addCollider(565, 650, 180, 150)
     // 城门墙体
-    this.addCollider(360, 910, 220, 50)
+    this.addCollider(WORLD_W / 2, 910, 220, 50)
     // 周边城墙
     this.addCollider(4, WORLD_H / 2, 8, WORLD_H)
     this.addCollider(WORLD_W - 4, WORLD_H / 2, 8, WORLD_H)
@@ -307,7 +309,7 @@ export class CityScene extends Phaser.Scene {
       }
     }
     // 灯笼
-    const lanterns = [{ x: 100, y: 300 }, { x: 620, y: 300 }, { x: 360, y: 360 }]
+    const lanterns = [{ x: 100, y: 300 }, { x: 620, y: 300 }, { x: WORLD_W / 2, y: 360 }]
     for (const l of lanterns) {
       g.fillStyle(0xff6b35, 0.8); g.fillCircle(l.x, l.y, 6)
       g.fillStyle(0xffd54a, 0.2); g.fillCircle(l.x, l.y, 15)
@@ -359,7 +361,7 @@ export class CityScene extends Phaser.Scene {
       document.getElementById('btnAct')!.style.display = nearId ? 'flex' : 'none'
     }
     if (nearId && input.consumeAct()) {
-      if (nearId === 'portal') this.returnToTown()
+      if (nearId === 'portal') this.usePortal()
       else this.talkTo(nearId as CityNpcId)
     }
 
@@ -377,18 +379,36 @@ export class CityScene extends Phaser.Scene {
     }
   }
 
-  private returnToTown() {
+  private async usePortal() {
     if (this.entering) return
-    this.entering = true
     this.player.halt()
+
+    const options: { label: string; value: string }[] = [
+      { label: '返回洞府', value: 'town' },
+      { label: '前往大地图', value: 'world' },
+    ]
+    if (this.state.sectUnlocked) {
+      options.push({ label: '返回宗门', value: 'sect' })
+    }
+
+    const choice = await showDialog('传送阵', ['一道幽蓝的传送阵在此闪烁，你想要前往何处？'], options)
+    if (!choice) return
+
+    this.entering = true
     sfx('sfx_portal')
-    toast('返回洞府……', '#a3e4d7')
+    const destText: Record<string, string> = {
+      town: '返回洞府……',
+      world: '前往大地图……',
+      sect: '返回宗门……',
+    }
+    toast(destText[choice] ?? '传送中……', '#a3e4d7')
     this.cameras.main.fadeOut(400, 0, 0, 0)
     this.time.delayedCall(420, () => {
       document.getElementById('btnAct')!.style.display = 'none'
-      if (this.registry.get('cityReturnScene') === 'World') {
-        this.registry.set('cityReturnScene', null)
+      if (choice === 'world') {
         this.scene.start('World', { fromScene: 'city' })
+      } else if (choice === 'sect') {
+        this.scene.start('Sect', { fromScene: 'city' })
       } else {
         this.scene.start('Town')
       }

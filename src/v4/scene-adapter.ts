@@ -17,6 +17,7 @@ export interface V4SceneContext {
   dealDamage: (e: Enemy, mult: number, isSkill: boolean, fromX?: number, fromY?: number) => void
   floatText: (x: number, y: number, text: string, color: string, size: number) => void
   buffAtkPct: number
+  kitId?: string
 }
 
 function hitEnemiesInRange(
@@ -114,6 +115,21 @@ function createPersistentZone(
   })
 }
 
+// ---------- v4 神通动画精灵（atlas 覆盖层） ----------
+
+function playKitArtSprite(ctx: V4SceneContext, scale = 1.5): void {
+  if (!ctx.kitId) return
+  const atlasKey = `v4_${ctx.kitId}_atlas`
+  const animKey = `v4_${ctx.kitId}_art_main`
+  const { scene, playerX: px, playerY: py } = ctx
+  if (!scene.textures.exists(atlasKey) || !scene.anims.exists(animKey)) return
+  const sprite = scene.add.sprite(px, py, atlasKey, `${ctx.kitId}_art_main_1`)
+    .setDepth(76)
+    .setScale(scale)
+  sprite.play(animKey)
+  sprite.on('animationcomplete', () => sprite.destroy())
+}
+
 // ---------- 普攻侧行为落地 ----------
 
 export function executeV4NormalInScene(ctx: V4SceneContext, b: KitNormalBehavior): void {
@@ -205,6 +221,8 @@ export function executeV4NormalInScene(ctx: V4SceneContext, b: KitNormalBehavior
 
 export function executeV4ArtInScene(ctx: V4SceneContext, b: KitArtBehavior): void {
   const { scene, playerX: px, playerY: py } = ctx
+
+  playKitArtSprite(ctx)
 
   switch (b.primitive) {
     case 'boomerang': {

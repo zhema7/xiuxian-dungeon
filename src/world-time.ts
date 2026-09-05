@@ -19,10 +19,21 @@ export const MONTH_NAMES = [
   '七月', '八月', '九月', '十月', '冬月', '腊月',
 ]
 
-/** 现实 5 分钟 = 游戏内 1 天 */
+/** 现实 5 分钟 = 游戏内 1 天（静止时的基础流逝速度） */
 const REAL_MS_PER_GAME_DAY = 5 * 60 * 1000
 /** 现实 1 秒 = 游戏内时辰数 */
 const GAME_HOURS_PER_REAL_SEC = 12 / (REAL_MS_PER_GAME_DAY / 1000)
+
+/** 移动时时间加速基础倍率 */
+const MOVE_TIME_BASE_MULT = 4.0
+/** 速度参考值（基础速度约 110-180，取 120 为基准） */
+const SPEED_REF = 120
+
+/** 计算移动时的时间加速倍率：速度越高，赶路越快，时间消耗越少 */
+export function getMoveTimeMultiplier(effectiveSpeed: number): number {
+  // 速度 120 → 倍率 4.0；速度 180 → 倍率约 2.67；速度 100 → 倍率 4.8
+  return MOVE_TIME_BASE_MULT * (SPEED_REF / Math.max(60, effectiveSpeed))
+}
 
 export function newWorldTime(): WorldTime {
   return { year: 1, month: 1, day: 1, hour: 4, elapsed: 0 }

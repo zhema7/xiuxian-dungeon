@@ -9,6 +9,8 @@ import { mindModsAt } from './skills'
 import { talentMods } from './talents'
 import { totalEnhMult, starMult } from './core'
 import type { GameState } from './state'
+import { ascensionBonus } from './tribulation-data'
+import { totalArtifactStats, getArtifactBuff, refineBuffMult, type ArtifactInstance } from './artifact-data'
 
 export interface Stats {
   maxHp: number; atk: number; def: number; speed: number; crit: number
@@ -16,6 +18,44 @@ export interface Stats {
 }
 
 function addMod(mods: Mods, key: ModKey, v: number) { mods[key] += v }
+
+// ---------- 后天灵窍系统 ----------
+export interface OrificeDef {
+  name: string
+  cost: number
+  successBase: number
+  atk: number; def: number; maxHp: number; crit: number; speed: number
+}
+
+export const SPIRIT_ORIFICES: OrificeDef[] = [
+  { name: '灵海', cost: 2000,   successBase: 0.95, atk: 15,  def: 8,   maxHp: 80,   crit: 0.01, speed: 2 },
+  { name: '气关', cost: 5000,   successBase: 0.87, atk: 25,  def: 12,  maxHp: 120,  crit: 0.01, speed: 3 },
+  { name: '神庭', cost: 10000,  successBase: 0.79, atk: 35,  def: 16,  maxHp: 160,  crit: 0.02, speed: 3 },
+  { name: '天灵', cost: 20000,  successBase: 0.71, atk: 50,  def: 22,  maxHp: 220,  crit: 0.02, speed: 4 },
+  { name: '玄关', cost: 40000,  successBase: 0.63, atk: 70,  def: 30,  maxHp: 300,  crit: 0.03, speed: 5 },
+  { name: '百会', cost: 80000,  successBase: 0.55, atk: 95,  def: 40,  maxHp: 400,  crit: 0.03, speed: 6 },
+  { name: '紫府', cost: 150000, successBase: 0.47, atk: 130, def: 55,  maxHp: 550,  crit: 0.04, speed: 7 },
+  { name: '玉枕', cost: 300000, successBase: 0.39, atk: 180, def: 75,  maxHp: 750,  crit: 0.05, speed: 8 },
+  { name: '泥丸', cost: 600000, successBase: 0.31, atk: 250, def: 100, maxHp: 1000, crit: 0.06, speed: 10 },
+]
+
+/** 计算灵窍成功率（境界越高略加成） */
+export function orificeSuccessRate(s: GameState, idx: number): number {
+  const o = SPIRIT_ORIFICES[idx]
+  if (!o) return 0
+  const realmBonus = Math.max(0, s.realm - 2) * 0.03
+  return Math.min(0.99, o.successBase + realmBonus)
+}
+
+/** 灵窍提供的属性加成 */
+export function orificeBonuses(s: GameState): { atk: number; def: number; maxHp: number; crit: number; speed: number } {
+  let atk = 0, def = 0, maxHp = 0, crit = 0, speed = 0
+  for (let i = 0; i < s.spiritOrifices && i < SPIRIT_ORIFICES.length; i++) {
+    const o = SPIRIT_ORIFICES[i]
+    atk += o.atk; def += o.def; maxHp += o.maxHp; crit += o.crit; speed += o.speed
+  }
+  return { atk, def, maxHp, crit, speed }
+}
 
 /** 汇总所有来源的修饰 */
 export function aggregateMods(s: GameState): Mods {
@@ -82,21 +122,30 @@ export function calcStats(s: GameState): Stats {
   const lv = s.level - 1
   const m = aggregateMods(s)
   const realmMult = 1 + REALM_STAT_BONUS * s.realm
+  const ascMult = ascensionBonus(s.ascensionCount).statMult
+  const orb = orificeBonuses(s)
+  const art = totalArtifactStats(s.artifacts ?? [])
+  const relicArts = (s.sect?.relics ?? []).filter(Boolean) as ArtifactInstance[]
+  const allArts = [...(s.artifacts ?? []), ...relicArts]
+  const buff = getArtifactBuff(allArts, s.classId)
+  // 法宝 stat 级 buff
+  const atkPctBonus = buff?.type === 'atk_pct' ? buff.value : 0
+  const allStatsBonus = buff?.type === 'all_stats' ? buff.value : 0
+  const lifestealBonus = buff?.type === 'lifesteal' ? buff.value : 0
   // 移速衰减：边际收益递减，防止高装备时移速失控
-  // 公式：base + bonus_cap * (1 - 1/(1 + raw_speed / bonus_cap))
-  // 基础 110~118，额外速度最多追加约 60（封顶约 170-180）
   const speedBonusCap = 60
-  const speedBonus = m.speed > 0
-    ? speedBonusCap * (1 - 1 / (1 + m.speed / speedBonusCap))
-    : m.speed
+  const rawSpeed = m.speed + orb.speed + art.speed
+  const speedBonus = rawSpeed > 0
+    ? speedBonusCap * (1 - 1 / (1 + rawSpeed / speedBonusCap))
+    : rawSpeed
   return {
-    maxHp: Math.round((c.base.hp + c.growth.hp * lv + m.maxHp) * (1 + m.hpPct) * realmMult),
-    atk: Math.round((c.base.atk + c.growth.atk * lv + m.atk) * (1 + m.atkPct) * realmMult),
-    def: Math.round((c.base.def + c.growth.def * lv + m.def) * (1 + m.defPct) * realmMult),
+    maxHp: Math.round((c.base.hp + c.growth.hp * lv + m.maxHp + orb.maxHp + art.maxHp) * (1 + m.hpPct + allStatsBonus) * realmMult * ascMult),
+    atk: Math.round((c.base.atk + c.growth.atk * lv + m.atk + orb.atk + art.atk) * (1 + m.atkPct + atkPctBonus + allStatsBonus) * realmMult * ascMult),
+    def: Math.round((c.base.def + c.growth.def * lv + m.def + orb.def + art.def) * (1 + m.defPct + allStatsBonus) * realmMult * ascMult),
     speed: Math.round(c.base.speed + speedBonus),
-    crit: Math.min(1, c.base.crit + m.crit),
+    crit: Math.min(1, c.base.crit + m.crit + orb.crit + art.crit),
     aspd: Math.min(0.4, m.aspd),
-    lifesteal: Math.min(0.35, m.lifesteal),
+    lifesteal: Math.min(0.35, m.lifesteal + lifestealBonus),
     skillPct: m.skillPct,
     cdPct: Math.min(0.5, m.cdPct),
   }
@@ -312,7 +361,7 @@ function activeSetBonuses(s: GameState): SetAbilitySource[] {
     // dynamic record is a safe fallback when a test/runtime module graph has
     // not yet shared its registration side effect; it is already the loaded
     // authority for dynamic set identity and cannot override a static entry.
-    const def = SETS[setId] ?? s.dynamicSets.find((record) => record.set.id === setId)?.set
+    const def = SETS[setId] ?? V4_KIT_SETS.get(setId) ?? s.dynamicSets.find((record) => record.set.id === setId)?.set
     if (!def) continue
     const count = setPieceCount(s, setId)
     for (const bonus of def.bonuses ?? []) {

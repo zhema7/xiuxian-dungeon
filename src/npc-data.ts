@@ -1,6 +1,7 @@
 // ---------- 核心 NPC 系统：20+ NPC 动态成长 + 关系网络 + 故事线 ----------
 
 import type { WorldTime } from './world-time'
+import { makeRng } from './core'
 
 /** NPC 所在场景 */
 export type NpcLocation = 'home' | 'city' | 'sect' | 'world' | 'arena'
@@ -67,6 +68,8 @@ export interface NpcDef {
 export interface NpcState {
   id: string
   realm: number
+  /** 级别（境界内的细分等级 0~9，满 10 触发境界突破判定） */
+  level: number
   exp: number
   expToNext: number
   favor: number
@@ -77,6 +80,16 @@ export interface NpcState {
   lastInteract: number
   /** 是否存活 */
   alive: boolean
+  /** 阅历：成长与事件日志（最近 30 条） */
+  chronicle?: string[]
+  /** 程序化外观：外观种子（用于像素画生成） */
+  appearanceSeed?: number
+  /** 程序化外观：性别 */
+  procGender?: 'male' | 'female'
+  /** 程序化外观：道途（决定武器/配饰/体型） */
+  procDaoPath?: '剑道' | '丹道' | '器道' | '符道' | '体修' | '法修'
+  /** 程序化外观：灵根体质 */
+  procPhysique?: '普通' | '单灵根' | '双灵根' | '天灵根' | '异灵根'
 }
 
 /** 关系等级阈值 */
@@ -98,10 +111,21 @@ export function getRelation(favor: number): { level: RelationLevel; name: string
   return { level: result.level, name: result.name }
 }
 
-/** NPC 升级所需经验 */
+/** NPC 境界突破所需经验（旧门槛，保留供迁移换算） */
 export function npcExpToNext(realm: number): number {
   return 200 + realm * 150 + realm * realm * 50
 }
+
+/** 境界名称 */
+export const NPC_REALM_NAMES = ['练气', '筑基', '金丹', '元婴', '化神', '合体', '大乘', '渡劫']
+
+/** NPC 单级所需经验（境界突破门槛的 1/10，使级别增长更频繁） */
+export function npcLevelExp(realm: number): number {
+  return Math.max(20, Math.floor(npcExpToNext(realm) / 10))
+}
+
+/** 修炼结果 */
+export type CultivateResult = 'none' | 'levelup' | 'breakthrough' | 'breakfail'
 
 /** NPC 突破概率 */
 export function npcBreakthroughChance(realm: number, cultSpeed: number): number {
@@ -208,7 +232,7 @@ export const NPC_DEFS: NpcDef[] = [
   // ===== 宗门 =====
   {
     id: 'npc_sect_elder', name: '周道玄', title: '宗门长老', role: 'sect_elder',
-    location: 'sect', x: 4, y: 3, texture: 'npc_junior',
+    location: 'sect', x: 4, y: 10, texture: 'npc_junior', // 主殿上方
     baseRealm: 4, baseFavor: 20, cultSpeed: 1.5,
     preferredGift: 'tupo', giftHint: '长老在追求突破',
     dialogues: ['宗门建设不可懈怠。', '弟子培养是重中之重。'],
@@ -217,7 +241,7 @@ export const NPC_DEFS: NpcDef[] = [
   },
   {
     id: 'npc_alchemy_master', name: '丹阳子', title: '炼丹大师', role: 'alchemist',
-    location: 'sect', x: 2, y: 4, texture: 'npc_junior',
+    location: 'sect', x: 2, y: 14, texture: 'npc_junior', // 炼丹房旁
     baseRealm: 3, baseFavor: 10, cultSpeed: 1.8,
     preferredGift: 'potion', giftHint: '丹师对丹药很有研究',
     dialogues: ['丹道无穷，吾辈上下求索。', '灵草品质决定丹药品质。'],
@@ -226,7 +250,7 @@ export const NPC_DEFS: NpcDef[] = [
   },
   {
     id: 'npc_forge_master', name: '欧冶子', title: '炼器大师', role: 'blacksmith',
-    location: 'sect', x: 6, y: 4, texture: 'npc_junior',
+    location: 'sect', x: 6, y: 14, texture: 'npc_junior', // 炼器阁旁
     baseRealm: 3, baseFavor: 10, cultSpeed: 1.5,
     preferredGift: 'gold50', giftHint: '大师也在筹集材料',
     dialogues: ['器道亦是道。', '好矿出好器。'],
@@ -235,7 +259,7 @@ export const NPC_DEFS: NpcDef[] = [
   },
   {
     id: 'npc_library_keeper', name: '书灵', title: '藏经阁守阁人', role: 'scholar',
-    location: 'sect', x: 4, y: 5, texture: 'npc_junior',
+    location: 'sect', x: 4, y: 14, texture: 'npc_junior', // 藏经阁旁
     baseRealm: 4, baseFavor: 10, cultSpeed: 2,
     preferredGift: 'tupo', giftHint: '守阁人在参悟功法',
     dialogues: ['书中自有大道。', '功法万千，择一而终。'],
@@ -244,7 +268,7 @@ export const NPC_DEFS: NpcDef[] = [
   },
   {
     id: 'npc_training_master', name: '武狂', title: '演武教头', role: 'arena_master',
-    location: 'sect', x: 1, y: 3, texture: 'npc_junior',
+    location: 'sect', x: 1, y: 12, texture: 'npc_junior', // 演武场旁
     baseRealm: 3, baseFavor: 10, cultSpeed: 2.5,
     preferredGift: 'tupo', giftHint: '教头在追求武道突破',
     dialogues: ['练武先练心。', '弟子们还需磨砺。'],
@@ -253,7 +277,7 @@ export const NPC_DEFS: NpcDef[] = [
   },
   {
     id: 'npc_quest_elder', name: '陈奉', title: '任务殿执事', role: 'sect_elder',
-    location: 'sect', x: 1, y: 5, texture: 'npc_junior',
+    location: 'sect', x: 1, y: 16, texture: 'npc_junior', // 任务殿旁
     baseRealm: 2, baseFavor: 15, cultSpeed: 1,
     preferredGift: 'gold50', giftHint: '执事需要活动经费',
     dialogues: ['任务殿近来活不少。', '弟子们多多历练。'],
@@ -312,42 +336,105 @@ export function getNpcsByLocation(loc: NpcLocation): NpcDef[] {
 
 /** 生成 NPC 初始状态 */
 export function createNpcState(def: NpcDef): NpcState {
-  return {
+  const state: NpcState = {
     id: def.id,
     realm: def.baseRealm,
+    level: 0,
     exp: 0,
-    expToNext: npcExpToNext(def.baseRealm),
+    expToNext: npcLevelExp(def.baseRealm),
     favor: def.baseFavor,
     // 故事线初始状态由 STORIES 表决定，而不是硬编码两个 NPC id。
-    // 旧实现只把 npc_elder / npc_sister 置 'available'，其余一律 'locked'，
-    // 而全仓没有任何 locked → available 的迁移路径，导致
-    // 「城主的考验」「宿敌的觉悟」「隐士的传承」三条故事线成为死内容（缺陷 B27）。
-    // 有故事的 NPC 一律 'available'，等级 / 好感门槛交给 progressStory 里的
-    // requireLevel / requireFavor 判定（会给出明确提示文案），无故事的 NPC 保持 'locked'。
     storyStage: getStory(def.id) ? 'available' : 'locked',
     storyProgress: 0,
     lastInteract: 0,
     alive: true,
   }
+  logNpcEvent(state, `初入修仙界，${NPC_REALM_NAMES[def.baseRealm]}境`)
+  return state
 }
 
-/** NPC 随时间修炼 */
-export function npcCultivate(state: NpcState, def: NpcDef, deltaMinutes: number, rng: () => number): boolean {
-  if (!state.alive) return false
+const PROC_DAO_PATHS: NonNullable<NpcState['procDaoPath']>[] = ['剑道', '丹道', '器道', '符道', '体修', '法修']
+const PROC_PHYSIQUES: NonNullable<NpcState['procPhysique']>[] = ['普通', '单灵根', '双灵根', '天灵根', '异灵根']
+
+function npcIdHash(s: string): number {
+  let h = 2166136261
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+  }
+  return h >>> 0
+}
+
+/**
+ * 为宗门 NPC 生成程序化外观字段（appearanceSeed/gender/daoPath/physique）。
+ * 仅在缺失时填充，已有值则跳过，故可安全用于存档迁移与新建。
+ * 种子由 def.id 哈希派生，保证每个宗门 NPC 外观稳定且互不相同。
+ */
+export function ensureProcAppearance(ns: NpcState, def: NpcDef): void {
+  if (def.location !== 'sect') return
+  if (ns.appearanceSeed !== undefined) return
+  const rng = makeRng(npcIdHash(def.id))
+  ns.appearanceSeed = Math.floor(rng() * 1000000)
+  ns.procGender = rng() < 0.5 ? 'male' : 'female'
+  ns.procDaoPath = PROC_DAO_PATHS[Math.floor(rng() * PROC_DAO_PATHS.length)]
+  ns.procPhysique = PROC_PHYSIQUES[Math.floor(rng() * PROC_PHYSIQUES.length)]
+}
+
+/**
+ * 旧存档迁移：为 NPC 补齐 level 字段，并把旧「经验满即境界突破」制换算为
+ * 「级别细分（0~9）满 10 触发境界突破」制。旧门槛为级别门槛的 10 倍，
+ * 故经验按 1/10 折算以保留进度。幂等：已有 level 字段则跳过。
+ */
+export function ensureNpcLevel(ns: NpcState, def: NpcDef): void {
+  void def
+  if (ns.level !== undefined) return
+  ns.level = 0
+  ns.exp = Math.floor(ns.exp / 10)
+  ns.expToNext = npcLevelExp(ns.realm)
+}
+
+/** 记录一条阅历日志（最多保留 30 条，超出丢弃最早的） */
+export function logNpcEvent(ns: NpcState, msg: string): void {
+  if (!ns.chronicle) ns.chronicle = []
+  ns.chronicle.push(msg)
+  if (ns.chronicle.length > 30) ns.chronicle.shift()
+}
+
+/** NPC 随时间修炼：经验累积 → 级别增长（0~9）→ 满 10 级触发境界突破判定 */
+export function npcCultivate(state: NpcState, def: NpcDef, deltaMinutes: number, rng: () => number): CultivateResult {
+  if (!state.alive) return 'none'
   state.exp += Math.floor(def.cultSpeed * deltaMinutes)
-  if (state.exp >= state.expToNext) {
-    // 尝试突破
-    const chance = npcBreakthroughChance(state.realm, def.cultSpeed)
-    if (rng() < chance && state.realm < 6) {
-      state.realm++
-      state.exp = 0
-      state.expToNext = npcExpToNext(state.realm)
-      return true // 突破成功
-    } else {
-      state.exp = Math.floor(state.expToNext * 0.5) // 突破失败，经验减半
+  // 境界封顶：不再细分级别，仅折损经验避免溢出
+  if (state.realm >= 6) {
+    if (state.exp >= state.expToNext) state.exp = Math.floor(state.expToNext * 0.5)
+    return 'none'
+  }
+  let result: CultivateResult = 'none'
+  while (state.exp >= state.expToNext) {
+    state.exp -= state.expToNext
+    state.level++
+    result = 'levelup'
+    // 满 10 级触发境界突破判定
+    if (state.level >= 10) {
+      const chance = npcBreakthroughChance(state.realm, def.cultSpeed)
+      if (state.realm < 6 && rng() < chance) {
+        state.realm++
+        state.level = 0
+        state.exp = 0
+        state.expToNext = npcLevelExp(state.realm)
+        logNpcEvent(state, `突破至 ${NPC_REALM_NAMES[state.realm]}境`)
+        result = 'breakthrough'
+        if (state.realm >= 6) break // 达到境界封顶，不再继续细分级别
+      } else {
+        // 突破失败：级别回退一级，经验折损
+        state.level--
+        state.exp = Math.floor(state.expToNext * 0.5)
+        result = 'breakfail'
+        break
+      }
     }
   }
-  return false
+  return result
 }
 
 /** 好感变化 */

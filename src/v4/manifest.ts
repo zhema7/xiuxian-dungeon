@@ -1,6 +1,6 @@
 // ---------- v4 资源 Manifest（ADR §3：每 Kit 独占帧，no-tint，不跨 Kit 借用） ----------
 // 帧命名：v4/{kit}_{channel}_{phase}_{n}（如 v4/k01_atk_main_1）
-// 帧预算：普攻 4/6/4 + 神通 4/8/8 = 34 帧/Kit + 4 图标 = 38 资产/Kit
+// 帧预算：普攻 4/6/4 + 神通 4/8/8 = 34 帧/Kit + 1 图标 = 35 资产/Kit
 // 缺帧降级：缺帧→Graphics 兜底，不新增伤害/碰撞（GDD §5）
 
 import type { KitId, KitResourceManifest } from '../data'
@@ -24,7 +24,7 @@ function phaseKeys(kitId: KitId, channel: 'atk' | 'art'): { start: string[]; mai
 }
 
 function iconKeys(kitId: KitId): string[] {
-  return Array.from({ length: 4 }, (_, i) => `v4/${kitId}_icon_${i}`)
+  return Array.from({ length: 1 }, (_, i) => `v4/${kitId}_icon_${i}`)
 }
 
 /** 构建 Kit 的资源 Manifest */
@@ -80,13 +80,13 @@ export function missingFrames(
   return all.filter((key) => !textureExists(key))
 }
 
-/** 每 Kit 的总帧数（名义 34 动画帧 + 4 图标 = 38） */
+/** 每 Kit 的总帧数（34 动画帧 + 1 图标 = 35） */
 export const KIT_FRAME_TOTAL = FRAME_BUDGET.normal.start + FRAME_BUDGET.normal.main + FRAME_BUDGET.normal.mid
   + FRAME_BUDGET.art.start + FRAME_BUDGET.art.main + FRAME_BUDGET.art.mid
-export const KIT_ICON_COUNT = 4
+export const KIT_ICON_COUNT = 1
 export const KIT_ASSET_TOTAL = KIT_FRAME_TOTAL + KIT_ICON_COUNT
 
-/** 已生成 PNG 资产的 Kit 列表（30 套全量，1140 PNG）。未列出的 Kit 走 Graphics 兜底。 */
+/** 已生成 PNG 资产的 Kit 列表（30 套全量）。未列出的 Kit 走 Graphics 兜底。 */
 export const V4_KIT_ASSET_READY: readonly KitId[] = Array.from(
   { length: 30 },
   (_, i) => `k${String(i + 1).padStart(2, '0')}` as KitId,

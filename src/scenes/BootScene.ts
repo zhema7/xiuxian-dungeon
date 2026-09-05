@@ -1,6 +1,6 @@
-import Phaser from 'phaser'
+﻿import Phaser from 'phaser'
 import { generateMissing, SPRITE_KEYS } from '../textures'
-import { AUDIO_KEYS, audioInit } from '../audio'
+import { AUDIO_KEYS, audioInit, BGM_TITLE, playBgm, audioUrls } from '../audio'
 import { REGIONS } from '../data'
 import { loadGame } from '../state'
 import { initUI } from '../ui'
@@ -10,7 +10,7 @@ import {
   hasCompleteSequenceResourceBundleForRegistration,
   type SequenceResourceBundleRegistrationKey,
 } from '../fx/sequence-contract'
-import { buildKitManifest, V4_KIT_ASSET_READY } from '../v4/manifest'
+import { V4_KIT_ASSET_READY } from '../v4/manifest'
 
 const ANIM_CLASSES = ['sword', 'fairy', 'mage', 'sword_new', 'fairy_new']
 
@@ -109,6 +109,11 @@ export class BootScene extends Phaser.Scene {
   private progressText: Phaser.GameObjects.Text | null = null
   private loadingText: Phaser.GameObjects.Text | null = null
   private titleText: Phaser.GameObjects.Text | null = null
+  // 资源加载占整个启动过程的 80%，create() 阶段占 20%
+  private static readonly LOAD_RATIO = 0.8
+  private static readonly CREATE_RATIO = 0.2
+  private static readonly CREATE_STEPS = 10
+  private createStep = 0
 
   constructor() { super('Boot') }
 
@@ -120,14 +125,14 @@ export class BootScene extends Phaser.Scene {
       this.failedKeys.add(file.key)
     })
 
-    // 监听加载进度
+    // 监听加载进度（映射到 0 ~ LOAD_RATIO）
     this.load.on('progress', (value: number) => {
-      this.updateProgress(value)
+      this.updateProgress(value * BootScene.LOAD_RATIO)
     })
 
     // 加载完成
     this.load.on('complete', () => {
-      this.updateProgress(1)
+      this.updateProgress(BootScene.LOAD_RATIO)
     })
 
     if (this.isMinitool) {
@@ -244,9 +249,16 @@ export class BootScene extends Phaser.Scene {
     this.progressText.setText(`${percent}%`)
 
     // 加载完成时的文字变化
-    if (value >= 1 && this.loadingText) {
+    if (value >= 0.99 && this.loadingText) {
       this.loadingText.setText('灵气充盈，仙途将启...')
     }
+  }
+
+  /** create() 阶段进度推进 */
+  private advanceCreateProgress() {
+    this.createStep++
+    const ratio = BootScene.LOAD_RATIO + (this.createStep / BootScene.CREATE_STEPS) * BootScene.CREATE_RATIO
+    this.updateProgress(Math.min(1, ratio))
   }
 
   private preloadMinitool() {
@@ -262,7 +274,7 @@ export class BootScene extends Phaser.Scene {
       this.load.json(`${cls}_anims`, `sprites/${cls}_anims.json`)
     }
     for (const key of AUDIO_KEYS) {
-      this.load.audio(key, `audio/${key}.mp3`)
+      this.load.audio(key, audioUrls(key))
     }
   }
 
@@ -304,7 +316,7 @@ export class BootScene extends Phaser.Scene {
     this.load.image('cave_bg_xian', 'sprites/cave_bg_xian.png')
     this.load.image('chest_xian', 'sprites/chest_xian.png')
     this.load.image('altar_xian', 'sprites/altar_xian.png')
-    this.load.image('talisman_save', 'sprites/talisman_save.jpg')
+    this.load.image('talisman_save', 'sprites/talisman_save.png')
     // AI 生成攻击特效帧（仙界专用）
     const aiEffectSheets = ['ai_slash', 'ai_sword_proj', 'ai_bolt_fly', 'ai_proj_fx', 'ai_mod', 'ai_burst']
     for (const prefix of aiEffectSheets) {
@@ -344,7 +356,53 @@ export class BootScene extends Phaser.Scene {
       this.load.json(`npc_${nid}_anims`, `sprites/npc_${nid}_anims.json`)
     }
     // 宗门场景背景
-    this.load.image('sect_bg', 'sprites/sect_bg.jpg')
+    this.load.image('sect_bg', 'sprites/sect_bg.png')
+    // 大地图五域背景（AI 生成）
+    this.load.image('world_south_bg', 'sprites/world_south_bg.jpg')
+    this.load.image('world_central_bg', 'sprites/world_central_bg.jpg')
+    this.load.image('world_east_bg', 'sprites/world_east_bg.jpg')
+    this.load.image('world_west_bg', 'sprites/world_west_bg.jpg')
+    this.load.image('world_north_bg', 'sprites/world_north_bg.jpg')
+    // AI 生成大地图建筑贴图 v2（高精度像素风 + 名称调性匹配）
+    this.load.image('ai_bldg_home', 'sprites/bldg_home_v2.jpg')
+    this.load.image('ai_bldg_city', 'sprites/bldg_city_v2.jpg')
+    this.load.image('ai_bldg_sect', 'sprites/bldg_sect_v2.jpg')
+    this.load.image('ai_bldg_dungeon', 'sprites/bldg_dungeon_v2.jpg')
+    this.load.image('ai_bldg_landmark', 'sprites/bldg_landmark_v2.jpg')
+    // AI 生成域特色地形贴图
+    this.load.image('ai_terrain_south', 'sprites/terrain_south.jpg')
+    this.load.image('ai_terrain_central', 'sprites/terrain_central.jpg')
+    this.load.image('ai_terrain_east', 'sprites/terrain_east.jpg')
+    this.load.image('ai_terrain_west', 'sprites/terrain_west.jpg')
+    this.load.image('ai_terrain_north', 'sprites/terrain_north.jpg')
+    // AI 生成大地图装饰物贴图
+    this.load.image('ai_deco_waterfall', 'sprites/world_deco_waterfall.jpg')
+    this.load.image('ai_deco_altar', 'sprites/world_deco_altar.jpg')
+    this.load.image('ai_deco_bonfire', 'sprites/world_deco_bonfire.jpg')
+    // AI 生成高清地形贴图
+    this.load.image('ai_grass_hq', 'sprites/ai_grass_hq.jpg')
+    this.load.image('ai_stone_hq', 'sprites/ai_stone_hq.jpg')
+    this.load.image('ai_water_hq', 'sprites/ai_water_hq.jpg')
+    this.load.image('ai_shrine', 'sprites/ai_shrine.jpg')
+    // 高清像素风地貌贴图（无缝平铺）
+    this.load.image('tex_grass', 'sprites/tex_grass.jpg')
+    this.load.image('tex_stone', 'sprites/tex_stone.jpg')
+    this.load.image('tex_water', 'sprites/tex_water.jpg')
+    this.load.image('tex_sand', 'sprites/tex_sand.jpg')
+    this.load.image('tex_snow', 'sprites/tex_snow.jpg')
+    this.load.image('tex_forest', 'sprites/tex_forest.jpg')
+    // 3D 植被装饰精灵（白底，后续抠图处理）
+    this.load.image('spr_pine_tree', 'sprites/spr_pine_tree.jpg')
+    this.load.image('spr_willow_tree', 'sprites/spr_willow_tree.jpg')
+    this.load.image('spr_bamboo', 'sprites/spr_bamboo.jpg')
+    this.load.image('spr_rock_formation', 'sprites/spr_rock_formation.jpg')
+    this.load.image('spr_spirit_crystal', 'sprites/spr_spirit_crystal.jpg')
+    this.load.image('spr_dead_tree', 'sprites/spr_dead_tree.jpg')
+    this.load.image('spr_lotus_pond', 'sprites/spr_lotus_pond.jpg')
+    // 大地图地点图标
+    for (const icon of ['home', 'city', 'dungeon', 'resource', 'teleport', 'landmark', 'sect', 'domain_gate']) {
+      this.load.image(`world_icon_${icon}`, `sprites/world_icon_${icon}.png`)
+    }
     // Sequence texture keys come from registration bundles; missing assets retain static fallback paths.
     for (const fx of FX_ANIMS) {
       for (const textureKey of SEQUENCE_RESOURCE_BUNDLE_REGISTRATION_CONTRACTS[fx.key].requiredTextureKeysForRegistration) {
@@ -353,14 +411,14 @@ export class BootScene extends Phaser.Scene {
     }
     // 音频：BGM + 音效（缺失文件走 loaderror 兜底，不影响游戏）
     for (const key of AUDIO_KEYS) {
-      this.load.audio(key, `audio/${key}.mp3`)
+      this.load.audio(key, audioUrls(key))
     }
     // 黄龙山 NPC 立绘（韩前辈 / 施法光翼 / 乐上师）
     this.load.image('hanli_base', 'sprites/hanli_base.png')
     this.load.image('hanli_cast', 'sprites/hanli_cast.png')
     this.load.image('leshangshi', 'sprites/leshangshi.png')
     // 天枢城场景资源（城池背景、竞技场背景、NPC精灵）
-    this.load.image('city_map', 'sprites/city_map_large.jpg')
+    this.load.image('city_map', 'sprites/city_map_large.png')
     this.load.image('city_bg', 'sprites/city_bg.png')
     this.load.image('arena_bg', 'sprites/arena_bg.png')
     this.load.image('npc_auctioneer', 'sprites/npc_auctioneer.png')
@@ -371,6 +429,7 @@ export class BootScene extends Phaser.Scene {
     this.load.image('npc_quest3', 'sprites/npc_quest3.png')
     this.load.image('npc_city_lord', 'sprites/npc_city_lord.png')
     this.load.image('npc_arena_champion', 'sprites/npc_arena_champion.png')
+    this.load.image('npc', 'sprites/npc.png')
     // 洞府NPC（统一像素风）
     this.load.image('npc_merchant', 'sprites/npc_merchant.png')
     this.load.image('npc_elder', 'sprites/npc_elder.png')
@@ -384,17 +443,23 @@ export class BootScene extends Phaser.Scene {
     this.load.image('m_spirit_fox', 'sprites/m_spirit_fox.png')
     this.load.image('m_demon_general', 'sprites/m_demon_general.png')
     this.load.image('m_stone_guardian', 'sprites/m_stone_guardian.png')
-    // v4 Kit 独立资产轨（ADR §3：每 Kit 独占帧，no-tint）
-    // 仅加载已生成 PNG 的 Kit（V4_KIT_ASSET_READY）；缺失帧走 Graphics 兜底，不影响游戏
+    // Phase 7: 剧情线 NPC 立绘（64x64 PNG 透明背景）
+    this.load.image('npc_sword_sage', 'sprites/story/npc_sword_sage.png')
+    this.load.image('npc_alchemist_grandma', 'sprites/story/npc_alchemist_grandma.png')
+    this.load.image('npc_demon_sealer', 'sprites/story/npc_demon_sealer.png')
+    this.load.image('npc_wandering_cloud', 'sprites/story/npc_wandering_cloud.png')
+    this.load.image('npc_spirit_tamer', 'sprites/story/npc_spirit_tamer.png')
+    // Phase 7: 坐骑灵驹（基础图 + 4帧序列 + 精灵表）
+    this.load.image('mount_spirit_horse', 'sprites/mount_spirit_horse.png')
+    this.load.spritesheet('mount_spirit_horse_anim', 'sprites/mount_spirit_horse_sheet.png', { frameWidth: 64, frameHeight: 64 })
+    // Phase 7: 秘境原住民部落精灵（基础图 + 4帧序列 + 精灵表）
+    for (const tribe of ['spirit_beast', 'ancient_human', 'elemental', 'shadow_folk', 'crystal_people']) {
+      this.load.image(`tribe_${tribe}`, `sprites/tribes/tribe_${tribe}.png`)
+      this.load.spritesheet(`tribe_${tribe}_anim`, `sprites/tribes/tribe_${tribe}_sheet.png`, { frameWidth: 64, frameHeight: 64 })
+    }
+    // v4 Kit Atlas 资产（30 套 × 9 帧 = 270 帧，请求数 30）
     for (const kitId of V4_KIT_ASSET_READY) {
-      const m = buildKitManifest(kitId)
-      for (const key of [
-        ...m.icons,
-        ...m.normalFrames.start, ...m.normalFrames.main, ...m.normalFrames.mid,
-        ...m.artFrames.start, ...m.artFrames.main, ...m.artFrames.mid,
-      ]) {
-        this.load.image(key, `sprites/${key}.png`)
-      }
+      this.load.atlas(`v4_${kitId}_atlas`, `sprites/v4-atlas/${kitId}_atlas.png`, `sprites/v4-atlas/${kitId}_atlas.json`)
     }
   }
 
@@ -419,14 +484,23 @@ export class BootScene extends Phaser.Scene {
   }
 
   create() {
-    if (this.isMinitool) {
-      this.extractAtlasFrames()
-      const missing = SPRITE_KEYS.filter(k => !this.textures.exists(k))
-      generateMissing(this, missing)
-    } else {
-      generateMissing(this, this.failedKeys)
-    }
-    audioInit(this.sound)
+    // 将 create() 分为 10 个步骤，每步之间延迟一帧让进度条可见
+    const steps: (() => void)[] = [
+      // Step 1: 生成缺失贴图
+      () => {
+        if (this.isMinitool) {
+          this.extractAtlasFrames()
+          const missing = SPRITE_KEYS.filter(k => !this.textures.exists(k))
+          generateMissing(this, missing)
+        } else {
+          generateMissing(this, this.failedKeys)
+        }
+        this.setLoadingText('正在凝聚灵脉...')
+      },
+      // Step 2: 音频初始化 + 贴图变体
+      () => {
+        audioInit(this.sound)
+        playBgm(BGM_TITLE)
     // 预生成地面/墙体暗色变体贴图（canvas 合成，WebGL 下安全；丰富地面层次用）
     const variantOf = (src: string) => {
       const key = `${src}_d`
@@ -445,6 +519,51 @@ export class BootScene extends Phaser.Scene {
       this.textures.addCanvas(key, c)
     }
     for (const r of REGIONS) { variantOf(r.floorTex); variantOf(r.wallTex) }
+        this.setLoadingText('正在炼化法阵...')
+      },
+      // Step 3: AI 贴图背景移除
+      () => {
+    // AI 生成装饰物背景移除（.jpg → 透明 .png 效果）
+    const removeAiBg = (key: string) => {
+      if (!this.textures.exists(key)) return
+      const src = this.textures.get(key).getSourceImage() as HTMLImageElement | HTMLCanvasElement
+      const w = src.width as number, h = src.height as number
+      const cv = document.createElement('canvas')
+      cv.width = w; cv.height = h
+      const ctx = cv.getContext('2d')!
+      ctx.imageSmoothingEnabled = false
+      ctx.drawImage(src, 0, 0)
+      const data = ctx.getImageData(0, 0, w, h)
+      const px = data.data
+      // 采样四角颜色作为背景色
+      const corners = [0, (w - 1) * 4, (h - 1) * w * 4, (h - 1) * w * 4 + (w - 1) * 4]
+      const bgR = corners.reduce((s, i) => s + px[i], 0) / 4
+      const bgG = corners.reduce((s, i) => s + px[i + 1], 0) / 4
+      const bgB = corners.reduce((s, i) => s + px[i + 2], 0) / 4
+      const threshold = 50
+      for (let i = 0; i < px.length; i += 4) {
+        const dr = Math.abs(px[i] - bgR)
+        const dg = Math.abs(px[i + 1] - bgG)
+        const db = Math.abs(px[i + 2] - bgB)
+        if (dr + dg + db < threshold * 3) {
+          px[i + 3] = 0 // 透明
+        } else if (dr + dg + db < threshold * 6) {
+          // 边缘半透明过渡
+          px[i + 3] = Math.floor(255 * (dr + dg + db) / (threshold * 6))
+        }
+      }
+      ctx.putImageData(data, 0, 0)
+      this.textures.remove(key)
+      this.textures.addCanvas(key, cv)
+    }
+    removeAiBg('ai_shrine')
+    for (const spr of ['spr_pine_tree', 'spr_willow_tree', 'spr_bamboo', 'spr_rock_formation', 'spr_spirit_crystal', 'spr_dead_tree', 'spr_lotus_pond']) {
+      removeAiBg(spr)
+    }
+        this.setLoadingText('正在注册剑灵...')
+      },
+      // Step 4: 角色动画 + 灵兽动画注册
+      () => {
     // 注册角色动画（atlas 与动画定义都成功加载时）
     for (const cls of ANIM_CLASSES) {
       if (!this.textures.exists(`${cls}_atlas`)) { console.warn(`[anim] ${cls}_atlas missing`); continue }
@@ -473,6 +592,10 @@ export class BootScene extends Phaser.Scene {
         if (!this.anims.exists(def.key!)) this.anims.create(def)
       }
     }
+        this.setLoadingText('正在唤醒灵兽...')
+      },
+      // Step 5: 阵法 + NPC 动画注册
+      () => {
     // 注册阵法动画
     for (const t of FORMATION_ANIM_TYPES) {
       const atlasKey = `formation_${t}_atlas`
@@ -503,6 +626,47 @@ export class BootScene extends Phaser.Scene {
         if (!this.anims.exists(def.key!)) this.anims.create(def)
       }
     }
+        this.setLoadingText('正在布设阵法...')
+      },
+      // Step 6: v4 Kit + 坐骑 + 部落动画
+      () => {
+    // 注册 v4 Kit 神通动画（30 套 × 8 帧 art_main）
+    for (const kitId of V4_KIT_ASSET_READY) {
+      const atlasKey = `v4_${kitId}_atlas`
+      const animKey = `v4_${kitId}_art_main`
+      if (!this.textures.exists(atlasKey)) { console.warn(`[v4-anim] ${atlasKey} missing`); continue }
+      if (this.anims.exists(animKey)) continue
+      const tex = this.textures.get(atlasKey)
+      const testFrame = `${kitId}_art_main_1`
+      if (!tex.has(testFrame)) { console.warn(`[v4-anim] ${kitId} frame ${testFrame} NOT in texture!`); continue }
+      const frames: { key: string; frame: string }[] = []
+      for (let f = 1; f <= 8; f++) {
+        frames.push({ key: atlasKey, frame: `${kitId}_art_main_${f}` })
+      }
+      this.anims.create({ key: animKey, frames, frameRate: 12, repeat: 0 })
+    }
+    // Phase 7: 注册坐骑灵驹奔跑动画（4帧）
+    if (this.textures.exists('mount_spirit_horse_anim')) {
+      const mountFrames: { key: string; frame: number }[] = []
+      for (let f = 0; f < 4; f++) mountFrames.push({ key: 'mount_spirit_horse_anim', frame: f })
+      if (!this.anims.exists('mount_spirit_horse_gallop')) {
+        this.anims.create({ key: 'mount_spirit_horse_gallop', frames: mountFrames, frameRate: 8, repeat: -1 })
+      }
+    }
+    // Phase 7: 注册部落待机动画（5类 × 4帧）
+    for (const tribe of ['spirit_beast', 'ancient_human', 'elemental', 'shadow_folk', 'crystal_people']) {
+      const ssKey = `tribe_${tribe}_anim`
+      if (!this.textures.exists(ssKey)) continue
+      const animKey = `tribe_${tribe}_idle`
+      if (this.anims.exists(animKey)) continue
+      const frames: { key: string; frame: number }[] = []
+      for (let f = 0; f < 4; f++) frames.push({ key: ssKey, frame: f })
+      this.anims.create({ key: animKey, frames, frameRate: 4, repeat: -1 })
+    }
+        this.setLoadingText('正在铭刻神通...')
+      },
+      // Step 7: 序列帧特效动画注册
+      () => {
     // Registration bundles and runtime playback contracts are intentionally separate.
     // Sword registration remains atomic over sword_proj_1..8, while each runtime
     // route validates only the frames the target animation actually consumes.
@@ -547,6 +711,10 @@ export class BootScene extends Phaser.Scene {
         repeat: fx.anim.repeat,
       })
     }
+        this.setLoadingText('正在注入仙法...')
+      },
+      // Step 8: 仙界敌人动画注册
+      () => {
     // 仙界敌人动画注册（4行×4列：idle/walk/attack/hit）
     const xianAnimIds = [
       'xian_sanxian_m', 'xian_sanxian_f', 'xian_zhenxian_m', 'xian_zhenxian_f',
@@ -596,6 +764,10 @@ export class BootScene extends Phaser.Scene {
         })
       }
     }
+        this.setLoadingText('正在召唤仙兵...')
+      },
+      // Step 9: AI 特效动画注册
+      () => {
     // AI 攻击特效动画注册（仙界专用）
     const aiEffects = [
       { prefix: 'ai_slash', keys: [1, 2, 3, 4, 5, 6], rate: 14, repeat: 0 },     // 剑光
@@ -618,9 +790,37 @@ export class BootScene extends Phaser.Scene {
         repeat: fx.repeat,
       })
     }
-    const state = loadGame()
-    this.registry.set('state', state)
-    initUI(state, () => {})
-    this.scene.start('Title')
+        this.setLoadingText('正在开启天机...')
+      },
+      // Step 10: 加载存档 + 初始化 UI + 启动标题
+      () => {
+        const state = loadGame()
+        this.registry.set('state', state)
+        initUI(state, () => {})
+        this.setLoadingText('灵气充盈，仙途将启...')
+        this.updateProgress(1)
+        this.time.delayedCall(200, () => {
+          this.scene.start('Title')
+        })
+      },
+    ]
+
+    // 逐步执行，每步之间延迟一帧让进度条可见
+    let stepIndex = 0
+    const runNextStep = () => {
+      if (stepIndex >= steps.length) return
+      steps[stepIndex]()
+      this.advanceCreateProgress()
+      stepIndex++
+      if (stepIndex < steps.length) {
+        this.time.delayedCall(1, runNextStep)
+      }
+    }
+    runNextStep()
+  }
+
+  /** 更新加载文字 */
+  private setLoadingText(text: string) {
+    if (this.loadingText) this.loadingText.setText(text)
   }
 }

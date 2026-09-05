@@ -22,12 +22,14 @@
     "build:android": "vite build && npx cap copy android"
   },
   "dependencies": {
-    "@capacitor/core": "^7.0.0",
-    "phaser": "^3.90.0"
+    "@capacitor/core": "^7.6.9",
+    "@types/three": "^0.185.4",
+    "phaser": "^3.90.0",
+    "three": "^0.185.1"
   },
   "devDependencies": {
-    "@capacitor/android": "^7.0.0",
-    "@capacitor/cli": "^7.0.0",
+    "@capacitor/android": "^7.6.9",
+    "@capacitor/cli": "^7.6.9",
     "sharp": "^0.35.3",
     "typescript": "^5.6.0",
     "vite": "^5.4.0"

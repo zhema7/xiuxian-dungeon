@@ -2,9 +2,10 @@
 
 import {
   AFFIXES, ITEM_BASES, QUALITY_AFFIX_COUNT, QUALITY_MULT, QUALITY_WEIGHT, SETS,
-  type AffixDef, type ItemBase, type ModKey, type Quality,
+  type AffixDef, type ItemBase, type ModKey, type Quality, type SetDef,
 } from './data'
 import { genNamedName } from './lore'
+import { V4_KIT_SETS } from './v4/kit-data'
 
 /** 仙界起始楼层（与 xian-realm.ts 保持一致） */
 const XIAN_START_FLOOR = 10000
@@ -270,7 +271,7 @@ export function rollEquip(rng: () => number, floor: number, luckBonus = 0, playe
 
 /** 套装部件（Boss 掉落），quality 灵品~玄品；luck 提高高品质权重 */
 export function rollSetPiece(rng: () => number, setId: string, floor: number, luck = 0, playerLevel = 1): EquipItem | null {
-  const set = SETS[setId]
+  const set = SETS[setId] ?? V4_KIT_SETS.get(setId)
   if (!set) return null
   const baseId = set.pieces[randInt(rng, 0, set.pieces.length - 1)]
   const base = ITEM_BASES.find((b) => b.id === baseId)

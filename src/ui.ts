@@ -4,8 +4,8 @@ import {
   CLASSES, ITEM_BASES, MOD_LABELS, QUALITY_NAMES, REALMS, REALM_STAT_BONUS, SETS, SKILLS, SKILL_TYPE_NAMES,
   SLOT_KEYS, SLOT_NAMES, TALENT_BRANCHES, type SlotKey,
 } from './data'
-import { calcStats, currentHp, equippedSetIds, isSetBonusActive, setPieceCount } from './effects'
-import { expNeed, recordCodexItem, saveGame, applyPreset, snapshotPreset, PRESET_COUNT, type GameState } from './state'
+import { calcStats, currentHp, equippedSetIds, isSetBonusActive, setPieceCount, SPIRIT_ORIFICES, orificeSuccessRate, orificeBonuses } from './effects'
+import { expNeed, recordCodexItem, saveGame, applyPreset, snapshotPreset, PRESET_COUNT, type GameState, pushPlayerLog } from './state'
 import {
   canUpgrade, equipSkill, isSkillEquipped, learnSkill, skillLevel, unequipSkill, upgradeCost, upgradeSkill, SKILL_MAX_LEVEL,
   mindModsAt, skillPowerAt,
@@ -13,20 +13,36 @@ import {
 import { genDynamicSetFromSeed, genDynamicSkill, nextDynamicSetSequence, registerDynamicContent } from './lore'
 import { addPoint, availablePoints, respec, RESPEC_COST, spentPoints } from './talents'
 import { ENH_MAX, enhanceCost, makeItem, type EquipItem } from './core'
+import { ARTIFACTS, artifactStats, artifactBuffValue, refineCost, totalArtifactStats, getArtifactBuff, SECT_RELIC_SLOTS, type ArtifactInstance } from './artifact-data'
+import { V4_KIT_SETS } from './v4/kit-data'
 import { gainExp } from './state'
 import { classNameOf, getRecords, type RecordEntry } from './records'
 import { sfx, getBgmVolume, getSfxVolume, setBgmVolume, setSfxVolume } from './audio'
 import { listSaveSlots, loadSaveSlot, deleteSaveSlot, hasSaveSlot, MAX_SAVE_SLOTS, type SaveSlotMeta } from './state'
+import { needsTribulation, getTribulation, canAscend, performAscension, ascensionBonus, ASCENSION_REQUIREMENTS } from './tribulation-data'
+import { getDomainDef, type DomainId } from './world-map'
+import { getMainQuest } from './storyline-data'
+import { QUESTS } from './favor'
 
 export interface SettingsCallbacks {
   onLoadSave?: (slotIndex: number) => void
   onReturnTitle?: () => void
+  onBuildHome?: () => void
+  onZoom?: (delta: number) => void
+  onResetCamera?: () => void
+  onToggleRenderMode?: () => void
 }
 
 let settingsCallbacks: SettingsCallbacks = {}
 
 export function setSettingsCallbacks(cb: SettingsCallbacks) {
   settingsCallbacks = cb
+}
+
+let tribulationStartCallback: ((realmIndex: number) => void) | null = null
+
+export function setTribulationCallback(cb: ((realmIndex: number) => void) | null) {
+  tribulationStartCallback = cb
 }
 
 function el<T extends HTMLElement = HTMLElement>(id: string) {
@@ -36,13 +52,17 @@ function el<T extends HTMLElement = HTMLElement>(id: string) {
 let state: GameState
 let floorText = ''
 let onPanelToggle: ((open: boolean) => void) | null = null
-type Tab = 'equip' | 'skill' | 'talent' | 'codex'
+type Tab = 'equip' | 'skill' | 'talent' | 'artifact' | 'codex' | 'contacts' | 'log'
 type SkillFilter = 'all' | 'style' | 'art' | 'mind'
 let skillFilter: SkillFilter = 'all'
 type InvFilter = 'all' | 'weapon' | 'armor' | 'accessory'
 
 /** 背包筛选：当前选中的分类标签 */
 let invFilter: InvFilter = 'all'
+
+/** 日志筛选：当前选中的分类标签 */
+type LogFilter = 'all' | 'news' | 'quest' | 'world' | 'karma'
+let logFilter: LogFilter = 'all'
 
 export function initUI(s: GameState, panelToggle: (open: boolean) => void) {
   state = s
@@ -181,7 +201,8 @@ export function setFloorText(t: string) { floorText = t }
 export function updateHUD() {
   const st = calcStats(state)
   const hp = currentHp(state)
-  el('hudName').textContent = `${state.heroName} · ${CLASSES[state.classId]?.name ?? ''} · ${REALMS[state.realm]?.name ?? ''}`
+  const ascTag = state.ascensionCount > 0 ? ` · 第${state.ascensionCount}世` : ''
+  el('hudName').textContent = `${state.heroName} · ${CLASSES[state.classId]?.name ?? ''} · ${REALMS[state.realm]?.name ?? ''}${ascTag}`
   el('hudFloor').textContent = floorText
   const hpBar = el('hpbar')
   ;(hpBar.querySelector('i') as HTMLElement).style.width = `${(hp / st.maxHp) * 100}%`
@@ -205,6 +226,7 @@ export function toast(text: string, color = '#f0d98c') {
   t.style.opacity = '1'
   clearTimeout(toastTimer)
   toastTimer = window.setTimeout(() => { t.style.opacity = '0' }, 1600)
+  if (state) pushPlayerLog(state, text)
 }
 
 // ---------- 对话（支持结尾选项分支） ----------
@@ -332,9 +354,454 @@ export function closePanel() {
   onPanelToggle?.(false)
 }
 
+// ---------- NPC 信息面板 ----------
+export interface NpcPanelData {
+  name: string
+  realmName: string
+  profession: string
+  personality: string[]
+  daoPath: string
+  physique: string
+  moralityName: string
+  moralityColor: string
+  relationLevel: string
+  favor: number
+  trust: number
+  fear: number
+  story: string
+  purpose: string
+  activity: string
+  socialLines: string[]
+  lifeEvents: string[]
+  hasSecret: boolean
+  secretText?: string
+  hp: number
+  maxHp: number
+  level: number
+}
+
+export function openNpcPanel(data: NpcPanelData) {
+  const panel = el('panel')
+  panel.classList.add('open')
+  delete panel.dataset.modal
+  onPanelToggle?.(true)
+  sfx('sfx_open', 0.5)
+
+  const moralityColor = data.moralityColor
+  const favorColor = data.favor >= 50 ? '#4ade80' : data.favor >= 10 ? '#fbbf24' : data.favor < -20 ? '#f87171' : '#e2e8f0'
+
+  let socialHtml = ''
+  if (data.socialLines.length > 0) {
+    socialHtml = `<div style="border-top:1px solid #3a4356;margin:6px 0;padding-top:4px">
+      <div style="font-size:10px;color:#7c9cb0;margin-bottom:2px">社交关系</div>
+      ${data.socialLines.map(s => `<div style="font-size:10px;color:#9a937f;margin-bottom:1px">${s}</div>`).join('')}
+    </div>`
+  }
+
+  let eventsHtml = ''
+  if (data.lifeEvents.length > 0) {
+    eventsHtml = `<div style="border-top:1px solid #3a4356;margin:6px 0;padding-top:4px">
+      <div style="font-size:10px;color:#7c9cb0;margin-bottom:2px">近期经历</div>
+      ${data.lifeEvents.slice(-4).map(e => `<div style="font-size:10px;color:#9a937f;margin-bottom:1px">${e}</div>`).join('')}
+    </div>`
+  }
+
+  let secretHtml = ''
+  if (data.secretText) {
+    secretHtml = `<div style="border-top:1px solid #3a4356;margin:6px 0;padding-top:4px">
+      <div style="font-size:10px;color:#f87171;margin-bottom:2px">隐秘</div>
+      <div style="font-size:10px;color:#c4b998">${data.secretText}</div>
+    </div>`
+  }
+
+  panel.innerHTML = `<div class="card" style="max-width:300px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <span style="font-size:14px;font-weight:bold;color:#e8d8a0">${data.name}</span>
+      <span style="font-size:10px;color:${moralityColor};border:1px solid ${moralityColor};padding:1px 4px;border-radius:3px">${data.moralityName}</span>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:4px;font-size:11px">
+      <span style="color:#fbbf24">${data.realmName}</span>
+      <span style="color:#7c9cb0">Lv.${data.level}</span>
+      <span style="color:#9a937f">${data.profession}</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:10px;color:#9a937f;margin-bottom:4px">
+      <span>气血 ${data.hp}/${data.maxHp}</span>
+      <span style="color:${favorColor}">好感 ${data.favor} · 信任 ${data.trust} · 畏惧 ${data.fear}</span>
+    </div>
+    <div style="border-top:1px solid #3a4356;margin:4px 0;padding-top:4px;font-size:10px;color:#9a937f">
+      <div style="display:flex;justify-content:space-between;margin-bottom:1px"><span>性格</span><span style="color:#c4b998">${data.personality.join('、')}</span></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:1px"><span>道途</span><span style="color:#c4b998">${data.daoPath}</span></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:1px"><span>体质</span><span style="color:#c4b998">${data.physique}</span></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:1px"><span>关系</span><span style="color:${favorColor}">${data.relationLevel}</span></div>
+    </div>
+    <div style="border-top:1px solid #3a4356;margin:6px 0;padding-top:4px">
+      <div style="font-size:10px;color:#7c9cb0;margin-bottom:2px">行迹</div>
+      <div style="font-size:10px;color:#c4b998;margin-bottom:2px">${data.story}</div>
+      <div style="font-size:10px;color:#9a937f">「${data.purpose}」</div>
+      <div style="font-size:10px;color:#7c9cb0;margin-top:2px">${data.activity}</div>
+    </div>
+    ${socialHtml}
+    ${eventsHtml}
+    ${secretHtml}
+    <div style="text-align:right;margin-top:6px"><button data-close>关闭</button></div>
+  </div>`
+
+  panel.querySelector('[data-close]')!.addEventListener('pointerdown', (e) => {
+    e.stopPropagation()
+    closePanel()
+  })
+}
+
 export function openInventory() { openPanel('equip') }
 
-/** 打开修行设置面板 */
+// ---------- 宗门看板 ----------
+export interface BuildingProdInfo {
+  id: string
+  name: string
+  level: number
+  desc: string
+  /** 产出资源名（如 '灵石'），无产出为 null */
+  produces: string | null
+  /** 每分钟产出量 */
+  rate: number
+  /** 产出加成百分比（弟子职务+天赋） */
+  bonus: number
+}
+
+export interface SectDashboardData {
+  sectName: string
+  sectLevel: number
+  resources: { stone: number; herb: number; ore: number; wood: number; insight: number; prestige: number }
+  buildings: Array<{ id: string; name: string; level: number; desc: string }>
+  /** 产出建筑详细信息 */
+  productionBuildings: BuildingProdInfo[]
+  /** 弟子职务加成汇总 */
+  discipleBonuses: { stone: number; herb: number; ore: number; wood: number }
+  discipleCount: number
+  discipleCapacity: number
+}
+
+export interface SectDashboardCallbacks {
+  onPlaceBuilding?: () => void
+  onPlaceNpc?: () => void
+  onManageDisciples?: () => void
+  onDiplomacy?: () => void
+}
+
+let sectCallbacks: SectDashboardCallbacks = {}
+
+export function setSectCallbacks(cb: SectDashboardCallbacks) {
+  sectCallbacks = cb
+}
+
+/** 资源获取途径指引 */
+const RESOURCE_GUIDES: Array<{ name: string; color: string; sources: string[] }> = [
+  { name: '灵石', color: '#fbbf24', sources: ['灵脉阵产出', '世界资源点·灵石矿脉', '贸易协定收入', '附庸进贡', '宗门任务奖励'] },
+  { name: '灵草', color: '#34d399', sources: ['灵田建筑产出', '灵田种植收获', '世界资源点·灵草野', '贸易协定收入', '采集任务奖励'] },
+  { name: '矿石', color: '#a78bfa', sources: ['矽脉建筑产出', '世界资源点·矿石矿脉', '结盟收入', '挖掘任务奖励'] },
+  { name: '木材', color: '#fb923c', sources: ['灵木林建筑产出', '世界资源点·灵木林', '结盟收入', '巡逻任务奖励'] },
+  { name: '悟道', color: '#60a5fa', sources: ['宗门任务奖励', '藏经阁研修', '探索遗迹任务'] },
+  { name: '声望', color: '#f87171', sources: ['宗门防御战胜利', '宗门战争胜利', '收服附庸', '宗门任务奖励'] },
+]
+
+export function openSectDashboard(data: SectDashboardData) {
+  const panel = el('panel')
+  panel.classList.add('open')
+  delete panel.dataset.modal
+  onPanelToggle?.(true)
+  sfx('sfx_open', 0.5)
+
+  const r = data.resources
+  const resourceChips = [
+    { label: '灵石', val: r.stone, color: '#fbbf24' },
+    { label: '灵草', val: r.herb, color: '#34d399' },
+    { label: '矿石', val: r.ore, color: '#a78bfa' },
+    { label: '木材', val: r.wood, color: '#fb923c' },
+    { label: '悟道', val: r.insight, color: '#60a5fa' },
+    { label: '声望', val: r.prestige, color: '#f87171' },
+  ].map(c => `<span class="resource-chip" style="color:${c.color}">${c.label} ${c.val}</span>`).join('')
+
+  // 产出建筑列表（含每分钟产出和加成）
+  const prodCards = data.productionBuildings.map(b => {
+    const lvText = b.level > 0 ? `<span class="q1">Lv.${b.level}</span>` : '<span class="dim">未建</span>'
+    if (b.produces && b.level > 0) {
+      const actualRate = Math.floor(b.rate * (1 + b.bonus))
+      const bonusText = b.bonus > 0 ? `<span class="stat-up"> +${Math.round(b.bonus * 100)}%</span>` : ''
+      return `<div class="bldg-card" style="flex-direction:column;align-items:flex-start;gap:2px">
+        <div style="display:flex;justify-content:space-between;width:100%"><span>${b.name}</span>${lvText}</div>
+        <span class="sub" style="font-size:10px">${b.produces} ${actualRate}/分${bonusText}</span>
+      </div>`
+    }
+    return `<div class="bldg-card"><span>${b.name}</span>${lvText}</div>`
+  }).join('')
+
+  // 资源获取指引
+  const guideSections = RESOURCE_GUIDES.map(g => {
+    const sources = g.sources.map(s => `<span class="dim" style="font-size:10px;margin-right:4px">·${s}</span>`).join('')
+    return `<div style="margin-bottom:3px"><span style="color:${g.color};font-size:11px">${g.name}：</span>${sources}</div>`
+  }).join('')
+
+  let html = `<div class="card wide sect-dashboard">
+    <div style="text-align:center;margin-bottom:6px">
+      <span class="q3" style="font-size:15px">${data.sectName}</span>
+      <span class="sub" style="display:inline;margin-left:4px">Lv.${data.sectLevel}</span>
+    </div>
+    <div class="resource-bar">${resourceChips}</div>
+    <div style="text-align:center;margin:6px 0">
+      <span class="dim">弟子 ${data.discipleCount}/${data.discipleCapacity}</span>
+    </div>
+
+    <div style="border-top:1px solid var(--line);margin:6px 0;padding-top:6px">
+      <div style="font-size:12px;color:#f0d98c;margin-bottom:4px">资源产出（每5秒结算）</div>
+      <div class="bldg-grid">${prodCards}</div>
+      ${data.discipleBonuses.stone + data.discipleBonuses.herb + data.discipleBonuses.ore + data.discipleBonuses.wood > 0
+        ? `<div style="margin-top:4px;font-size:10px;color:#9a937f">弟子职务加成：灵石+${Math.round(data.discipleBonuses.stone * 100)}% · 灵草+${Math.round(data.discipleBonuses.herb * 100)}% · 矿石+${Math.round(data.discipleBonuses.ore * 100)}% · 木材+${Math.round(data.discipleBonuses.wood * 100)}%</div>`
+        : ''}
+    </div>
+
+    <div style="border-top:1px solid var(--line);margin:6px 0;padding-top:6px">
+      <div style="font-size:12px;color:#f0d98c;margin-bottom:4px">资源获取途径</div>
+      ${guideSections}
+    </div>
+
+    <div style="border-top:1px solid var(--line);margin:6px 0;padding-top:6px">
+      <div style="font-size:12px;color:#f0d98c;margin-bottom:4px">管理事务</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px">
+        <button data-sect-act="building" style="padding:6px;font-size:12px">建筑摆放</button>
+        <button data-sect-act="npc" style="padding:6px;font-size:12px">NPC安排</button>
+        <button data-sect-act="disciple" style="padding:6px;font-size:12px">弟子管理</button>
+        <button data-sect-act="diplomacy" style="padding:6px;font-size:12px">外交</button>
+      </div>
+    </div>
+    <div style="text-align:right;margin-top:8px"><button data-close>关闭</button></div>
+  </div>`
+
+  panel.innerHTML = html
+
+  panel.querySelector('[data-sect-act="building"]')?.addEventListener('click', () => {
+    sfx('sfx_click', 0.4)
+    closePanel()
+    sectCallbacks.onPlaceBuilding?.()
+  })
+  panel.querySelector('[data-sect-act="npc"]')?.addEventListener('click', () => {
+    sfx('sfx_click', 0.4)
+    closePanel()
+    sectCallbacks.onPlaceNpc?.()
+  })
+  panel.querySelector('[data-sect-act="disciple"]')?.addEventListener('click', () => {
+    sfx('sfx_click', 0.4)
+    closePanel()
+    sectCallbacks.onManageDisciples?.()
+  })
+  panel.querySelector('[data-sect-act="diplomacy"]')?.addEventListener('click', () => {
+    sfx('sfx_click', 0.4)
+    closePanel()
+    sectCallbacks.onDiplomacy?.()
+  })
+  panel.querySelector('[data-close]')!.addEventListener('click', closePanel)
+}
+
+// ---------- 弟子看板 ----------
+export interface DiscipleCardData {
+  uid: string
+  name: string
+  rootName: string
+  rootColor: string
+  rootTierLabel: string
+  realmName: string
+  rankName: string
+  roleName: string | null
+  status: 'idle' | 'cultivating' | 'retreating' | 'dispatched'
+  statusLabel: string
+  power: number
+  atk: number
+  def: number
+  maxHp: number
+  crit: number
+  exp: number
+  expToNext: number
+  loyalty: number
+  affection: number
+  talents: Array<{ name: string; desc: string; positive: boolean }>
+  /** 闭关剩余秒数（仅闭关中） */
+  retreatRemain?: number
+  /** 任务名称和剩余秒数（仅派遣中） */
+  questName?: string
+  questRemain?: number
+  /** 指点是否可用 */
+  canGuide: boolean
+  /** 是否可晋升 */
+  canPromote: boolean
+}
+
+export interface RecruitCandidate {
+  name: string
+  rootName: string
+  rootColor: string
+  rootTierLabel: string
+  talents: Array<{ name: string; desc: string; positive: boolean }>
+  atk: number
+  def: number
+  maxHp: number
+  crit: number
+  loyalty: number
+  affection: number
+}
+
+export interface DiscipleDashboardData {
+  count: number
+  capacity: number
+  recruitCooldownRemain: number  // 秒
+  disciples: DiscipleCardData[]
+  candidate: RecruitCandidate | null  // 待招募人选
+}
+
+export interface DiscipleDashboardCallbacks {
+  onCultivate?: (uid: string) => void
+  onStopCultivate?: (uid: string) => void
+  onRetreat?: (uid: string) => void
+  onBreakRetreat?: (uid: string) => void
+  onGuide?: (uid: string) => void
+  onDispatch?: (uid: string) => void
+  onEquip?: (uid: string) => void
+  onPromote?: (uid: string) => void
+  onRecruitAccept?: () => void
+  onRecruitReject?: () => void
+}
+
+let discipleCallbacks: DiscipleDashboardCallbacks = {}
+
+export function setDiscipleCallbacks(cb: DiscipleDashboardCallbacks) {
+  discipleCallbacks = cb
+}
+
+export function openDiscipleDashboard(data: DiscipleDashboardData) {
+  const panel = el('panel')
+  panel.classList.add('open')
+  delete panel.dataset.modal
+  onPanelToggle?.(true)
+  sfx('sfx_open', 0.5)
+
+  const statusColor = (s: string) => s === 'idle' ? '#a3a3a3' : s === 'cultivating' ? '#60a5fa' : s === 'retreating' ? '#c4a2ff' : '#fbbf24'
+
+  // 弟子卡片
+  const discipleCards = data.disciples.map(d => {
+    const talentHtml = d.talents.map(t =>
+      `<span class="${t.positive ? 'stat-up' : 'stat-down'}" style="font-size:9px;margin-right:2px">${t.name}</span>`
+    ).join('')
+    const expBar = `<div style="background:#1a1a2e;height:3px;border-radius:2px;margin-top:2px"><div style="background:#60a5fa;height:3px;border-radius:2px;width:${Math.min(100, d.exp / d.expToNext * 100)}%"></div></div>`
+    const roleTag = d.roleName ? `<span class="q2" style="font-size:9px;margin-left:2px">[${d.roleName}]</span>` : ''
+
+    let actions = ''
+    if (d.status === 'idle') {
+      actions = `<button data-dact="cultivate:${d.uid}" style="font-size:10px;padding:2px 5px">修炼</button>
+        <button data-dact="retreat:${d.uid}" style="font-size:10px;padding:2px 5px">闭关</button>
+        ${d.canGuide ? `<button data-dact="guide:${d.uid}" style="font-size:10px;padding:2px 5px">指点</button>` : ''}
+        <button data-dact="dispatch:${d.uid}" style="font-size:10px;padding:2px 5px">派遣</button>`
+    } else if (d.status === 'cultivating') {
+      actions = `<button data-dact="stop:${d.uid}" style="font-size:10px;padding:2px 5px">停止修炼</button>`
+    } else if (d.status === 'retreating') {
+      actions = `<span class="dim" style="font-size:9px">闭关中 ${d.retreatRemain ?? 0}s</span>
+        <button data-dact="break:${d.uid}" style="font-size:10px;padding:2px 5px">出关</button>`
+    } else if (d.status === 'dispatched') {
+      actions = `<span class="dim" style="font-size:9px">${d.questName ?? '任务中'} ${d.questRemain ?? 0}s</span>`
+    }
+    actions += `<button data-dact="equip:${d.uid}" style="font-size:10px;padding:2px 5px">装备</button>`
+    if (d.canPromote) actions += `<button data-dact="promote:${d.uid}" style="font-size:10px;padding:2px 5px">晋升</button>`
+
+    return `<div class="compare-item" style="border-left:3px solid ${d.rootColor}">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span class="q1" style="font-size:12px">${d.name}</span>
+        <span style="font-size:10px;color:${statusColor(d.status)}">${d.statusLabel}</span>
+      </div>
+      <div style="font-size:10px;margin-top:1px">
+        <span style="color:${d.rootColor}">${d.rootName}</span>
+        <span class="dim">${d.rootTierLabel}</span>
+        <span class="q3">${d.realmName}</span>
+        <span class="dim">${d.rankName}</span>${roleTag}
+        <span style="color:#f0d98c">战${d.power}</span>
+      </div>
+      <div style="font-size:9px;color:#9a937f;margin-top:1px">攻${d.atk} 防${d.def} 体${d.maxHp} 暴${d.crit}% 忠${d.loyalty} 好${d.affection}</div>
+      <div style="margin-top:1px">${talentHtml}</div>
+      ${expBar}
+      <div style="display:flex;gap:2px;flex-wrap:wrap;margin-top:3px">${actions}</div>
+    </div>`
+  }).join('')
+
+  // 招募区域
+  let recruitSection = ''
+  if (data.candidate) {
+    const c = data.candidate
+    const talentHtml = c.talents.map(t =>
+      `<span class="${t.positive ? 'stat-up' : 'stat-down'}" style="font-size:9px;margin-right:2px">${t.name}</span>`
+    ).join('')
+    recruitSection = `<div style="border:1px dashed #f0d98c;padding:6px;margin-top:6px;border-radius:4px">
+      <div style="font-size:11px;color:#f0d98c;margin-bottom:3px">待招募人选</div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <span class="q2" style="font-size:12px">${c.name}</span>
+        <span style="font-size:10px;color:${c.rootColor}">${c.rootName} ${c.rootTierLabel}</span>
+      </div>
+      <div style="font-size:9px;color:#9a937f;margin-top:1px">攻${c.atk} 防${c.def} 体${c.maxHp} 暴${c.crit}% 忠${c.loyalty}</div>
+      <div style="margin-top:1px">${talentHtml}</div>
+      <div style="display:flex;gap:4px;margin-top:4px">
+        <button data-dact="recruit_accept" style="flex:1;padding:4px;font-size:11px">收入门下</button>
+        <button data-dact="recruit_reject" style="flex:1;padding:4px;font-size:11px">婉拒</button>
+      </div>
+    </div>`
+  } else if (data.recruitCooldownRemain > 0) {
+    recruitSection = `<div style="text-align:center;margin-top:6px;padding:6px;border:1px solid var(--line);border-radius:4px">
+      <span class="dim" style="font-size:11px">招募冷却中 · ${data.recruitCooldownRemain}s 后可招募</span>
+    </div>`
+  } else if (data.count < data.capacity) {
+    recruitSection = `<div style="text-align:center;margin-top:6px">
+      <button data-dact="recruit_accept" style="padding:6px 16px;font-size:12px">广纳门徒</button>
+    </div>`
+  } else {
+    recruitSection = `<div style="text-align:center;margin-top:6px">
+      <span class="dim" style="font-size:11px">弟子房已满，升级弟子房可增加名额</span>
+    </div>`
+  }
+
+  let html = `<div class="card wide sect-dashboard">
+    <div style="text-align:center;margin-bottom:6px">
+      <span class="q3" style="font-size:14px">弟子堂</span>
+      <span class="sub" style="display:inline;margin-left:4px">${data.count} / ${data.capacity}</span>
+    </div>
+    <div style="max-height:55vh;overflow-y:auto">
+      ${discipleCards || '<p class="dim" style="text-align:center">尚无弟子</p>'}
+    </div>
+    ${recruitSection}
+    <div style="text-align:right;margin-top:8px"><button data-close>关闭</button></div>
+  </div>`
+
+  panel.innerHTML = html
+
+  // 弟子操作按钮
+  const handleDact = (action: string, uid?: string) => {
+    sfx('sfx_click', 0.4)
+    switch (action) {
+      case 'cultivate': discipleCallbacks.onCultivate?.(uid!); break
+      case 'stop': discipleCallbacks.onStopCultivate?.(uid!); break
+      case 'retreat': discipleCallbacks.onRetreat?.(uid!); break
+      case 'break': discipleCallbacks.onBreakRetreat?.(uid!); break
+      case 'guide': discipleCallbacks.onGuide?.(uid!); break
+      case 'dispatch': discipleCallbacks.onDispatch?.(uid!); break
+      case 'equip': closePanel(); discipleCallbacks.onEquip?.(uid!); break
+      case 'promote': closePanel(); discipleCallbacks.onPromote?.(uid!); break
+      case 'recruit_accept': discipleCallbacks.onRecruitAccept?.(); break
+      case 'recruit_reject': discipleCallbacks.onRecruitReject?.(); break
+    }
+  }
+
+  panel.querySelectorAll('[data-dact]').forEach(b => b.addEventListener('click', (e) => {
+    const raw = (e.target as HTMLElement).getAttribute('data-dact')!
+    const [action, uid] = raw.split(':')
+    handleDact(action, uid)
+  }))
+  panel.querySelector('[data-close]')!.addEventListener('click', closePanel)
+}
+
+
 export function openSettings() {
   const panel = el('panel')
   panel.classList.add('open')
@@ -365,7 +832,25 @@ export function openSettings() {
     </div>
 
     <div style="border-top:1px solid #3a4356;margin:8px 0;padding-top:8px">
+      <div style="font-size:12px;color:#9a937f;margin-bottom:6px">视野调节</div>
+      <div style="display:flex;gap:6px;margin-bottom:8px">
+        <button id="zoomOutBtn" style="flex:1;padding:6px;font-size:14px">− 拉远</button>
+        <button id="zoomResetBtn" style="flex:1;padding:6px;font-size:12px">默认</button>
+        <button id="zoomInBtn" style="flex:1;padding:6px;font-size:14px">＋ 拉近</button>
+      </div>
+    </div>
+
+    <div style="border-top:1px solid #3a4356;margin:8px 0;padding-top:8px">
+      <div style="font-size:12px;color:#9a937f;margin-bottom:6px">大地图模式</div>
+      <div style="display:flex;gap:6px;margin-bottom:8px">
+        <button id="render2DBtn" style="flex:1;padding:6px;font-size:13px${state.renderMode === '2d' ? ';background:#3a5a7a;color:#e8d8a0' : ''}">2D 平面</button>
+        <button id="render3DBtn" style="flex:1;padding:6px;font-size:13px${state.renderMode === '3d' ? ';background:#3a5a7a;color:#e8d8a0' : ''}">3D 幻境</button>
+      </div>
+    </div>
+
+    <div style="border-top:1px solid #3a4356;margin:8px 0;padding-top:8px">
       <button id="settingsLoadBtn" style="width:100%;margin-bottom:6px;padding:6px;font-size:12px">转劫重修</button>
+      ${settingsCallbacks.onBuildHome ? '<button id="settingsBuildHomeBtn" style="width:100%;margin-bottom:6px;padding:6px;font-size:12px;color:#48e0d0">开辟新洞府</button>' : ''}
       <button id="settingsTitleBtn" style="width:100%;margin-bottom:6px;padding:6px;font-size:12px">返回山门</button>
     </div>
 
@@ -394,6 +879,38 @@ export function openSettings() {
     sfx('sfx_click', 0.3)
   })
 
+  // 视野调节
+  el('zoomInBtn').addEventListener('click', () => {
+    sfx('sfx_click', 0.3)
+    settingsCallbacks.onZoom?.(-100)
+  })
+  el('zoomOutBtn').addEventListener('click', () => {
+    sfx('sfx_click', 0.3)
+    settingsCallbacks.onZoom?.(100)
+  })
+  el('zoomResetBtn').addEventListener('click', () => {
+    sfx('sfx_click', 0.3)
+    settingsCallbacks.onResetCamera?.()
+  })
+
+  // 2D/3D 渲染模式切换
+  el('render2DBtn').addEventListener('click', () => {
+    sfx('sfx_click', 0.3)
+    if (state.renderMode === '2d') return
+    state.renderMode = '2d'
+    saveGame(state)
+    closePanel()
+    settingsCallbacks.onToggleRenderMode?.()
+  })
+  el('render3DBtn').addEventListener('click', () => {
+    sfx('sfx_click', 0.3)
+    if (state.renderMode === '3d') return
+    state.renderMode = '3d'
+    saveGame(state)
+    closePanel()
+    settingsCallbacks.onToggleRenderMode?.()
+  })
+
   // 转劫重修（读档）
   el('settingsLoadBtn').addEventListener('click', async () => {
     sfx('sfx_click', 0.4)
@@ -420,6 +937,16 @@ export function openSettings() {
     settingsCallbacks.onReturnTitle?.()
   })
 
+  // 开辟新洞府
+  const buildHomeBtn = document.getElementById('settingsBuildHomeBtn')
+  if (buildHomeBtn) {
+    buildHomeBtn.addEventListener('click', () => {
+      sfx('sfx_click', 0.4)
+      closePanel()
+      settingsCallbacks.onBuildHome?.()
+    })
+  }
+
   panel.querySelector('[data-close]')!.addEventListener('click', closePanel)
 }
 
@@ -429,11 +956,14 @@ export function openPanel(tab: Tab) {
   delete panel.dataset.modal
   onPanelToggle?.(true)
   sfx('sfx_open', 0.5)
-  let html = `<div class="card"><div class="tabs">
+  let html = `<div class="card${tab === 'equip' || tab === 'skill' ? ' wide' : ''}"><div class="tabs">
     <button data-tab="equip" class="${tab === 'equip' ? 'active' : ''}">装备</button>
     <button data-tab="skill" class="${tab === 'skill' ? 'active' : ''}">功法</button>
     <button data-tab="talent" class="${tab === 'talent' ? 'active' : ''}">天赋</button>
+    <button data-tab="artifact" class="${tab === 'artifact' ? 'active' : ''}">法宝</button>
     <button data-tab="codex" class="${tab === 'codex' ? 'active' : ''}">图鉴</button>
+    <button data-tab="contacts" class="${tab === 'contacts' ? 'active' : ''}">人脉</button>
+    <button data-tab="log" class="${tab === 'log' ? 'active' : ''}">见闻录</button>
   </div><div id="tabBody"></div>
   <div style="text-align:right;margin-top:8px"><button data-close>关闭</button></div></div>`
   panel.innerHTML = html
@@ -449,11 +979,48 @@ function refresh(tab: Tab) { saveGame(state); updateHUD(); renderTab(tab) }
 function renderTab(tab: Tab) {
   if (tab === 'equip') renderEquipTab()
   else if (tab === 'skill') renderSkillTab()
+  else if (tab === 'artifact') renderArtifactTab()
   else if (tab === 'codex') renderCodexTab()
+  else if (tab === 'contacts') renderContactsTab()
+  else if (tab === 'log') renderLogTab()
   else renderTalentTab()
 }
 
-// ---------- 装备页 ----------
+/** 生成两件装备的属性对比（新装备 vs 旧装备） */
+function compareItems(oldIt: EquipItem | null, newIt: EquipItem): string {
+  const stats: Array<[string, number, number]> = []
+  const oAtk = (oldIt?.atk ?? 0) + (oldIt?.enh ?? 0) * 2
+  const nAtk = (newIt.atk ?? 0) + (newIt.enh ?? 0) * 2
+  if (oAtk !== nAtk) stats.push(['攻', oAtk, nAtk])
+  const oDef = (oldIt?.def ?? 0) + (oldIt?.enh ?? 0) * 2
+  const nDef = (newIt.def ?? 0) + (newIt.enh ?? 0) * 2
+  if (oDef !== nDef) stats.push(['防', oDef, nDef])
+  const oSpd = oldIt?.speed ?? 0, nSpd = newIt.speed ?? 0
+  if (oSpd !== nSpd) stats.push(['速', oSpd, nSpd])
+  const oHp = oldIt?.maxHp ?? 0, nHp = newIt.maxHp ?? 0
+  if (oHp !== nHp) stats.push(['气血', oHp, nHp])
+  const oCrt = oldIt?.crit ?? 0, nCrt = newIt.crit ?? 0
+  if (oCrt !== nCrt) stats.push(['会心', Math.round(oCrt * 100), Math.round(nCrt * 100)])
+  if (stats.length === 0) return '<span class="sub" style="color:#9a937f">属性持平</span>'
+  return stats.map(([label, oldV, newV]) => {
+    const diff = newV - oldV
+    const cls = diff > 0 ? 'stat-up' : diff < 0 ? 'stat-down' : ''
+    const sign = diff > 0 ? '+' : ''
+    return `<span class="${cls}">${label} ${oldV}→${newV}(${sign}${diff})</span>`
+  }).join(' ')
+}
+
+/** 生成装备简要属性（对比面板紧凑显示） */
+function itemStatsBrief(it: EquipItem): string {
+  const parts: string[] = []
+  if (it.atk) parts.push(`攻${it.atk + (it.enh ?? 0) * 2}`)
+  if (it.def) parts.push(`防${it.def + (it.enh ?? 0) * 2}`)
+  if (it.speed) parts.push(`速${it.speed}`)
+  if (it.maxHp) parts.push(`血${it.maxHp}`)
+  if (it.crit) parts.push(`会${(it.crit * 100).toFixed(0)}%`)
+  return parts.join(' ')
+}
+
 function itemLabel(it: EquipItem) {
   const parts: string[] = []
   if (it.atk) parts.push(`攻+${it.atk}`)
@@ -488,11 +1055,18 @@ function renderEquipTab() {
   html += `<div class="item"><span class="q3">【境界】${realm.name}${state.realm > 0 ? `（基础属性 +${(REALM_STAT_BONUS * state.realm * 100).toFixed(0)}%）` : ''}
     <span class="sub">${next ? `突破【${next.name}】需 Lv.${next.level} + 突破石×${next.stones}（现有 ${state.materials.tupo ?? 0}）` : '已达当前最高境界'}</span></span>`
   if (next) html += `<button data-breakthrough ${canBreakthrough() ? '' : 'disabled'}>突破</button>`
+  else if (canAscend(state)) html += `<button data-ascend>飞升</button>`
   html += `</div>`
-  html += `<p class="dim">攻击 ${st.atk} · 防御 ${st.def} · 速度 ${st.speed} · 会心 ${(st.crit * 100).toFixed(0)}% · 攻速 +${(st.aspd * 100).toFixed(0)}% · 吸血 ${(st.lifesteal * 100).toFixed(0)}%</p>`
+  if (state.ascensionCount > 0) {
+    const ab = ascensionBonus(state.ascensionCount)
+    html += `<div class="item"><span class="q4">【飞升】第${state.ascensionCount}世<span class="sub">属性 ×${ab.statMult.toFixed(2)} · 经验 ×${ab.expMult.toFixed(2)} · 额外技能点 +${ab.extraSkillPoints}</span></span></div>`
+  }
+  if (!next && !canAscend(state)) {
+    html += `<div class="item"><span class="dim">飞升条件：破碎仙宫达到 ${ASCENSION_REQUIREMENTS.minXianFloor} 层（当前 ${state.xianMaxDepth}）</span></div>`
+  }
+  html += `<p class="dim">攻 ${st.atk} · 防 ${st.def} · 速 ${st.speed} · 会心 ${(st.crit * 100).toFixed(0)}% · 攻速 +${(st.aspd * 100).toFixed(0)}% · 吸血 ${(st.lifesteal * 100).toFixed(0)}%</p>`
 
-  // 配装方案（装备+功法+天赋 一键切换）
-  html += `<div class="item"><span class="q2">【配装方案】<span class="sub">读取时会把当前配置自动存回你离开的方案槽</span></span></div>`
+  // 配装方案
   html += `<div class="item" style="flex-wrap:wrap;gap:4px">`
   for (let i = 0; i < PRESET_COUNT; i++) {
     const saved = !!state.presets[i]
@@ -502,28 +1076,40 @@ function renderEquipTab() {
   }
   html += `</div>`
 
+  // ===== 左右对比布局 =====
+  html += `<div class="compare-grid">`
+
+  // 左列：已装备
+  html += `<div class="compare-col"><h5>已装备</h5><div class="compare-col-scroll">`
   for (const slot of SLOT_KEYS) {
     const it = state.equipment[slot]
-    html += `<div class="item"><span class="${it ? 'q' + it.quality : 'dim'}">【${SLOT_NAMES[slot]}】${it ? itemLabel(it) + affixLine(it) : '——'}</span>`
     if (it) {
       const cost = enhanceCost(it)
-      html += `<span style="white-space:nowrap">`
-      if ((it.enh ?? 0) < ENH_MAX) html += `<button data-enh="equip:${slot}" ${state.gold >= cost ? '' : 'disabled'}>强化(${cost})</button>`
-      html += `<button data-unequip="${slot}">卸下</button></span>`
+      const enhTag = (it.enh ?? 0) > 0 ? ` <span class="q3">+${it.enh}</span>` : ''
+      html += `<div class="compare-item" data-eq-slot="${slot}">
+        <span class="q${it.quality}">【${SLOT_NAMES[slot]}】${it.name}${enhTag} Lv.${it.itemLevel ?? 1}</span>
+        <span class="sub">${itemStatsBrief(it)}</span>
+        ${affixLine(it) ? `<span class="sub">${affixLine(it)}</span>` : ''}
+        <span class="sub">
+          ${(it.enh ?? 0) < ENH_MAX ? `<button data-enh="equip:${slot}" ${state.gold >= cost ? '' : 'disabled'} style="font-size:10px;padding:2px 6px">强化(${cost})</button> ` : ''}
+          <button data-unequip="${slot}" style="font-size:10px;padding:2px 6px">卸下</button>
+        </span>
+      </div>`
+    } else {
+      html += `<div class="compare-item"><span class="dim">【${SLOT_NAMES[slot]}】——</span></div>`
     }
-    html += `</div>`
   }
-
   // 套装信息
   for (const setId of equippedSetIds(state)) {
-    const set = SETS[setId]
+    const set = SETS[setId] ?? V4_KIT_SETS.get(setId)
+    if (!set) continue
     const n = setPieceCount(state, setId)
     const lines = set.bonuses.map((bonus) => `<span class="${isSetBonusActive(n, bonus) ? 'q1' : 'dim'}">${bonus.desc}</span>`).join('<br>')
-    html += `<div class="item"><span class="q2">套装【${set.name}】${n}/${set.pieces.length}<span class="sub">${lines}</span></span></div>`
+    html += `<div class="compare-item"><span class="q2">套装【${set.name}】${n}/${set.pieces.length}<span class="sub">${lines}</span></span></div>`
   }
+  html += `</div></div>`
 
-  // 背包分类筛选 + 一键售卖
-  const filterLabels: Record<InvFilter, string> = { all: '全部', weapon: '武器', armor: '防具', accessory: '饰品' }
+  // 右列：行囊
   const filterInventory = (it: EquipItem): boolean => {
     if (invFilter === 'all') return true
     if (invFilter === 'weapon') return it.slot === 'weapon'
@@ -534,31 +1120,41 @@ function renderEquipTab() {
   const filtered: Array<{ it: EquipItem; idx: number }> = []
   state.inventory.forEach((it, idx) => { if (filterInventory(it)) filtered.push({ it, idx }) })
 
-  // 凡品数量（用于一键售卖按钮）
   const commonCount = state.inventory.filter((it) => it.quality === 0).length
   const commonTotal = state.inventory.filter((it) => it.quality === 0)
     .reduce((sum, it) => sum + it.price + (it.enh ?? 0) * 10, 0)
 
-  html += `<p class="dim" style="margin-top:10px">—— 行囊（${state.inventory.length}）——</p>`
-  html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-    <div class="tabs" style="margin-bottom:0">
-      <button data-inv-filter="all" class="${invFilter === 'all' ? 'active' : ''}" style="padding:3px 10px;font-size:11px">全部</button>
-      <button data-inv-filter="weapon" class="${invFilter === 'weapon' ? 'active' : ''}" style="padding:3px 10px;font-size:11px">武器</button>
-      <button data-inv-filter="armor" class="${invFilter === 'armor' ? 'active' : ''}" style="padding:3px 10px;font-size:11px">防具</button>
-      <button data-inv-filter="accessory" class="${invFilter === 'accessory' ? 'active' : ''}" style="padding:3px 10px;font-size:11px">饰品</button>
-    </div>
-    <button data-sell-all-common ${commonCount > 0 ? '' : 'disabled'} style="padding:3px 8px;font-size:11px">售卖凡品×${commonCount}(${commonTotal})</button>
-  </div>`
+  html += `<div class="compare-col"><h5>行囊（${state.inventory.length}）</h5>`
+  html += `<div style="display:flex;gap:2px;margin-bottom:4px;flex-wrap:wrap">
+    <button data-inv-filter="all" class="${invFilter === 'all' ? 'q3' : 'dim'}" style="padding:2px 6px;font-size:10px;border:1px solid var(--line)">全</button>
+    <button data-inv-filter="weapon" class="${invFilter === 'weapon' ? 'q3' : 'dim'}" style="padding:2px 6px;font-size:10px;border:1px solid var(--line)">武</button>
+    <button data-inv-filter="armor" class="${invFilter === 'armor' ? 'q3' : 'dim'}" style="padding:2px 6px;font-size:10px;border:1px solid var(--line)">防</button>
+    <button data-inv-filter="accessory" class="${invFilter === 'accessory' ? 'q3' : 'dim'}" style="padding:2px 6px;font-size:10px;border:1px solid var(--line)">饰</button>
+    <button data-sell-all-common ${commonCount > 0 ? '' : 'disabled'} style="padding:2px 6px;font-size:10px;margin-left:auto">售凡×${commonCount}</button>
+  </div><div class="compare-col-scroll">`
   if (filtered.length === 0) {
-    html += `<p class="dim">${state.inventory.length === 0 ? '空空如也' : '该分类暂无装备'}</p>`
+    html += `<p class="dim" style="font-size:11px">${state.inventory.length === 0 ? '空空如也' : '该分类无装备'}</p>`
   }
   filtered.forEach(({ it, idx }) => {
-    const cost = enhanceCost(it)
-    html += `<div class="item"><span class="q${it.quality}">${itemLabel(it)}${affixLine(it)}</span>
-      <span style="white-space:nowrap">
-        ${(it.enh ?? 0) < ENH_MAX ? `<button data-enh="inv:${idx}" ${state.gold >= cost ? '' : 'disabled'}>强化(${cost})</button>` : ''}
-        <button data-equip="${idx}">装备</button><button data-sell="${idx}">出售</button></span></div>`
+    // 找到对应槽位当前装备，生成对比
+    const slotKey: SlotKey = it.slot === 'charm' ? 'charm1' : it.slot
+    const currentEquipped = state.equipment[slotKey] ?? state.equipment[it.slot === 'charm' ? 'charm2' : it.slot] ?? null
+    const cmp = compareItems(currentEquipped, it)
+    const enhTag = (it.enh ?? 0) > 0 ? ` <span class="q3">+${it.enh}</span>` : ''
+    html += `<div class="compare-item" data-inv-idx="${idx}">
+      <span class="q${it.quality}">${it.name}${enhTag} <span class="sub" style="display:inline">Lv.${it.itemLevel ?? 1}</span></span>
+      <span class="sub">${itemStatsBrief(it)}</span>
+      ${affixLine(it) ? `<span class="sub">${affixLine(it)}</span>` : ''}
+      <span class="sub" style="margin-top:1px">${cmp}</span>
+      <span class="sub">
+        <button data-equip="${idx}" style="font-size:10px;padding:2px 6px">装备</button>
+        ${(it.enh ?? 0) < ENH_MAX ? `<button data-enh="inv:${idx}" ${state.gold >= enhanceCost(it) ? '' : 'disabled'} style="font-size:10px;padding:2px 6px">强化</button>` : ''}
+        <button data-sell="${idx}" style="font-size:10px;padding:2px 6px">售</button>
+      </span>
+    </div>`
   })
+  html += `</div></div></div>`
+
   body().innerHTML = html
 
   body().querySelectorAll('[data-preset-save]').forEach((b) => b.addEventListener('click', (e) => {
@@ -574,7 +1170,7 @@ function renderEquipTab() {
     const p = state.presets[i]
     if (!p) return
     if (state.activePreset >= 0 && state.activePreset !== i) {
-      state.presets[state.activePreset] = snapshotPreset(state) // 当前配置存回原槽位
+      state.presets[state.activePreset] = snapshotPreset(state)
     }
     applyPreset(state, p)
     state.activePreset = i
@@ -585,12 +1181,77 @@ function renderEquipTab() {
   body().querySelector('[data-breakthrough]')?.addEventListener('click', () => {
     if (!canBreakthrough()) return
     const next = REALMS[state.realm + 1]
+    const realmIndex = state.realm + 1
+
+    if (needsTribulation(realmIndex)) {
+      if (!tribulationStartCallback) {
+        toast('需返回洞府方可渡劫', '#ff8888')
+        return
+      }
+      const trib = getTribulation(realmIndex)!
+      const panel = el('panel')
+      panel.classList.add('open')
+      panel.dataset.modal = '1'
+      onPanelToggle?.(true)
+      panel.innerHTML = `<div class="card">
+        <h3>${trib.name}</h3>
+        <p>突破至【${next.name}】需经受天劫考验！</p>
+        <p class="dim">天雷持续 ${Math.ceil(trib.durationMs / 1000)} 秒，共 ${trib.maxStrikesTotal} 道天雷。</p>
+        <p class="dim">每道天雷造成 ${trib.damagePerStrike} 点伤害。</p>
+        <div style="text-align:center">
+          <button data-trib-start>开始渡劫</button>
+          <button data-trib-cancel>再等等</button>
+        </div>
+      </div>`
+      panel.querySelector('[data-trib-start]')!.addEventListener('click', () => {
+        sfx('sfx_click')
+        state.materials.tupo -= next.stones
+        closePanel()
+        tribulationStartCallback!(realmIndex)
+      })
+      panel.querySelector('[data-trib-cancel]')!.addEventListener('click', () => {
+        sfx('sfx_click')
+        closePanel()
+      })
+      return
+    }
+
     state.materials.tupo -= next.stones
     state.realm++
     state.hp = -1
     sfx('sfx_levelup')
     toast(`突破成功！晋入【${next.name}】，气血回满`, '#e8c86a')
     refresh('equip')
+  })
+  body().querySelector('[data-ascend]')?.addEventListener('click', () => {
+    if (!canAscend(state)) return
+    const panel = el('panel')
+    panel.classList.add('open')
+    panel.dataset.modal = '1'
+    onPanelToggle?.(true)
+    const ab = ascensionBonus(state.ascensionCount + 1)
+    panel.innerHTML = `<div class="card">
+      <h3>飞升转世</h3>
+      <p>飞升将重置境界至炼气，但保留等级、装备、功法等。</p>
+      <p>第 ${state.ascensionCount + 1} 世永久加成：</p>
+      <p class="dim">属性 ×${ab.statMult.toFixed(2)} · 经验 ×${ab.expMult.toFixed(2)} · 额外技能点 +${ab.extraSkillPoints}</p>
+      <div style="text-align:center">
+        <button data-ascend-ok>确认飞升</button>
+        <button data-ascend-cancel>再想想</button>
+      </div>
+    </div>`
+    panel.querySelector('[data-ascend-ok]')!.addEventListener('click', () => {
+      sfx('sfx_breakthrough')
+      performAscension(state)
+      saveGame(state)
+      closePanel()
+      toast(`飞升成功！进入第${state.ascensionCount}世轮回`, '#c8a2ff')
+      refresh('equip')
+    })
+    panel.querySelector('[data-ascend-cancel]')!.addEventListener('click', () => {
+      sfx('sfx_click')
+      closePanel()
+    })
   })
   body().querySelectorAll('[data-equip]').forEach((b) => b.addEventListener('click', (e) => {
     const idx = Number((e.target as HTMLElement).getAttribute('data-equip'))
@@ -635,13 +1296,11 @@ function renderEquipTab() {
     sfx('sfx_equip', 0.45)
     refresh('equip')
   }))
-  // 背包分类筛选
   body().querySelectorAll('[data-inv-filter]').forEach((b) => b.addEventListener('click', (e) => {
     invFilter = (e.target as HTMLElement).getAttribute('data-inv-filter') as InvFilter
     sfx('sfx_click', 0.3)
     refresh('equip')
   }))
-  // 一键售卖凡品
   body().querySelector('[data-sell-all-common]')?.addEventListener('click', () => {
     const commons = state.inventory.filter((it) => it.quality === 0)
     if (commons.length === 0) return
@@ -709,41 +1368,73 @@ function skillUpgradeCompare(id: string, lv: number): string {
 function renderSkillTab() {
   let html = `<p class="dim">悟道点 ${state.insight} · 升级消耗 = 当前等级 × 2</p>`
 
-  const slotName = (id: string | null) => (id ? SKILLS.get(id)?.name ?? id : '——')
-  html += `<div class="item"><span>【招式】${slotName(state.skillSlots.style)}</span></div>`
-  html += `<div class="item"><span>【心法一】${slotName(state.skillSlots.minds[0])}</span></div>`
-  html += `<div class="item"><span>【心法二】${slotName(state.skillSlots.minds[1])}</span></div>`
-  html += `<div class="item"><span>【神通】${slotName(state.skillSlots.art)}</span></div>`
+  // ===== 左右对比布局 =====
+  html += `<div class="compare-grid">`
 
-  html += `<p class="dim" style="margin-top:10px">—— 已习得功法 ——</p>`
-  html += `<div style="display:flex;gap:4px;margin-bottom:6px">`
-  html += `<button data-skill-filter="all" class="${skillFilter === 'all' ? 'active' : ''}" style="padding:3px 10px;font-size:11px">全部</button>`
-  html += `<button data-skill-filter="style" class="${skillFilter === 'style' ? 'active' : ''}" style="padding:3px 10px;font-size:11px">招式</button>`
-  html += `<button data-skill-filter="art" class="${skillFilter === 'art' ? 'active' : ''}" style="padding:3px 10px;font-size:11px">神通</button>`
-  html += `<button data-skill-filter="mind" class="${skillFilter === 'mind' ? 'active' : ''}" style="padding:3px 10px;font-size:11px">心法</button>`
-  html += `</div>`
+  // 左列：已装配
+  html += `<div class="compare-col"><h5>已装配</h5><div class="compare-col-scroll">`
+  const slots: Array<[string, string | null, string]> = [
+    ['招式', state.skillSlots.style, 'style'],
+    ['心法一', state.skillSlots.minds[0], 'mind'],
+    ['心法二', state.skillSlots.minds[1], 'mind'],
+    ['神通', state.skillSlots.art, 'art'],
+  ]
+  for (const [label, id, type] of slots) {
+    if (id) {
+      const def = SKILLS.get(id)
+      const lv = state.skills[id] ?? 1
+      const upCost = upgradeCost(lv)
+      const badge = def ? classBadgeHtml(def.class) : ''
+      html += `<div class="compare-item">
+        <span class="q1">${badge}【${label}】《${def?.name ?? id}》 Lv.${lv}</span>
+        <span class="sub">${def?.desc ?? ''}</span>
+        ${def ? skillUpgradeCompare(id, lv) : ''}
+        <span class="sub">
+          <button data-unskill="${id}" style="font-size:10px;padding:2px 6px">卸下</button>
+          ${lv < SKILL_MAX_LEVEL ? `<button data-upskill="${id}" ${canUpgrade(state, id) ? '' : 'disabled'} style="font-size:10px;padding:2px 6px">升级(${upCost})</button>` : ''}
+        </span>
+      </div>`
+    } else {
+      html += `<div class="compare-item"><span class="dim">【${label}】——</span></div>`
+    }
+  }
+  html += `</div></div>`
+
+  // 右列：已习得
+  html += `<div class="compare-col"><h5>已习得</h5>`
+  html += `<div style="display:flex;gap:2px;margin-bottom:4px;flex-wrap:wrap">
+    <button data-skill-filter="all" class="${skillFilter === 'all' ? 'q3' : 'dim'}" style="padding:2px 6px;font-size:10px;border:1px solid var(--line)">全</button>
+    <button data-skill-filter="style" class="${skillFilter === 'style' ? 'q3' : 'dim'}" style="padding:2px 6px;font-size:10px;border:1px solid var(--line)">招</button>
+    <button data-skill-filter="art" class="${skillFilter === 'art' ? 'q3' : 'dim'}" style="padding:2px 6px;font-size:10px;border:1px solid var(--line)">神</button>
+    <button data-skill-filter="mind" class="${skillFilter === 'mind' ? 'q3' : 'dim'}" style="padding:2px 6px;font-size:10px;border:1px solid var(--line)">心</button>
+  </div><div class="compare-col-scroll">`
   const learned = Object.entries(state.skills).filter(([id]) => {
     const def = SKILLS.get(id)
     if (!def) return false
     if (skillFilter === 'all') return true
     return def.type === skillFilter
   })
-  if (learned.length === 0) html += `<p class="dim">${skillFilter === 'all' ? '尚未习得任何功法' : '此分类暂无功法'}</p>`
+  if (learned.length === 0) {
+    html += `<p class="dim" style="font-size:11px">${skillFilter === 'all' ? '尚未习得功法' : '此分类无功法'}</p>`
+  }
   for (const [id, lv] of learned) {
     const def = SKILLS.get(id)
     if (!def) continue
     const equipped = isSkillEquipped(state, id)
     const upCost = upgradeCost(lv)
     const badge = classBadgeHtml(def.class)
-    const upgradeCompare = skillUpgradeCompare(id, lv)
-    html += `<div class="item"><span class="${equipped ? 'q1' : ''}">${badge}《${def.name}》 ${SKILL_TYPE_NAMES[def.type]} Lv.${lv}${equipped ? ' <span class="equipped-tag">已装配</span>' : ''}
+    html += `<div class="compare-item${equipped ? ' selected' : ''}">
+      <span class="${equipped ? 'q1' : ''}">${badge}《${def.name}》 ${SKILL_TYPE_NAMES[def.type]} Lv.${lv}${equipped ? ' <span class="equipped-tag">已装</span>' : ''}
       <span class="sub">${def.desc}</span>
-      ${upgradeCompare}</span>
-      <span style="white-space:nowrap">
-        ${equipped ? `<button data-unskill="${id}">卸下</button>` : `<button data-onskill="${id}">装配</button>`}
-        ${lv < SKILL_MAX_LEVEL ? `<button data-upskill="${id}" ${canUpgrade(state, id) ? '' : 'disabled'}>升级(${upCost})</button>` : ''}
-      </span></div>`
+      ${skillUpgradeCompare(id, lv)}
+      <span class="sub">
+        ${equipped ? `<button data-unskill="${id}" style="font-size:10px;padding:2px 6px">卸下</button>` : `<button data-onskill="${id}" style="font-size:10px;padding:2px 6px">装配</button>`}
+        ${lv < SKILL_MAX_LEVEL ? `<button data-upskill="${id}" ${canUpgrade(state, id) ? '' : 'disabled'} style="font-size:10px;padding:2px 6px">升级(${upCost})</button>` : ''}
+      </span>
+    </div>`
   }
+  html += `</div></div></div>`
+
   body().innerHTML = html
 
   body().querySelectorAll('[data-skill-filter]').forEach((b) => b.addEventListener('click', (e) => {
@@ -784,6 +1475,34 @@ function renderTalentTab() {
     html += `</div>`
   }
   html += `<div style="margin-top:8px"><button data-respec ${state.gold >= RESPEC_COST && spentPoints(state) > 0 ? '' : 'disabled'}>洗点（${RESPEC_COST} 灵石）</button></div>`
+
+  // 后天灵窍系统（金丹期解锁）
+  if (state.realm >= 2) {
+    const opened = state.spiritOrifices
+    const orbTotal = orificeBonuses(state)
+    html += `<div class="tbranch" style="margin-top:10px;border-color:#8b5cf6">
+      <h4 style="color:#a78bfa">后天灵窍 <span class="dim" style="font-size:10px">已打通 ${opened}/${SPIRIT_ORIFICES.length}</span></h4>`
+    if (opened > 0) {
+      html += `<p class="sub" style="margin:2px 0 4px">当前加成：攻+${orbTotal.atk} 防+${orbTotal.def} 体+${orbTotal.maxHp} 暴+${(orbTotal.crit * 100).toFixed(0)}% 速+${orbTotal.speed}</p>`
+    }
+    if (opened < SPIRIT_ORIFICES.length) {
+      const next = SPIRIT_ORIFICES[opened]
+      const rate = orificeSuccessRate(state, opened)
+      const canOpen = state.gold >= next.cost
+      html += `<div class="tnode" style="border-color:#6d28d9">
+        <span style="color:#c4b5fd">${next.name}
+        <span class="sub" style="color:#9ca3af">攻+${next.atk} 防+${next.def} 体+${next.maxHp} 暴+${(next.crit * 100).toFixed(0)}% 速+${next.speed}</span>
+        <span class="sub" style="color:${rate > 0.6 ? '#86efac' : rate > 0.4 ? '#fbbf24' : '#f87171'}">成功率 ${(rate * 100).toFixed(0)}%</span>
+        <span class="sub">消耗 ${next.cost.toLocaleString()} 灵石</span>
+        </span>
+        <button data-orifice ${canOpen ? '' : 'disabled'}>打通</button>
+      </div>`
+    } else {
+      html += `<p class="dim" style="color:#86efac">九窍皆通，灵窍大成！</p>`
+    }
+    html += `</div>`
+  }
+
   body().innerHTML = html
 
   body().querySelectorAll('[data-talent]').forEach((b) => b.addEventListener('click', (e) => {
@@ -795,6 +1514,184 @@ function renderTalentTab() {
     if (respec(state)) { sfx('sfx_skill'); toast('已洗点，返还全部天赋点', '#5dade2') }
     refresh('talent')
   })
+  body().querySelector('[data-orifice]')?.addEventListener('click', () => {
+    const idx = state.spiritOrifices
+    if (idx >= SPIRIT_ORIFICES.length) return
+    const o = SPIRIT_ORIFICES[idx]
+    if (state.gold < o.cost) { toast('灵石不足', '#f87171'); return }
+    state.gold -= o.cost
+    const rate = orificeSuccessRate(state, idx)
+    if (Math.random() < rate) {
+      state.spiritOrifices++
+      sfx('sfx_orifice', 0.6)
+      toast(`灵窍「${o.name}」打通！属性大幅提升`, '#a78bfa')
+      pushPlayerLog(state, `打通灵窍「${o.name}」，实力大增`)
+    } else {
+      sfx('sfx_hit', 0.3)
+      toast(`灵窍「${o.name}」打通失败，灵石散去`, '#f87171')
+      pushPlayerLog(state, `尝试打通灵窍「${o.name}」失败`)
+    }
+    saveGame(state)
+    refresh('talent')
+  })
+}
+
+// ---------- 法宝页 ----------
+function renderArtifactTab() {
+  const arts = state.artifacts ?? []
+  const canCraft = state.realm >= 2
+  let html = ''
+
+  // 已有法宝列表
+  html += `<h4 style="margin:0 0 6px">已炼法宝 ${arts.length} 件</h4>`
+  if (arts.length > 0) {
+    const totalArt = totalArtifactStats(arts)
+    html += `<p class="sub" style="margin:2px 0 6px">总属性加成：攻+${totalArt.atk} 防+${totalArt.def} 体+${totalArt.maxHp} 暴+${(totalArt.crit * 100).toFixed(0)}% 速+${totalArt.speed}</p>`
+    for (const a of arts) {
+      const def = ARTIFACTS[a.defId]
+      if (!def) continue
+      const s = artifactStats(a)
+      const buffVal = artifactBuffValue(a)
+      const buffDesc = def.buffType === 'flying_sword' ? `攻击时额外召唤${Math.ceil(buffVal)}把飞剑`
+        : def.buffType === 'spell_amplify' ? `法术伤害+${(buffVal * 100).toFixed(0)}%`
+        : def.buffType === 'heal_boost' ? `治疗效果+${(buffVal * 100).toFixed(0)}%`
+        : def.buffType === 'atk_pct' ? `攻击力+${(buffVal * 100).toFixed(0)}%`
+        : def.buffType === 'def_pct' ? `减伤+${(buffVal * 100).toFixed(0)}%`
+        : def.buffType === 'all_stats' ? `全属性+${(buffVal * 100).toFixed(0)}%`
+        : def.buffType === 'lifesteal' ? `吸血+${(buffVal * 100).toFixed(0)}%`
+        : def.buffType === 'crit_boost' ? `暴击+${(buffVal * 100).toFixed(0)}%`
+        : ''
+      const rCost = refineCost(def.refineCostBase, a.refineLevel)
+      const canRefine = a.refineLevel < 9 && state.gold >= rCost
+      html += `<div class="tnode" style="border-color:${def.tier === 'mythic' ? '#fbbf24' : def.tier === 'legendary' ? '#a78bfa' : '#6366f1'}">
+        <span style="color:${def.tier === 'mythic' ? '#fbbf24' : def.tier === 'legendary' ? '#c4b5fd' : '#a5b4fc'}">${def.name} <span class="dim">+${a.refineLevel}</span>
+        <span class="sub">攻+${s.atk} 防+${s.def} 体+${s.maxHp} 暴+${(s.crit * 100).toFixed(0)}% 速+${s.speed}</span>
+        <span class="sub" style="color:#fbbf24">${buffDesc}</span>
+        ${def.classId ? `<span class="sub">(${CLASSES[def.classId]?.name ?? def.classId}专属)</span>` : '<span class="sub">(全职业)</span>'}
+        </span>
+        <button data-refine="${a.defId}" ${canRefine ? '' : 'disabled'}>精炼(${rCost.toLocaleString()})</button>
+      </div>`
+    }
+  } else {
+    html += `<p class="dim" style="margin:2px 0 6px">尚未炼制任何法宝</p>`
+  }
+
+  // 炼制法宝
+  html += `<h4 style="margin:10px 0 6px">炼制法宝</h4>`
+  if (!canCraft) {
+    html += `<p class="dim">需达到${REALMS[2].name}期方可炼制法宝</p>`
+  } else {
+    for (const def of Object.values(ARTIFACTS)) {
+      const already = arts.some(a => a.defId === def.id)
+      if (already) continue
+      const realmOk = state.realm >= def.craftRealm
+      const goldOk = state.gold >= def.craftCost
+      const locked = !realmOk
+      html += `<div class="tnode" style="border-color:${locked ? '#374151' : '#4b5563'}">
+        <span style="color:${locked ? '#6b7280' : '#e5e7eb'}">${def.name}
+        <span class="sub">${def.desc}</span>
+        <span class="sub">攻+${def.stats.atk} 防+${def.stats.def} 体+${def.stats.maxHp}</span>
+        ${def.classId ? `<span class="sub">(${CLASSES[def.classId]?.name ?? def.classId}专属)</span>` : ''}
+        <span class="sub">消耗 ${def.craftCost.toLocaleString()} 灵石${def.craftRealm > 2 ? ` · 需${REALMS[def.craftRealm].name}期` : ''}</span>
+        </span>
+        <button data-craft="${def.id}" ${realmOk && goldOk ? '' : 'disabled'}>${locked ? '未解锁' : '炼制'}</button>
+      </div>`
+    }
+  }
+
+  // 宗门圣物装配
+  if (state.sectUnlocked && state.sect) {
+    const relics = state.sect.relics ?? []
+    while (relics.length < SECT_RELIC_SLOTS) relics.push(null)
+    html += `<h4 style="margin:10px 0 6px">宗门圣物（${relics.filter(Boolean).length}/${SECT_RELIC_SLOTS}）</h4>`
+    html += `<p class="sub" style="margin:2px 0 6px">将法宝装配为宗门圣物，为宗门与全宗弟子提供属性加成</p>`
+    for (let i = 0; i < SECT_RELIC_SLOTS; i++) {
+      const r = relics[i]
+      if (r) {
+        const def = ARTIFACTS[r.defId]
+        const s = artifactStats(r)
+        html += `<div class="tnode">
+          <span style="color:#fbbf24">${def?.name ?? '???'} +${r.refineLevel}
+          <span class="sub">攻+${s.atk} 防+${s.def} 体+${s.maxHp}</span>
+          </span>
+          <button data-unrelic="${i}">卸下</button>
+        </div>`
+      } else {
+        // 可装配的法宝
+        const available = arts.filter(a => !relics.some((r2, j) => j !== i && r2?.defId === a.defId))
+        if (available.length > 0) {
+          html += `<div class="tnode" style="border-color:#374151">
+            <span style="color:#9ca3af">空槽位</span>
+            <select data-relic="${i}">
+              <option value="">选择法宝...</option>
+              ${available.map(a => `<option value="${a.defId}">${ARTIFACTS[a.defId]?.name ?? a.defId} +${a.refineLevel}</option>`).join('')}
+            </select>
+          </div>`
+        } else {
+          html += `<div class="tnode" style="border-color:#374151"><span style="color:#6b7280">空槽位（无可装配法宝）</span></div>`
+        }
+      }
+    }
+  }
+
+  body().innerHTML = html
+
+  // 精炼事件
+  body().querySelectorAll('[data-refine]').forEach((b) => b.addEventListener('click', (e) => {
+    const defId = (e.target as HTMLElement).getAttribute('data-refine')!
+    const a = state.artifacts.find(x => x.defId === defId)
+    if (!a) return
+    const def = ARTIFACTS[defId]
+    if (!def) return
+    const cost = refineCost(def.refineCostBase, a.refineLevel)
+    if (state.gold < cost) { toast('灵石不足', '#f87171'); return }
+    if (a.refineLevel >= 9) { toast('已达最高精炼等级', '#f87171'); return }
+    state.gold -= cost
+    a.refineLevel++
+    sfx('sfx_skill')
+    toast(`${def.name} 精炼至 +${a.refineLevel}！`, '#fbbf24')
+    pushPlayerLog(state, `精炼${def.name}至+${a.refineLevel}`)
+    refresh('artifact')
+  }))
+
+  // 炼制事件
+  body().querySelectorAll('[data-craft]').forEach((b) => b.addEventListener('click', (e) => {
+    const defId = (e.target as HTMLElement).getAttribute('data-craft')!
+    const def = ARTIFACTS[defId]
+    if (!def) return
+    if (state.gold < def.craftCost) { toast('灵石不足', '#f87171'); return }
+    if (state.realm < def.craftRealm) { toast(`需${REALMS[def.craftRealm].name}期`, '#f87171'); return }
+    state.gold -= def.craftCost
+    state.artifacts.push({ defId, refineLevel: 0 })
+    sfx('sfx_skill')
+    toast(`炼制成功！获得「${def.name}」`, '#fbbf24')
+    pushPlayerLog(state, `炼制法宝「${def.name}」`)
+    refresh('artifact')
+  }))
+
+  // 圣物装配事件
+  body().querySelectorAll('[data-relic]').forEach((s) => s.addEventListener('change', (e) => {
+    const slotIdx = parseInt((e.target as HTMLElement).getAttribute('data-relic')!, 10)
+    const defId = (e.target as HTMLSelectElement).value
+    if (!defId || !state.sect) return
+    const a = state.artifacts.find(x => x.defId === defId)
+    if (!a) return
+    if (!state.sect.relics) state.sect.relics = []
+    while (state.sect.relics.length < SECT_RELIC_SLOTS) state.sect.relics.push(null)
+    state.sect.relics[slotIdx] = { defId: a.defId, refineLevel: a.refineLevel }
+    sfx('sfx_click')
+    toast(`「${ARTIFACTS[defId]?.name}」已供奉为宗门圣物`, '#fbbf24')
+    refresh('artifact')
+  }))
+
+  // 卸下圣物
+  body().querySelectorAll('[data-unrelic]').forEach((b) => b.addEventListener('click', (e) => {
+    const slotIdx = parseInt((e.target as HTMLElement).getAttribute('data-unrelic')!, 10)
+    if (!state.sect?.relics) return
+    state.sect.relics[slotIdx] = null
+    sfx('sfx_click')
+    refresh('artifact')
+  }))
 }
 
 // ---------- 图鉴页（万象图鉴） ----------
@@ -848,6 +1745,189 @@ function renderCodexTab() {
     }
   }
   body().innerHTML = html
+}
+
+// ---------- 人脉页 ----------
+function renderContactsTab() {
+  const rels = state.playerNpcRelations ?? {}
+  const npcIds = Object.keys(rels)
+  let html = ''
+
+  if (npcIds.length === 0) {
+    html = `<p class="dim" style="text-align:center;padding:20px 0">尚未结识任何修士<br><span style="font-size:11px">在大地图上与NPC互动以建立人脉</span></p>`
+    body().innerHTML = html
+    return
+  }
+
+  // 收集NPC数据
+  const contacts = npcIds.map(id => {
+    const rel = rels[id]
+    const npc = (state.proceduralNpcs ?? []).find(n => n.id === id)
+    return { rel, npc, id }
+  }).filter(c => c.npc) // 只显示仍存在的NPC
+
+  // 按好感度排序
+  contacts.sort((a, b) => b.rel.favor - a.rel.favor)
+
+  html += `<p class="dim" style="margin:2px 0 4px">已结识 ${contacts.length} 位修士</p>`
+
+  for (const { rel, npc } of contacts) {
+    if (!npc) continue
+    const realmName = REALMS[npc.realm]?.name ?? '未知'
+    const domainName = getDomainDef(npc.location.domain as DomainId)?.name ?? npc.location.domain
+    const status = !npc.alive ? '<span style="color:#f87171">已陨落</span>' : npc.isActive ? '<span style="color:#4ade80">附近</span>' : '<span class="dim">远方</span>'
+
+    // 好感度条
+    const favorColor = rel.favor > 50 ? '#4ade80' : rel.favor > 0 ? '#fbbf24' : rel.favor > -30 ? '#fb923c' : '#f87171'
+    const favorLabel = rel.favor > 80 ? '莫逆' : rel.favor > 50 ? '友好' : rel.favor > 20 ? '相识' : rel.favor > 0 ? '泛交' : rel.favor > -30 ? '不睦' : '仇敌'
+
+    html += `<div class="item" style="border-left:3px solid ${favorColor};padding-left:6px;margin:4px 0">
+      <span><b style="color:${favorColor}">${npc.name}</b> <span class="sub">${realmName}境 · Lv${npc.level}</span> ${status}</span>
+      <span class="sub" style="display:block;margin-top:2px">
+        <span style="color:${favorColor}">好感 ${rel.favor}（${favorLabel}）</span> · 信任 ${rel.trust} · 相遇 ${rel.metCount}次
+        <br>所在：${domainName}${rel.saved ? ' · <span style="color:#4ade80">曾救之</span>' : ''}
+      </span>`
+
+    // 最近经历
+    const log = (npc.eventLog ?? []).slice(-5).reverse()
+    if (log.length > 0) {
+      html += `<div class="sub" style="margin-top:3px;font-size:10px;color:#888">`
+      for (const e of log) {
+        html += `<div>${e}</div>`
+      }
+      html += `</div>`
+    }
+
+    html += `</div>`
+  }
+
+  body().innerHTML = html
+}
+
+// ---------- 见闻录 ----------
+function fmtLogTime(ts: number): string {
+  const d = new Date(ts)
+  const mo = d.getMonth() + 1
+  const da = d.getDate()
+  const h = String(d.getHours()).padStart(2, '0')
+  const m = String(d.getMinutes()).padStart(2, '0')
+  return `${mo}/${da} ${h}:${m}`
+}
+
+function renderLogTab() {
+  const logLabels: Record<LogFilter, string> = {
+    all: '全部', news: '见闻', quest: '任务', world: '天道', karma: '因果',
+  }
+
+  let html = `<div class="tabs" style="margin-bottom:6px">`
+  for (const k of ['all', 'news', 'quest', 'world', 'karma'] as LogFilter[]) {
+    html += `<button data-log-filter="${k}" class="${logFilter === k ? 'active' : ''}" style="padding:3px 10px;font-size:11px">${logLabels[k]}</button>`
+  }
+  html += `</div>`
+
+  interface LogEntry { time: number; html: string; category: LogFilter }
+  const entries: LogEntry[] = []
+
+  for (const e of (state.playerLog ?? [])) {
+    entries.push({
+      time: e.time,
+      category: 'news',
+      html: `<span class="sub" style="white-space:nowrap">${fmtLogTime(e.time)}</span>　${e.text}`,
+    })
+  }
+
+  if (state.mainQuestId) {
+    const q = getMainQuest(state.mainQuestId)
+    if (q) {
+      entries.push({
+        time: Date.now(),
+        category: 'quest',
+        html: `<span style="color:#4ade80">[进行中]</span> <b>${q.title}</b> — ${q.objective}<br><span class="sub">提示：${q.hint}</span>`,
+      })
+    }
+  }
+  for (const qid of (state.mainQuestCompleted ?? [])) {
+    const q = getMainQuest(qid)
+    if (q) {
+      entries.push({
+        time: 0,
+        category: 'quest',
+        html: `<span style="color:#888">[已完成]</span> ${q.title} — ${q.objective}`,
+      })
+    }
+  }
+
+  for (const dq of (state.dailyQuests ?? [])) {
+    const status = dq.claimed ? '已领取' : dq.progress >= dq.goal ? '可领取' : `${dq.progress}/${dq.goal}`
+    const color = dq.claimed ? '#888' : dq.progress >= dq.goal ? '#4ade80' : '#fbbf24'
+    entries.push({
+      time: Date.now(),
+      category: 'quest',
+      html: `<span style="color:${color}">[日常]</span> ${dq.name} — ${status}<br><span class="sub">${dq.desc}</span>`,
+    })
+  }
+
+  for (const [qid, status] of Object.entries(state.quests ?? {})) {
+    const q = QUESTS.find(qx => qx.id === qid)
+    if (q) {
+      const color = status === 'done' ? '#888' : '#fbbf24'
+      const tag = status === 'done' ? '已完成' : '进行中'
+      entries.push({
+        time: 0,
+        category: 'quest',
+        html: `<span style="color:${color}">[${tag}]</span> ${q.name} — ${q.desc}`,
+      })
+    }
+  }
+
+  for (const e of (state.annualEventLog ?? [])) {
+    entries.push({
+      time: e.timestamp ?? 0,
+      category: 'world',
+      html: `<span style="color:#af7ac5">[苍玄历${e.year}年]</span> ${e.result}`,
+    })
+  }
+  for (const e of (state.npcLifeEventsLog ?? [])) {
+    entries.push({
+      time: e.timestamp ?? 0,
+      category: 'world',
+      html: `<span style="color:#7c9aff">[苍玄历${e.year}年]</span> <b>${e.npcName}</b>：${e.description}`,
+    })
+  }
+
+  for (const e of (state.karmaLog ?? [])) {
+    const color = e.type === 'good' ? '#4ade80' : '#f87171'
+    const tag = e.type === 'good' ? '善业' : '恶业'
+    entries.push({
+      time: e.time,
+      category: 'karma',
+      html: `<span style="color:${color}">[${tag} ${e.amount > 0 ? '+' : ''}${e.amount}]</span> ${e.description}`,
+    })
+  }
+
+  entries.sort((a, b) => b.time - a.time)
+  const filtered = logFilter === 'all' ? entries : entries.filter(e => e.category === logFilter)
+
+  if (filtered.length === 0) {
+    html += `<p class="dim" style="text-align:center;padding:20px 0">暂无记录</p>`
+  } else {
+    html += `<div style="max-height:420px;overflow-y:auto;font-size:12px">`
+    for (const e of filtered) {
+      const catColor = e.category === 'news' ? '#a3e4d7' : e.category === 'quest' ? '#4ade80' : e.category === 'world' ? '#af7ac5' : '#fda4af'
+      html += `<div style="padding:4px 6px;border-bottom:1px solid #2a2a35;line-height:1.6">
+        <span style="color:${catColor};margin-right:3px">●</span>${e.html}
+      </div>`
+    }
+    html += `</div>`
+  }
+
+  body().innerHTML = html
+
+  body().querySelectorAll('[data-log-filter]').forEach((b) => b.addEventListener('click', (e) => {
+    logFilter = (e.target as HTMLElement).getAttribute('data-log-filter') as LogFilter
+    sfx('sfx_click', 0.3)
+    renderLogTab()
+  }))
 }
 
 // ---------- 境界突破 ----------
@@ -940,13 +2020,39 @@ export interface TitleMenuOpts {
 
 export function showTitleMenu(opts: TitleMenuOpts) {
   el('title').style.display = 'flex'
+  el('controls').style.display = 'none'
   ;(el('btnContinue') as HTMLButtonElement).disabled = !opts.hasSave
   el('btnNew').onclick = () => { sfx('sfx_click'); opts.onNew() }
   el('btnContinue').onclick = () => { if (!(el('btnContinue') as HTMLButtonElement).disabled) sfx('sfx_click'); opts.onContinue() }
   el('btnRecords').onclick = () => { sfx('sfx_click'); opts.onRecords() }
 }
 
-export function hideTitleMenu() { el('title').style.display = 'none' }
+export function hideTitleMenu() {
+  el('title').style.display = 'none'
+  el('controls').style.display = 'block'
+  resetControls()
+}
+
+/** 恢复所有控制按钮到默认可见状态（离开宗战/天劫等特殊场景后调用） */
+export function resetControls() {
+  const controls = el('controls')
+  controls.style.display = 'block'
+  for (const id of ['btnBag', 'btnAtk', 'btnPot', 'btnSkill']) {
+    const btn = document.getElementById(id)
+    if (btn) {
+      btn.style.display = 'flex'
+      btn.textContent = id === 'btnBag' ? '背包'
+        : id === 'btnAtk' ? '攻击'
+        : id === 'btnPot' ? '丹药'
+        : '神通'
+    }
+  }
+  // btnAct 和 btnRetreat 默认隐藏，由场景按需显示
+  const btnAct = document.getElementById('btnAct')
+  if (btnAct) { btnAct.style.display = 'none' }
+  const btnRetreat = document.getElementById('btnRetreat')
+  if (btnRetreat) { btnRetreat.style.display = 'none' }
+}
 
 // ---------- 榜单（本地个人最佳） ----------
 export function openRecords() {
@@ -964,6 +2070,8 @@ export function openRecords() {
     ${row('修为榜', r.level)}
     ${row('除魔榜', r.kills)}
     ${row('妖域榜', r.depth)}
+    ${row('天梯榜', r.ladder)}
+    ${row('飞升榜', r.ascension)}
     <div style="text-align:right;margin-top:8px"><button data-close>关闭</button></div></div>`
   panel.querySelector('[data-close]')!.addEventListener('click', closePanel)
 }

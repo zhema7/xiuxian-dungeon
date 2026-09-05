@@ -341,7 +341,7 @@ export function generateLevel(rng: () => number, opts: { water: boolean }): Leve
 }
 
 /** 黄龙山开放竞技场：长方形平地，无房间，仅边缘岩壁 + 少量石柱群 */
-export function generateArena(rng: () => number): LevelMap {
+export function generateArena(rng: () => number, opts?: { water?: boolean }): LevelMap {
   const tiles = new Uint8Array(COLS * ROWS)
   // 全部开凿为地面，外圈两格岩壁
   for (let cy = 0; cy < ROWS; cy++) {
@@ -358,6 +358,24 @@ export function generateArena(rng: () => number): LevelMap {
     for (let i = 0; i < n; i++) {
       const x = bx + ri(-1, 1), y = by + ri(-1, 1)
       tiles[y * COLS + x] = T_PILLAR
+    }
+  }
+  // 水域地形：河道/海滨域生成水池增加地形特色
+  if (opts?.water) {
+    const pools = ri(2, 4)
+    for (let p = 0; p < pools; p++) {
+      const cx = ri(5, COLS - 6)
+      const cy = ri(10, ROWS - 10)
+      const w = ri(2, 4)
+      const h = ri(2, 3)
+      for (let dy = 0; dy < h; dy++) {
+        for (let dx = 0; dx < w; dx++) {
+          const tx = cx + dx, ty = cy + dy
+          if (tx >= 2 && tx < COLS - 2 && ty >= 2 && ty < ROWS - 2) {
+            tiles[ty * COLS + tx] = T_WATER
+          }
+        }
+      }
     }
   }
   const spawn: Pt = { x: OX + (COLS / 2) * TILE, y: OY + (ROWS - 6) * TILE }

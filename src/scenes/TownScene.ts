@@ -8,7 +8,7 @@ import { saveGame, switchClass, loadSaveSlot, type GameState } from '../state'
 import { unlearnedSkills } from '../skills'
 import { canEnterXianRealm, xianCheckpointFloor, XIAN_START_FLOOR } from '../xian-realm'
 import {
-  dialogOpen, modalPanel, openGmPanel, openInventory, openSettings, openShop, panelOpen, setFloorText, setSettingsCallbacks, showDialog, toast, updateHUD, closePanel,
+  dialogOpen, modalPanel, openGmPanel, openInventory, openSettings, openShop, panelOpen, resetControls, setFloorText, setSettingsCallbacks, setTribulationCallback, showDialog, toast, updateHUD, closePanel,
   type ShopStock,
 } from '../ui'
 import { BGM_TOWN, playBgm, sfx, stopBgm } from '../audio'
@@ -40,6 +40,7 @@ export class TownScene extends Phaser.Scene {
   private cityPortal!: Phaser.GameObjects.Container
   private hlPortal!: Phaser.GameObjects.Container
   private worldPortal!: Phaser.GameObjects.Container
+  private ladderPortal!: Phaser.GameObjects.Container
   private furnace!: Phaser.GameObjects.Image
   private entering = false
   private nearNpc: NpcId | null = null
@@ -56,6 +57,8 @@ export class TownScene extends Phaser.Scene {
   create() {
     this.state = this.registry.get('state')
     this.state.hp = -1 // 回城回满
+    this.state.lastScene = 'Town'
+    this.state.lastSceneData = {}
     saveGame(this.state)
 
     // 从大地图进入的地下城返回时，自动跳回大地图
@@ -90,9 +93,9 @@ export class TownScene extends Phaser.Scene {
     if (this.textures.exists('cave_bg')) {
       this.add.image(180, 320, 'cave_bg').setDepth(0)
     } else {
-      const rt = this.add.renderTexture(0, 0, 360, 640).setOrigin(0).setDepth(0)
-      for (let y = 0; y < 640; y += 16)
-        for (let x = 0; x < 360; x += 16) rt.draw('grass', x + 8, y + 8)
+      const rt = this.add.renderTexture(0, 0, this.scale.gameSize.width, this.scale.gameSize.height).setOrigin(0).setDepth(0)
+      for (let y = 0; y < this.scale.gameSize.height; y += 16)
+        for (let x = 0; x < this.scale.gameSize.width; x += 16) rt.draw('grass', x + 8, y + 8)
       for (let y = 96; y < 560; y += 16) rt.draw('stone', 176, y + 8)
     }
 
@@ -160,11 +163,33 @@ export class TownScene extends Phaser.Scene {
       const glow3 = this.add.graphics()
       glow3.fillStyle(0x48e0d0, 0.16)
       glow3.fillCircle(0, 0, 13)
-      this.worldPortal = this.add.container(44, 310, [glow3, g3]).setDepth(2)
+      this.worldPortal = this.add.container(275, 530, [glow3, g3]).setDepth(2)
       this.tweens.add({ targets: g3, angle: 360, duration: 7000, repeat: -1 })
       this.tweens.add({ targets: glow3, alpha: 0.4, scale: 1.15, duration: 1000, yoyo: true, repeat: -1 })
       const unlockText = (this.state.level >= 5 || this.state.progress.qmCleared) ? '出山大地图' : '出山大地图(Lv5)'
-      this.add.text(44, 284, unlockText, { fontSize: '9px', color: '#48e0d0' }).setOrigin(0.5).setDepth(2)
+      this.add.text(275, 502, unlockText, { fontSize: '9px', color: '#48e0d0' }).setOrigin(0.5).setDepth(2)
+    }
+
+    // 天梯入口（洞府右下方，紫色传送法阵）
+    {
+      const g4 = this.add.graphics()
+      g4.lineStyle(2, 0xa855f7, 0.9)
+      g4.strokeCircle(0, 0, 16)
+      g4.lineStyle(1, 0xa855f7, 0.55)
+      g4.strokeCircle(0, 0, 11)
+      for (let i = 0; i < 4; i++) {
+        const a = (i * Math.PI) / 2
+        g4.fillStyle(0xc084fc, 0.95)
+        g4.fillCircle(Math.cos(a) * 16, Math.sin(a) * 16, 2)
+      }
+      const glow4 = this.add.graphics()
+      glow4.fillStyle(0xa855f7, 0.16)
+      glow4.fillCircle(0, 0, 13)
+      this.ladderPortal = this.add.container(316, 260, [glow4, g4]).setDepth(2)
+      this.tweens.add({ targets: g4, angle: -360, duration: 6000, repeat: -1 })
+      this.tweens.add({ targets: glow4, alpha: 0.4, scale: 1.15, duration: 900, yoyo: true, repeat: -1 })
+      const ladderLabel = this.state.realm >= 1 ? '天梯挑战' : '天梯(筑基)'
+      this.add.text(316, 232, ladderLabel, { fontSize: '9px', color: '#c084fc' }).setOrigin(0.5).setDepth(2)
     }
 
     // NPC（按洞府背景图锚点摆放，分散布局避免拥挤）
@@ -187,7 +212,7 @@ export class TownScene extends Phaser.Scene {
 
     this.cameras.main.setBackgroundColor('#1a2b20')
     document.getElementById('hud')!.style.display = 'block'
-    document.getElementById('controls')!.style.display = 'block'
+    resetControls()
     document.getElementById('btnSkill')!.style.display = 'none'
     document.getElementById('btnRetreat')!.style.display = 'none'
     document.getElementById('btnSettings')!.style.display = 'block'
@@ -206,6 +231,10 @@ export class TownScene extends Phaser.Scene {
         this.cameras.main.fadeOut(400, 0, 0, 0)
         this.time.delayedCall(420, () => this.scene.start('Title'))
       },
+    })
+    setTribulationCallback((realmIndex: number) => {
+      this.cameras.main.fadeOut(300, 0, 0, 0)
+      this.time.delayedCall(320, () => this.scene.start('Tribulation', { realmIndex }))
     })
     updateHUD()
 
@@ -818,10 +847,12 @@ export class TownScene extends Phaser.Scene {
     const cityDist = Phaser.Math.Distance.Between(this.player.sprite.x, this.player.sprite.y, 316, 180)
     const nearCity = !nearPortal && cityDist < 44 && cityDist < nearDist
     const nearHl = !nearPortal && !nearCity && hlDist < 44 && hlDist < nearDist
-    const worldDist = Phaser.Math.Distance.Between(this.player.sprite.x, this.player.sprite.y, 44, 310)
+    const worldDist = Phaser.Math.Distance.Between(this.player.sprite.x, this.player.sprite.y, 275, 530)
     const nearWorld = !nearPortal && !nearCity && !nearHl && worldDist < 44 && worldDist < nearDist
-    const nearFurnace = !nearPortal && !nearCity && !nearHl && !nearWorld && furnaceDist < 40 && furnaceDist < nearDist
-    const nearId = nearPortal ? 'portal' : nearCity ? 'city' : nearHl ? 'hl' : nearWorld ? 'world' : nearFurnace ? 'furnace' : (near?.id ?? null)
+    const ladderDist = Phaser.Math.Distance.Between(this.player.sprite.x, this.player.sprite.y, 316, 260)
+    const nearLadder = !nearPortal && !nearCity && !nearHl && !nearWorld && ladderDist < 44 && ladderDist < nearDist
+    const nearFurnace = !nearPortal && !nearCity && !nearHl && !nearWorld && !nearLadder && furnaceDist < 40 && furnaceDist < nearDist
+    const nearId = nearPortal ? 'portal' : nearCity ? 'city' : nearHl ? 'hl' : nearWorld ? 'world' : nearLadder ? 'ladder' : nearFurnace ? 'furnace' : (near?.id ?? null)
     if (nearId !== this.nearNpc) {
       this.nearNpc = nearId as NpcId | null
       document.getElementById('btnAct')!.style.display = nearId ? 'flex' : 'none'
@@ -831,6 +862,7 @@ export class TownScene extends Phaser.Scene {
       else if (nearId === 'city') this.cityEnter()
       else if (nearId === 'hl') this.hlEnter()
       else if (nearId === 'world') this.worldEnter()
+      else if (nearId === 'ladder') this.ladderEnter()
       else if (nearId === 'furnace') this.furnaceFlow()
       else this.talkTo(nearId as NpcId)
     }
@@ -908,6 +940,40 @@ export class TownScene extends Phaser.Scene {
       document.getElementById('btnAct')!.style.display = 'none'
       this.registry.set('dungeonReturnScene', 'Town')
       this.scene.start('Dungeon', { mode: 'hl' })
+    })
+  }
+
+  /** 进入天梯挑战：筑基期方可踏足，无尽攀升 */
+  private async ladderEnter() {
+    if (this.entering) return
+    this.player.halt()
+    if (this.state.realm < 1) {
+      await showDialog('天梯挑战', [
+        '紫色法阵散发着远古气息，神识触及便觉深不可测。',
+        '（天梯为无尽挑战模式，需筑基期以上方可踏足）',
+      ])
+      input.clearQueues()
+      return
+    }
+    const startFloor = Math.max(1, this.state.ladderFloor)
+    const lines = [
+      `紫色法阵直通天际——天梯是无尽攀升之路，每层妖魔渐强。`,
+      `每 ${10} 层有守关BOSS，层数越高奖励越丰。`,
+      `当前进度：第 ${startFloor} 层（历史最高：第 ${this.state.ladderMaxFloor} 层）`,
+    ]
+    const choice = await showDialog('天梯挑战', lines, [
+      { label: '踏入天梯', value: 'go' },
+      { label: '退回', value: 'no' },
+    ])
+    input.clearQueues()
+    if (choice !== 'go') return
+    this.entering = true
+    sfx('sfx_portal')
+    toast('踏入天梯……', '#c084fc')
+    this.cameras.main.fadeOut(400, 0, 0, 0)
+    this.time.delayedCall(420, () => {
+      document.getElementById('btnAct')!.style.display = 'none'
+      this.scene.start('Dungeon', { mode: 'ladder' })
     })
   }
 

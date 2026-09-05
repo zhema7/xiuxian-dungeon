@@ -207,3 +207,138 @@ export function shouldTriggerEvent(
 ): boolean {
   return moveAccumulator >= baseRate
 }
+
+// ===== 事件三层分级系统 =====
+
+export type EventTier = 'surface' | 'middle' | 'deep'
+
+export interface TieredEvent {
+  tier: EventTier
+  event: WorldEvent
+  // 后续影响标记
+  followUpId?: string
+  karmaImpact?: number
+  moralityImpact?: number
+}
+
+const SURFACE_TYPES: WorldEventType[] = [
+  'herb_discovery', 'ore_discovery', 'beast_pack', 'monster_ambush', 'fog_trap',
+]
+const MIDDLE_TYPES: WorldEventType[] = [
+  'wandering_cultivator', 'rescue', 'merchant_caravan', 'spirit_tide', 'cultivation_insight',
+]
+const DEEP_TYPES: WorldEventType[] = [
+  'treasure_find', 'ancestor_relic',
+]
+
+// 新增深层事件类型
+export type DeepEventType = 'ancient_inheritance' | 'evil_cultivator' | 'sect_war' | 'demonic_invasion'
+
+export function rollTieredEvent(
+  rng: Rng,
+  time: WorldTime,
+  playerLevel: number,
+  playerRealm: number,
+): TieredEvent {
+  const night = isNight(time)
+  // 深层事件概率随境界提升
+  const deepChance = 0.03 + playerRealm * 0.015
+  const middleChance = 0.25 + playerRealm * 0.02
+
+  const r = rng()
+  let tier: EventTier
+  if (r < deepChance) tier = 'deep'
+  else if (r < deepChance + middleChance) tier = 'middle'
+  else tier = 'surface'
+
+  // 按层级选择事件类型
+  let type: WorldEventType
+  if (tier === 'deep') {
+    type = DEEP_TYPES[Math.floor(rng() * DEEP_TYPES.length)]
+    // 高境界可能触发特殊深层事件
+    if (playerRealm >= 2 && rng() < 0.3) {
+      return buildDeepEvent(rng, playerLevel, playerRealm)
+    }
+  } else if (tier === 'middle') {
+    type = MIDDLE_TYPES[Math.floor(rng() * MIDDLE_TYPES.length)]
+  } else {
+    type = SURFACE_TYPES[Math.floor(rng() * SURFACE_TYPES.length)]
+  }
+
+  const event = buildEvent(type, rng, playerLevel)
+  return { tier, event }
+}
+
+function buildDeepEvent(rng: Rng, level: number, realm: number): TieredEvent {
+  const deepTypes: DeepEventType[] = ['ancient_inheritance', 'evil_cultivator', 'sect_war', 'demonic_invasion']
+  const dtype = deepTypes[Math.floor(rng() * deepTypes.length)]
+
+  switch (dtype) {
+    case 'ancient_inheritance':
+      return {
+        tier: 'deep',
+        event: {
+          type: 'treasure_find',
+          title: '上古传承现世！',
+          description: '你感应到地底深处传来一股古老而浩瀚的气息——这是一处上古修士的传承之地！入口就在前方，但其中危险不可知。',
+          choices: [
+            { label: '进入传承之地', outcome: 'battle', text: '你踏入传承阵法，遭遇守护傀儡！', reward: { dungeonRegion: 'xian', dungeonFloor: 1, dungeonDifficulty: realm } },
+            { label: '在外参悟阵纹', outcome: 'reward', text: '你从入口阵纹中参悟了大道痕迹。', reward: { insight: 30, gold: 200 + level * 20 } },
+            { label: '标记位置离开', outcome: 'leave', text: '你记下此处位置，打算日后再来。', reward: { insight: 5 } },
+          ],
+        },
+        karmaImpact: 0,
+        moralityImpact: 0,
+        followUpId: `deep_inheritance_${Date.now()}`,
+      }
+    case 'evil_cultivator':
+      return {
+        tier: 'deep',
+        event: {
+          type: 'monster_ambush',
+          title: '邪修拦路！',
+          description: '一名浑身黑气的邪修拦住去路：「储物戒交出来，饶你不死！」其修为不弱，杀气凛然。',
+          choices: [
+            { label: '迎战邪修', outcome: 'battle', text: '你拔剑迎战！', reward: { dungeonRegion: 'qm', dungeonFloor: 3, dungeonDifficulty: realm } },
+            { label: '交出灵石脱身', outcome: 'reward', text: '你交出一半灵石，邪修冷笑离去。', reward: { gold: -(100 + level * 10) } },
+            { label: '虚与委蛇后偷袭', outcome: 'battle', text: '你假装屈服，趁其不备发动偷袭！', reward: { dungeonRegion: 'qm', dungeonFloor: 2, dungeonDifficulty: 0 } },
+          ],
+        },
+        karmaImpact: 0,
+        moralityImpact: -5,
+      }
+    case 'sect_war':
+      return {
+        tier: 'deep',
+        event: {
+          type: 'wandering_cultivator',
+          title: '宗门冲突！',
+          description: '前方两派修士正在激烈交战，法术横飞！一方明显处于劣势，正在求援。',
+          choices: [
+            { label: '助弱势一方', outcome: 'battle', text: '你加入战团，帮助弱势一方！', reward: { dungeonRegion: 'qm', dungeonFloor: 3, dungeonDifficulty: 1 } },
+            { label: '趁乱渔利', outcome: 'reward', text: '你在混乱中捡拾了散落的灵石和材料。', reward: { gold: 150 + level * 15, materials: { tupo: 1 } } },
+            { label: '远观不介入', outcome: 'leave', text: '你远远避开，不想卷入宗门恩怨。' },
+          ],
+        },
+        karmaImpact: 0,
+        moralityImpact: 0,
+      }
+    case 'demonic_invasion':
+      return {
+        tier: 'deep',
+        event: {
+          type: 'fog_trap',
+          title: '魔气侵蚀！',
+          description: '四周突然被浓郁魔气笼罩！你感到灵力运转受阻，远处传来魔修的狂笑声。',
+          choices: [
+            { label: '强行突破魔气', outcome: 'reward', text: '你运转真元强行冲破魔气封锁！', reward: { hpCost: 50, insight: 20, gold: 100 } },
+            { label: '反守为攻追踪魔修', outcome: 'battle', text: '你顺着魔气追踪到源头！', reward: { dungeonRegion: 'qm', dungeonFloor: 4, dungeonDifficulty: realm } },
+            { label: '就地布阵防御', outcome: 'leave', text: '你布下防御阵法，等待魔气自然消散。', reward: { hpCost: 10, insight: 5 } },
+          ],
+        },
+        karmaImpact: 0,
+        moralityImpact: 0,
+      }
+  }
+}
+

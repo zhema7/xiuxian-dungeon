@@ -67,6 +67,8 @@ export interface SectData {
   techs: Record<string, number>
   /** 灵田种植槽 */
   farmSlots: (CropSlot | null)[]
+  /** 宗门圣物槽（法宝装配，3个槽位） */
+  relics: (import('./artifact-data').ArtifactInstance | null)[]
 }
 
 /** 建筑配置表 */
@@ -74,72 +76,72 @@ export const BUILDINGS: Record<BuildingId, BuildingDef> = {
   main_hall: {
     id: 'main_hall', name: '主殿', desc: '宗门核心，决定宗门等级上限与建筑解锁',
     maxLevel: 10, baseCost: { stone: 500, wood: 200, ore: 100 },
-    gridX: 4, gridY: 3, color: 0xfbbf24,
+    gridX: 4, gridY: 11, color: 0xfbbf24,
   },
   spirit_vein: {
     id: 'spirit_vein', name: '灵脉阵', desc: '持续产出宗门灵石',
     maxLevel: 10, baseCost: { stone: 300, wood: 100, ore: 50 },
-    gridX: 2, gridY: 2, color: 0x34d399, requireHall: 1,
+    gridX: 2, gridY: 9, color: 0x34d399, requireHall: 1,
   },
   disciple_room: {
     id: 'disciple_room', name: '弟子房', desc: '容纳弟子修炼，增加弟子容量与修炼速度',
     maxLevel: 10, baseCost: { stone: 200, wood: 300, ore: 50 },
-    gridX: 6, gridY: 2, color: 0x60a5fa, requireHall: 1,
+    gridX: 6, gridY: 9, color: 0x60a5fa, requireHall: 1,
   },
   alchemy_room: {
     id: 'alchemy_room', name: '炼丹房', desc: '炼制丹药，解锁更高阶丹方',
     maxLevel: 10, baseCost: { stone: 300, wood: 200, ore: 100 },
-    gridX: 2, gridY: 4, color: 0xf472b6, requireHall: 2,
+    gridX: 2, gridY: 13, color: 0xf472b6, requireHall: 2,
   },
   forge_pavilion: {
     id: 'forge_pavilion', name: '炼器阁', desc: '锻造装备，提升品质率',
     maxLevel: 10, baseCost: { stone: 300, wood: 150, ore: 200 },
-    gridX: 6, gridY: 4, color: 0xfb923c, requireHall: 2,
+    gridX: 6, gridY: 13, color: 0xfb923c, requireHall: 2,
   },
   library: {
     id: 'library', name: '藏经阁', desc: '存储功法供弟子学习，提升领悟速度',
     maxLevel: 10, baseCost: { stone: 400, wood: 200, ore: 100 },
-    gridX: 4, gridY: 5, color: 0xa78bfa, requireHall: 3,
+    gridX: 4, gridY: 13, color: 0xa78bfa, requireHall: 3,
   },
   training_ground: {
     id: 'training_ground', name: '演武场', desc: '弟子切磋，提升攻防成长率',
     maxLevel: 10, baseCost: { stone: 200, wood: 200, ore: 100 },
-    gridX: 1, gridY: 3, color: 0xef4444, requireHall: 2,
+    gridX: 1, gridY: 11, color: 0xef4444, requireHall: 2,
   },
   guard_array: {
     id: 'guard_array', name: '护山大阵', desc: '防御敌宗袭击，提供防护罩',
     maxLevel: 10, baseCost: { stone: 500, wood: 100, ore: 300 },
-    gridX: 7, gridY: 3, color: 0x14b8a6, requireHall: 3,
+    gridX: 7, gridY: 11, color: 0x14b8a6, requireHall: 3,
   },
   quest_hall: {
     id: 'quest_hall', name: '任务殿', desc: '发布宗门任务，弟子领取执行',
     maxLevel: 10, baseCost: { stone: 300, wood: 300, ore: 50 },
-    gridX: 1, gridY: 5, color: 0xfacc15, requireHall: 2,
+    gridX: 1, gridY: 15, color: 0xfacc15, requireHall: 2,
   },
   spirit_farm: {
     id: 'spirit_farm', name: '灵田', desc: '种植灵草，炼丹材料来源',
     maxLevel: 10, baseCost: { stone: 100, wood: 200, ore: 50 },
-    gridX: 7, gridY: 5, color: 0x84cc16, requireHall: 1,
+    gridX: 7, gridY: 15, color: 0x84cc16, requireHall: 1,
   },
   ore_mine: {
     id: 'ore_mine', name: '矿脉', desc: '持续产出矿石，炼器材料来源',
     maxLevel: 10, baseCost: { stone: 200, wood: 100, ore: 50 },
-    gridX: 1, gridY: 6, color: 0xa8a29e, requireHall: 1,
+    gridX: 1, gridY: 17, color: 0xa8a29e, requireHall: 1,
   },
   wood_pavilion: {
     id: 'wood_pavilion', name: '灵木林', desc: '持续产出木材，建筑升级材料',
     maxLevel: 10, baseCost: { stone: 200, wood: 50, ore: 50 },
-    gridX: 7, gridY: 6, color: 0x65a30d, requireHall: 1,
+    gridX: 7, gridY: 17, color: 0x65a30d, requireHall: 1,
   },
   beast_park: {
     id: 'beast_park', name: '灵兽园', desc: '驯养灵兽，可战斗或代步',
     maxLevel: 10, baseCost: { stone: 400, wood: 200, ore: 200 },
-    gridX: 3, gridY: 6, color: 0xc084fc, requireHall: 4,
+    gridX: 3, gridY: 16, color: 0xc084fc, requireHall: 4,
   },
   realm_gate: {
     id: 'realm_gate', name: '秘境入口', desc: '宗门专属秘境，定期刷新资源',
     maxLevel: 5, baseCost: { stone: 1000, wood: 500, ore: 500 },
-    gridX: 5, gridY: 6, color: 0x6366f1, requireHall: 5,
+    gridX: 5, gridY: 16, color: 0x6366f1, requireHall: 5,
   },
 }
 
@@ -165,6 +167,7 @@ export function createNewSect(name: string, foundedTime: WorldTime, mapX: number
     recruitCooldown: 0,
     techs: {},
     farmSlots: [null, null, null],
+    relics: [null, null, null],
   }
 }
 
@@ -219,4 +222,4 @@ export function woodPavilionProduction(level: number): number {
 
 /** 开宗条件 */
 export const SECT_FOUND_COST = 10000  // 灵石
-export const SECT_FOUND_REALM = 3     // 金丹期（第三大境界，realm >= 3）
+export const SECT_FOUND_REALM = 2     // 金丹期（realm 索引 2）

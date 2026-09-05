@@ -39,7 +39,7 @@ export class Player {
       const body = this.sprite.body as Phaser.Physics.Arcade.Body
       // 碰撞体：窄型脚部碰撞（缩放后约 8.8×5.5px），比瓦片窄很多，避免卡墙角
       body.setSize(16, 10)
-      body.setOffset(24, 53)
+      body.setOffset(24, 38)
       this.playAnim('idle')
     } else {
       this.sprite = scene.physics.add.sprite(x, y, 'player')
@@ -71,8 +71,9 @@ export class Player {
     const moving = x !== 0 || y !== 0
     if (moving) {
       this.dir.set(x, y).normalize()
-      // 速度平滑过渡（lerp），避免启停生硬，dt 归一化到 60fps
-      const lerpFactor = Math.min(1, 0.25 * (dt / 16))
+      // 速度平滑过渡（lerp），dt 归一化到 60fps
+      // 加速更快（0.45），起步响应更跟手
+      const lerpFactor = Math.min(1, 0.45 * (dt / 16))
       const targetVx = x * stats.speed
       const targetVy = y * stats.speed
       const curVx = body.velocity.x
@@ -88,15 +89,15 @@ export class Player {
         this.sprite.setFlipX(this.facing === 'left')
       }
     } else {
-      // 减速到停止：更快的减速系数，保持手感灵敏
-      const lerpFactor = Math.min(1, 0.4 * (dt / 16))
+      // 减速到停止：更快的减速系数（0.7），松开即停
+      const lerpFactor = Math.min(1, 0.7 * (dt / 16))
       this.sprite.setVelocity(
         body.velocity.x * (1 - lerpFactor),
         body.velocity.y * (1 - lerpFactor)
       )
       // 速度足够小时直接归零，防止微速漂移
-      if (Math.abs(body.velocity.x) < 2) body.velocity.x = 0
-      if (Math.abs(body.velocity.y) < 2) body.velocity.y = 0
+      if (Math.abs(body.velocity.x) < 3) body.velocity.x = 0
+      if (Math.abs(body.velocity.y) < 3) body.velocity.y = 0
     }
     if (time < this.animLockUntil) return
     const isMoving = Math.abs(body.velocity.x) > 5 || Math.abs(body.velocity.y) > 5

@@ -95,12 +95,17 @@ export class InputPort {
     if (kx !== 0 || ky !== 0) {
       const len = Math.hypot(kx, ky)
       this.move.x = kx / len; this.move.y = ky / len
+    } else if (this.move.x !== 0 || this.move.y !== 0) {
+      // 摇杆无输入且键盘无输入时，保持摇杆状态（摇杆自身 end 事件会清零）
+      // 这里不主动清零，避免摇杆事件延迟导致抖动
     }
-    if (this.keys['KeyJ'] || this.keys['Space']) { this.attackQueue++; this.keys['KeyJ'] = false; this.keys['Space'] = false }
+    // 攻击键：按住自动连发（由攻击CD控制频率），每帧都入队一次
+    if (this.keys['KeyJ'] || this.keys['Space']) { this.attackQueue++ }
     if (this.keys['KeyK']) { this.potionQueue++; this.keys['KeyK'] = false }
     if (this.keys['KeyB'] || this.keys['KeyI']) { this.bagQueue++; this.keys['KeyB'] = false; this.keys['KeyI'] = false }
     if (this.keys['KeyE'] || this.keys['KeyF']) { this.actQueue++; this.keys['KeyE'] = false; this.keys['KeyF'] = false }
     if (this.keys['KeyL']) { this.skillQueue++; this.keys['KeyL'] = false }
+    if (this.keys['Escape']) { this.settingsQueue++; this.keys['Escape'] = false }
   }
 
   consumeAttack() { const v = this.attackQueue > 0; this.attackQueue = 0; return v }

@@ -387,6 +387,13 @@ export const REGIONS: RegionDef[] = [
   { id: 'loulan', name: '楼兰秘境', floors: [200016, 200018], setId: 'set_qm', floorTex: 'floor', wallTex: 'wall2', bg: 0x1a0e2a, decos: ['deco_qm1', 'deco_qm2', 'deco_qm3'], terrainPrefix: 'qm' },
   { id: 'bingyuan', name: '冰原秘境', floors: [200019, 200021], setId: 'set_qm', floorTex: 'floor2', wallTex: 'wall', bg: 0x0e1a2a, decos: ['deco_sy1', 'deco_sy2', 'deco_sy3'], terrainPrefix: 'sy' },
   { id: 'shenyuan', name: '深渊秘境', floors: [200022, 200024], setId: 'set_qm', floorTex: 'floor', wallTex: 'wall2', bg: 0x0a0e2a, decos: ['deco_qm1', 'deco_qm2', 'deco_qm3'], terrainPrefix: 'xj' },
+  // ----- 秘境类型视觉区域（动态秘境 regionOverride 使用） -----
+  { id: 'rl_yy', name: '灵药园', floors: [300001, 300099], setId: 'set_qm', floorTex: 'floor2', wallTex: 'wall', bg: 0x0a2a1a, decos: ['deco_sy1', 'deco_sy2', 'deco_sy3'], terrainPrefix: 'sy' },
+  { id: 'rl_gd', name: '古修洞府', floors: [300100, 300199], setId: 'set_qm', floorTex: 'floor', wallTex: 'wall2', bg: 0x1a1a2a, decos: ['deco_qm1', 'deco_qm2', 'deco_qm3'], terrainPrefix: 'qm' },
+  { id: 'rl_km', name: '矿脉秘境', floors: [300200, 300299], setId: 'set_qm', floorTex: 'floor2', wallTex: 'wall2', bg: 0x2a2a0e, decos: ['deco_ym1', 'deco_ym2', 'deco_ym3'], terrainPrefix: 'ym' },
+  { id: 'rl_mx', name: '魔修遗迹', floors: [300300, 300399], setId: 'set_qm', floorTex: 'floor', wallTex: 'wall', bg: 0x1b0a2a, decos: ['deco_qm1', 'deco_qm2', 'deco_qm3'], terrainPrefix: 'qm' },
+  { id: 'rl_ys', name: '妖兽巢穴', floors: [300400, 300499], setId: 'set_qm', floorTex: 'floor2', wallTex: 'wall2', bg: 0x2a1a0e, decos: ['deco_ym1', 'deco_ym2', 'deco_ym3'], terrainPrefix: 'ym' },
+  { id: 'rl_sl', name: '试炼秘境', floors: [300500, 300599], setId: 'set_qm', floorTex: 'floor', wallTex: 'wall', bg: 0x2a2a1a, decos: ['deco_sy1', 'deco_sy2', 'deco_sy3'], terrainPrefix: 'sy' },
 ]
 
 export function regionOfFloor(floor: number): RegionDef {
@@ -447,6 +454,13 @@ export function spawnTableForRegion(regionId: string, relFloor: number): SpawnEn
     loulan: [['phantom', 1 + extra, 2 + extra], ['moth', 1, 1 + extra], ['golem', 1, 1], ['spirit_fox', 1, 1 + extra]],
     bingyuan: [['tortoise', 1, 1 + extra], ['phantom', 1 + extra, 2 + extra], ['stone_guardian', 0, 1 + extra], ['brute', 0, 1]],
     shenyuan: [['wraith', 1 + extra, 2 + extra], ['golem', 1, 1], ['brute', 0, 1 + extra], ['moth', 1, 1 + extra], ['stone_guardian', 0, 1]],
+    // 秘境类型刷怪
+    rl_yy: [['flower', 1, 2 + extra], ['spirit_fox', 1, 1 + extra], ['tortoise', 0, 1 + extra], ['moth', 0, 1]],
+    rl_gd: [['skeleton', 1 + extra, 2 + extra], ['wraith', 1, 1 + extra], ['phantom', 1, 1 + extra], ['golem', 0, 1]],
+    rl_km: [['golem', 1 + extra, 2 + extra], ['stone_guardian', 1, 1 + extra], ['brute', 0, 1 + extra], ['tortoise', 1, 1]],
+    rl_mx: [['wraith', 1 + extra, 2 + extra], ['phantom', 1, 1 + extra], ['moth', 1, 1 + extra], ['spirit_fox', 0, 1]],
+    rl_ys: [['bat', 2, 3 + extra], ['eagle', 1, 2 + extra], ['brute', 1, 1 + extra], ['flower', 0, 1], ['tortoise', 0, 1 + extra]],
+    rl_sl: [['skeleton', 1, 2 + extra], ['spirit_fox', 1, 1 + extra], ['eagle', 1, 1 + extra], ['stone_guardian', 0, 1], ['phantom', 0, 1]],
   }
 
   const extras = regionExtras[regionId] || regionExtras.wanyao

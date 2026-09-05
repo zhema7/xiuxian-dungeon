@@ -20,6 +20,7 @@ export class FogSystem {
   private dirty = true
   private lastCx = -1
   private lastCy = -1
+  private visionRadius = DEFAULT_VISION_RADIUS
 
   constructor(
     scene: Phaser.Scene,
@@ -81,6 +82,7 @@ export class FogSystem {
     if (pcx === this.lastCx && pcy === this.lastCy) return
     this.lastCx = pcx
     this.lastCy = pcy
+    this.visionRadius = visionRadius
 
     this.visible.fill(0)
     const r = visionRadius
@@ -116,6 +118,8 @@ export class FogSystem {
     this.dirty = false
     const g = this.gfx
     g.clear()
+    const r = this.visionRadius
+    const innerR = r * 0.7
     // 逐行合并连续同 alpha 格子为单次 fillRect，减少绘制调用
     for (let cy = 0; cy < this.rows; cy++) {
       let runStart = -1
@@ -126,13 +130,24 @@ export class FogSystem {
         if (cx < this.cols) {
           const idx = rowBase + cx
           if (this.visible[idx]) {
-            alpha = 0
+            // 视野内：根据到玩家的距离计算渐变 alpha
+            const dx = cx - this.lastCx
+            const dy = cy - this.lastCy
+            const dist = Math.sqrt(dx * dx + dy * dy)
+            if (dist < innerR) {
+              alpha = 0
+            } else {
+              const t = Math.min(1, (dist - innerR) / (r - innerR))
+              alpha = t * EXPLORED_ALPHA * 0.5
+            }
           } else {
             alpha = this.fog[idx] !== FOG_HIDDEN ? EXPLORED_ALPHA : 1
           }
         } else {
           alpha = -1 // 哨兵：刷出行末残段
         }
+        // 四舍五入到 2 位小数以增加 run 合并概率
+        alpha = Math.round(alpha * 100) / 100
         if (alpha !== runAlpha) {
           if (runStart >= 0 && runAlpha > 0) {
             g.fillStyle(0x000000, runAlpha)

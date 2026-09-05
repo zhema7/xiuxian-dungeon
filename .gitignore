@@ -42,3 +42,16 @@ failed-test-summary.json
 # ---------- 系统文件 ----------
 Thumbs.db
 .DS_Store
+
+# ---------- APK 与打包产物 ----------
+*.apk
+*.apk.idsig
+*.idsig
+dist-taptap.zip
+android-manual-build/
+android/
+
+# ---------- 开发文档临时产物 ----------
+dev-retrospective.html
+game-intro.html
+game-intro.txt

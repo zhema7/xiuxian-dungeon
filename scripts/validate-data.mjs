@@ -161,8 +161,8 @@ if (errors > 0) {
 // ---------- v4 三十套独立 Kit 硬校验（ADR §6） ----------
 const V4_KIT_IDS = Array.from({ length: 30 }, (_, i) => `k${String(i + 1).padStart(2, '0')}`)
 const KIT_PRIMITIVES = ['roundtrip', 'refract', 'mark', 'fixedpoint', 'thundernet', 'thunderstake', 'charge', 'boomerang']
-const EXPECTED_NORMAL_COUNTS = { roundtrip: 5, refract: 5, mark: 5, fixedpoint: 3, thundernet: 1, thunderstake: 2, charge: 2, boomerang: 7 }
-const EXPECTED_ART_COUNTS = { roundtrip: 2, refract: 1, mark: 4, fixedpoint: 3, thundernet: 5, thunderstake: 5, charge: 4, boomerang: 6 }
+const EXPECTED_NORMAL_COUNTS = { roundtrip: 5, refract: 5, mark: 5, fixedpoint: 3, thundernet: 2, thunderstake: 2, charge: 2, boomerang: 6 }
+const EXPECTED_ART_COUNTS = { roundtrip: 2, refract: 2, mark: 4, fixedpoint: 3, thundernet: 5, thunderstake: 5, charge: 4, boomerang: 5 }
 
 const v4Kits = load('v4-kits.json')
 const seenKitIds = new Set()
@@ -206,6 +206,10 @@ if (v4Kits.length === 30) {
     if (normalCounts[p] === 0) err(`v4-kits: 普攻原语 ${p} 出现 0 次，未全覆盖`)
     if (artCounts[p] === 0) err(`v4-kits: 神通原语 ${p} 出现 0 次，未全覆盖`)
   }
+  // 30 套组合全唯一（normal/art 不可重复）
+  const combos = v4Kits.map(k => `${k.normalPrimitive}/${k.artPrimitive}`)
+  const dupCombos = combos.filter((c, i) => combos.indexOf(c) !== i)
+  if (dupCombos.length > 0) err(`v4-kits: 重复的 normal/art 组合: ${[...new Set(dupCombos)].join(', ')}`)
 }
 
 if (errors > 0) {

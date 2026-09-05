@@ -11,6 +11,11 @@ import { type AiSect, type ResourceNode } from './ai-sect-data'
 import { type DailyQuest } from './daily-quest'
 import { type Beast } from './beast-data'
 import { type MerchantData } from './merchant-system'
+import { type TribulationRecord, ascensionBonus } from './tribulation-data'
+import { type ProceduralNpc, type NpcRelationEntry, type PlayerNpcRelation } from './procedural-npc'
+import { type KarmaEntry } from './karma'
+import { type DiscipleData } from './disciple-system'
+import { type ArtifactInstance } from './artifact-data'
 export interface SkillSlots {
   style: string | null
   minds: [string | null, string | null]
@@ -24,7 +29,7 @@ export interface BuildPreset {
   talents: Record<string, number>
 }
 
-export const PRESET_COUNT = 5
+export const PRESET_COUNT = 6
 
 export interface GameState {
   version: number
@@ -68,12 +73,16 @@ export interface GameState {
   worldTime: WorldTime              // 苍玄历时间
   worldPlayerX: number              // 大地图玩家坐标 X
   worldPlayerY: number              // 大地图玩家坐标 Y
+  homeX: number                     // 洞府出生点 X（出洞府后固定位置）
+  homeY: number                     // 洞府出生点 Y
   worldDomain: string               // 当前所在域（south/central/east/west/north）
   discoveredPoints: string[]        // 已发现的地图点位 ID
   worldEventCooldown: number        // 随机事件冷却（移动距离累积）
   // 宗门系统
   sectUnlocked: boolean             // 宗门是否已建立
   sect: SectData | null             // 宗门数据
+  customBuildingPos?: Record<string, { x: number; y: number }>  // 自定义建筑摆放位置
+  customNpcPos?: Record<string, { x: number; y: number }>      // 自定义NPC摆放位置
   // NPC 成长系统
   npcStates: Record<string, NpcState>  // NPC 运行时状态
   // AI 宗门势力 + 外交
@@ -104,10 +113,77 @@ export interface GameState {
   // 商会交易系统
   merchants: MerchantData[]               // 商人数据列表
   sectTradeCooldown: number               // 宗门通商冷却
+  // 渡劫飞升系统
+  tribulationRecords: Record<number, TribulationRecord>  // 渡劫记录，key为境界索引
+  ascensionCount: number                  // 飞升次数（满级重置后累加）
+  ladderFloor: number                     // 天梯当前层数
+  ladderMaxFloor: number                  // 天梯历史最高层数
+  // ===== Phase 1: 探索体验基础 =====
+  morality: number                        // 道德值 -100~100（0=中性，正=善，负=恶）
+  reputation: number                      // 声望值（正=名扬天下，负=恶名远扬）
+  stamina: number                         // 体力值（0~100，移动消耗，休息恢复）
+  lastStaminaTick: number                 // 上次体力结算时间戳
+  worldFogData: Record<string, boolean>   // 大地图迷雾：key="domain:x:y" → true=已探索
+  // ===== Phase 2: 程序化NPC =====
+  proceduralNpcs: ProceduralNpc[]         // 程序化生成的NPC列表
+  npcRelationNet: NpcRelationEntry[]      // NPC间关系网
+  playerNpcRelations: Record<string, PlayerNpcRelation>  // 玩家与NPC的关系
+  divineSenseLevel: number                // 神念等级（随境界提升）
+  // ===== Phase 3: 战斗与招募 =====
+  karma: number                           // 业力值（正=善业，负=恶业）
+  karmaLog: KarmaEntry[]                  // 业力事件日志
+  disciples: DiscipleData[]               // 已收弟子列表
+  activeCompanionNpcId: string | null     // 当前组队NPC ID
+  // ===== Phase 4: 秘境系统 =====
+  discoveredRealms: string[]              // 已发现的秘境ID
+  realmExplorationRecord: Record<string, number>  // 秘境探索深度记录
+  activeRelationQuests: unknown[]          // Phase 5: 活跃的关系驱动任务
+  lastSocialSimDay: number                 // Phase 5: 上次社交模拟结算日
+  // ===== Phase 6: 心魔系统 =====
+  innerDemons: any[]                       // 心魔列表
+  // ===== Phase 7: 世界演进 =====
+  annualEventLog: AnnualEventRecord[]      // 年度事件记录
+  lastAnnualEventYear: number               // 上次触发年度事件的年份
+  worldEvolutionScore: number              // 世界宏观演进分数
+  npcLifeEventsLog: NpcLifeEventRecord[]    // NPC人生事件日志
+  playerLog: PlayerLogEntry[]               // 玩家见闻录
+  renderMode: '3d' | '2d'                   // 大地图渲染模式
+  spiritOrifices: number                     // 已打通的后天灵窍数量（0-9）
+  /** 当前场景与位置（退出时自动存档用） */
+  lastScene: string                          // 退出时所在场景名
+  lastSceneData: Record<string, unknown>     // 退出时场景参数
+  /** 法宝系统：已炼制的法宝列表 */
+  artifacts: ArtifactInstance[]
+}
+
+export interface AnnualEventRecord {
+  type: AnnualEventType
+  year: number
+  result: string
+  timestamp: number
+}
+
+export type AnnualEventType =
+  | 'sect_tournament'   // 宗门大比
+  | 'market_fair'       // 坊市集会
+  | 'realm_opening'     // 秘境开启
+
+export interface NpcLifeEventRecord {
+  npcId: string
+  npcName: string
+  eventType: string
+  description: string
+  year: number
+  timestamp: number
+}
+
+export interface PlayerLogEntry {
+  time: number
+  text: string
 }
 
 const SAVE_KEY = 'xiuxian_save_v1'
-export const SAVE_VERSION = 8
+export const SAVE_VERSION = 11
 
 // ---------- 多角色存档系统 ----------
 const SAVE_SLOTS_META_KEY = 'xiuxian_save_slots_meta'
@@ -241,7 +317,7 @@ export function newGame(): GameState {
     skills: { sk_sanlian: 1 },
     skillSlots: { style: 'sk_sanlian', minds: [null, null], art: null },
     talents: {},
-    presets: [null, null, null, null, null],
+    presets: [null, null, null, null, null, null],
     activePreset: -1,
     syCheckpoint: 7,
     syMaxDepth: 0,
@@ -259,6 +335,8 @@ export function newGame(): GameState {
     worldTime: newWorldTime(),
     worldPlayerX: 600,
     worldPlayerY: 1350,
+    homeX: 600,
+    homeY: 1350,
     worldDomain: 'south',
     discoveredPoints: ['home', 'sect_entrance'],
     worldEventCooldown: 0,
@@ -286,6 +364,43 @@ export function newGame(): GameState {
     activeFormation: null,
     merchants: [],
     sectTradeCooldown: 0,
+    tribulationRecords: {},
+    ascensionCount: 0,
+    ladderFloor: 0,
+    ladderMaxFloor: 0,
+    // Phase 1
+    morality: 0,
+    reputation: 0,
+    stamina: 100,
+    lastStaminaTick: 0,
+    worldFogData: {},
+    // Phase 2
+    proceduralNpcs: [],
+    npcRelationNet: [],
+    playerNpcRelations: {},
+    divineSenseLevel: 0,
+    // Phase 3
+    karma: 0,
+    karmaLog: [],
+    disciples: [],
+    activeCompanionNpcId: null,
+    // Phase 4
+    discoveredRealms: [],
+    realmExplorationRecord: {},
+    activeRelationQuests: [],
+    lastSocialSimDay: 0,
+    innerDemons: [],
+    // Phase 7
+    annualEventLog: [],
+    lastAnnualEventYear: 0,
+    worldEvolutionScore: 0,
+    npcLifeEventsLog: [],
+    playerLog: [],
+    renderMode: '3d',
+    spiritOrifices: 0,
+    lastScene: '',
+    lastSceneData: {},
+    artifacts: [],
   }
 }
 
@@ -389,11 +504,16 @@ function migrate(raw: Record<string, unknown>): GameState {
   s.worldTime = (raw.worldTime as WorldTime | undefined) ?? newWorldTime()
   s.worldPlayerX = Number(raw.worldPlayerX ?? 600) || 600
   s.worldPlayerY = Number(raw.worldPlayerY ?? 1350) || 1350
+  s.homeX = Number(raw.homeX ?? 600) || 600
+  s.homeY = Number(raw.homeY ?? 1350) || 1350
   s.worldDomain = typeof raw.worldDomain === 'string' ? raw.worldDomain : 'south'
   s.discoveredPoints = Array.isArray(raw.discoveredPoints) ? raw.discoveredPoints as string[] : ['home', 'sect_entrance']
   s.worldEventCooldown = Number(raw.worldEventCooldown ?? 0) || 0
   s.sectUnlocked = Boolean(raw.sectUnlocked ?? false)
   s.sect = (raw.sect as SectData | undefined) ?? null
+  if (s.sect && !Array.isArray(s.sect.relics)) s.sect.relics = [null, null, null]
+  s.customBuildingPos = (raw.customBuildingPos as Record<string, { x: number; y: number }> | undefined) ?? undefined
+  s.customNpcPos = (raw.customNpcPos as Record<string, { x: number; y: number }> | undefined) ?? undefined
   s.npcStates = (raw.npcStates as Record<string, NpcState>) ?? {}
   s.aiSects = Array.isArray(raw.aiSects) ? raw.aiSects as AiSect[] : []
   s.resourceNodes = Array.isArray(raw.resourceNodes) ? raw.resourceNodes as ResourceNode[] : []
@@ -416,6 +536,42 @@ function migrate(raw: Record<string, unknown>): GameState {
   s.activeFormation = typeof raw.activeFormation === 'string' ? raw.activeFormation : null
   s.merchants = Array.isArray(raw.merchants) ? raw.merchants as MerchantData[] : []
   s.sectTradeCooldown = Number(raw.sectTradeCooldown ?? 0) || 0
+  s.tribulationRecords = (raw.tribulationRecords as Record<number, TribulationRecord>) ?? {}
+  s.ascensionCount = Number(raw.ascensionCount ?? 0) || 0
+  s.ladderFloor = Number(raw.ladderFloor ?? 0) || 0
+  s.ladderMaxFloor = Number(raw.ladderMaxFloor ?? 0) || 0
+  // Phase 1
+  s.morality = Number(raw.morality ?? 0) || 0
+  s.reputation = Number(raw.reputation ?? 0) || 0
+  s.stamina = Number(raw.stamina ?? 100) || 100
+  s.lastStaminaTick = Number(raw.lastStaminaTick ?? 0) || 0
+  s.worldFogData = (raw.worldFogData as Record<string, boolean>) ?? {}
+  // Phase 2
+  s.proceduralNpcs = Array.isArray(raw.proceduralNpcs) ? raw.proceduralNpcs as ProceduralNpc[] : []
+  s.npcRelationNet = Array.isArray(raw.npcRelationNet) ? raw.npcRelationNet as NpcRelationEntry[] : []
+  s.playerNpcRelations = (raw.playerNpcRelations as Record<string, PlayerNpcRelation>) ?? {}
+  s.divineSenseLevel = Number(raw.divineSenseLevel ?? 0) || 0
+  // Phase 3
+  s.karma = Number(raw.karma ?? 0) || 0
+  s.karmaLog = Array.isArray(raw.karmaLog) ? raw.karmaLog as KarmaEntry[] : []
+  s.disciples = Array.isArray(raw.disciples) ? raw.disciples as DiscipleData[] : []
+  s.activeCompanionNpcId = typeof raw.activeCompanionNpcId === 'string' ? raw.activeCompanionNpcId : null
+  // Phase 4
+  s.discoveredRealms = Array.isArray(raw.discoveredRealms) ? raw.discoveredRealms as string[] : []
+  s.realmExplorationRecord = (raw.realmExplorationRecord as Record<string, number>) ?? {}
+  s.activeRelationQuests = Array.isArray(raw.activeRelationQuests) ? raw.activeRelationQuests : []
+  s.lastSocialSimDay = typeof raw.lastSocialSimDay === 'number' ? raw.lastSocialSimDay : 0
+  s.innerDemons = Array.isArray(raw.innerDemons) ? raw.innerDemons : []
+  s.annualEventLog = Array.isArray(raw.annualEventLog) ? raw.annualEventLog : []
+  s.lastAnnualEventYear = typeof raw.lastAnnualEventYear === 'number' ? raw.lastAnnualEventYear : 0
+  s.worldEvolutionScore = typeof raw.worldEvolutionScore === 'number' ? raw.worldEvolutionScore : 0
+  s.npcLifeEventsLog = Array.isArray(raw.npcLifeEventsLog) ? raw.npcLifeEventsLog : []
+  s.playerLog = Array.isArray(raw.playerLog) ? raw.playerLog as PlayerLogEntry[] : []
+  s.renderMode = (raw.renderMode === '2d' || raw.renderMode === '3d') ? raw.renderMode : '3d'
+  s.spiritOrifices = Math.min(9, Math.max(0, Number(raw.spiritOrifices ?? 0) || 0))
+  s.lastScene = typeof raw.lastScene === 'string' ? raw.lastScene : ''
+  s.lastSceneData = (raw.lastSceneData as Record<string, unknown>) ?? {}
+  s.artifacts = Array.isArray(raw.artifacts) ? raw.artifacts as ArtifactInstance[] : []
   registerDynamicContent(s.dynamicSets, s.dynamicSkills)
   return s
 }
@@ -466,11 +622,15 @@ function normalizeGameState(parsed: Record<string, unknown>): GameState {
     s.worldTime = s.worldTime ?? newWorldTime()
     s.worldPlayerX = s.worldPlayerX ?? 600
     s.worldPlayerY = s.worldPlayerY ?? 1350
+    s.homeX = s.homeX ?? 600
+    s.homeY = s.homeY ?? 1350
     s.worldDomain = typeof s.worldDomain === 'string' ? s.worldDomain : 'south'
     s.discoveredPoints = Array.isArray(s.discoveredPoints) ? s.discoveredPoints : ['home', 'sect_entrance']
     s.worldEventCooldown = s.worldEventCooldown ?? 0
     s.sectUnlocked = s.sectUnlocked ?? false
     s.sect = s.sect ?? null
+    s.customBuildingPos = s.customBuildingPos ?? undefined
+    s.customNpcPos = s.customNpcPos ?? undefined
     if (s.sect && Array.isArray(s.sect.disciples)) {
       for (const d of s.sect.disciples) {
         if (!d.equipment) {
@@ -481,6 +641,7 @@ function normalizeGameState(parsed: Record<string, unknown>): GameState {
         if (d.role === undefined) d.role = null
       }
     }
+    if (s.sect && !Array.isArray(s.sect.relics)) s.sect.relics = [null, null, null]
     s.npcStates = s.npcStates ?? {}
     s.aiSects = Array.isArray(s.aiSects) ? s.aiSects : []
     for (const ai of s.aiSects) {
@@ -510,6 +671,42 @@ function normalizeGameState(parsed: Record<string, unknown>): GameState {
     s.activeFormation = typeof s.activeFormation === 'string' ? s.activeFormation : null
     s.merchants = Array.isArray(s.merchants) ? s.merchants : []
     s.sectTradeCooldown = s.sectTradeCooldown ?? 0
+    s.tribulationRecords = s.tribulationRecords ?? {}
+    s.ascensionCount = s.ascensionCount ?? 0
+    s.ladderFloor = s.ladderFloor ?? 0
+    s.ladderMaxFloor = s.ladderMaxFloor ?? 0
+    // Phase 1
+    s.morality = s.morality ?? 0
+    s.reputation = s.reputation ?? 0
+    s.stamina = s.stamina ?? 100
+    s.lastStaminaTick = s.lastStaminaTick ?? 0
+    s.worldFogData = s.worldFogData ?? {}
+    // Phase 2
+    s.proceduralNpcs = Array.isArray(s.proceduralNpcs) ? s.proceduralNpcs : []
+    s.npcRelationNet = Array.isArray(s.npcRelationNet) ? s.npcRelationNet : []
+    s.playerNpcRelations = s.playerNpcRelations ?? {}
+    s.divineSenseLevel = s.divineSenseLevel ?? 0
+    // Phase 3
+    s.karma = s.karma ?? 0
+    s.karmaLog = Array.isArray(s.karmaLog) ? s.karmaLog : []
+    s.disciples = Array.isArray(s.disciples) ? s.disciples : []
+    s.activeCompanionNpcId = typeof s.activeCompanionNpcId === 'string' ? s.activeCompanionNpcId : null
+    // Phase 4
+    s.discoveredRealms = Array.isArray(s.discoveredRealms) ? s.discoveredRealms : []
+    s.realmExplorationRecord = s.realmExplorationRecord ?? {}
+    s.activeRelationQuests = Array.isArray(s.activeRelationQuests) ? s.activeRelationQuests : []
+    s.lastSocialSimDay = typeof s.lastSocialSimDay === 'number' ? s.lastSocialSimDay : 0
+    s.innerDemons = Array.isArray(s.innerDemons) ? s.innerDemons : []
+    s.annualEventLog = Array.isArray(s.annualEventLog) ? s.annualEventLog : []
+    s.lastAnnualEventYear = typeof s.lastAnnualEventYear === 'number' ? s.lastAnnualEventYear : 0
+    s.worldEvolutionScore = typeof s.worldEvolutionScore === 'number' ? s.worldEvolutionScore : 0
+    s.npcLifeEventsLog = Array.isArray(s.npcLifeEventsLog) ? s.npcLifeEventsLog : []
+    s.playerLog = Array.isArray(s.playerLog) ? s.playerLog : []
+    s.renderMode = (s.renderMode === '2d' || s.renderMode === '3d') ? s.renderMode : '3d'
+    s.spiritOrifices = Math.min(9, Math.max(0, s.spiritOrifices ?? 0))
+    s.lastScene = typeof s.lastScene === 'string' ? s.lastScene : ''
+    s.lastSceneData = s.lastSceneData ?? {}
+    s.artifacts = Array.isArray(s.artifacts) ? s.artifacts : []
     registerDynamicContent(s.dynamicSets, s.dynamicSkills)
     return s
   }
@@ -555,9 +752,17 @@ export function saveGame(s: GameState) {
   } catch { /* 忽略 */ }
 }
 
+const MAX_PLAYER_LOG = 200
+export function pushPlayerLog(s: GameState, text: string): void {
+  if (!Array.isArray(s.playerLog)) s.playerLog = []
+  s.playerLog.push({ time: Date.now(), text })
+  if (s.playerLog.length > MAX_PLAYER_LOG) s.playerLog = s.playerLog.slice(-MAX_PLAYER_LOG)
+}
+
 /** 加经验，返回升了几级（悟道点由调用方发放） */
 export function gainExp(s: GameState, amount: number): number {
-  s.exp += amount
+  const mult = ascensionBonus(s.ascensionCount).expMult
+  s.exp += Math.round(amount * mult)
   let ups = 0
   while (s.exp >= expNeed(s.level)) {
     s.exp -= expNeed(s.level)

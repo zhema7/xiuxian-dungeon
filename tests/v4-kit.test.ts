@@ -74,6 +74,22 @@ describe('v4 data types and whitelist', () => {
     }
   })
 
+  it('30 kits have 30 unique normal/art primitive combinations', () => {
+    const combos = V4_KIT_ABILITIES.map(a => `${a.normalPrimitive}/${a.artPrimitive}`)
+    expect(combos).toHaveLength(30)
+    expect(new Set(combos).size).toBe(30)
+  })
+
+  it('all 8 primitives appear on both normal and art sides', () => {
+    const PRIMITIVES = ['boomerang', 'roundtrip', 'refract', 'mark', 'fixedpoint', 'thundernet', 'thunderstake', 'charge']
+    const normalSet = new Set(V4_KIT_ABILITIES.map(a => a.normalPrimitive))
+    const artSet = new Set(V4_KIT_ABILITIES.map(a => a.artPrimitive))
+    for (const p of PRIMITIVES) {
+      expect(normalSet.has(p)).toBe(true)
+      expect(artSet.has(p)).toBe(true)
+    }
+  })
+
   it('kitIdFromSetId resolves v4 set ids', () => {
     expect(kitIdFromSetId('set_v4_k01')).toBe('k01')
     expect(kitIdFromSetId('set_v4_k30')).toBe('k30')
@@ -365,7 +381,7 @@ describe('v4 aggregateMods bypass (S1)', () => {
 describe('v4 resource manifest', () => {
   it('buildKitManifest produces correct frame counts', () => {
     const m = buildKitManifest('k01')
-    expect(m.icons).toHaveLength(4)
+    expect(m.icons).toHaveLength(1)
     expect(m.normalFrames.start).toHaveLength(4)
     expect(m.normalFrames.main).toHaveLength(6)
     expect(m.normalFrames.mid).toHaveLength(4)
@@ -375,9 +391,9 @@ describe('v4 resource manifest', () => {
     expect(m.tintPolicy).toBe('no-tint')
   })
 
-  it('total frame count is 34 + 4 icons = 38', () => {
+  it('total frame count is 34 + 1 icon = 35', () => {
     expect(KIT_FRAME_TOTAL).toBe(34)
-    expect(KIT_ASSET_TOTAL).toBe(38)
+    expect(KIT_ASSET_TOTAL).toBe(35)
   })
 
   it('frame keys follow naming convention', () => {

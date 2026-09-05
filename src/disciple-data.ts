@@ -101,6 +101,18 @@ export interface Disciple {
   rank: number
   /** 管理职能 */
   role: string | null
+  /** 宗门经营 buff（按职务生效） */
+  sectBuffs?: {
+    stoneBonus?: number    // 灵石产出加成（%）
+    herbBonus?: number     // 灵草产出加成（%）
+    oreBonus?: number      // 矿石产出加成（%）
+    woodBonus?: number    // 木材产出加成（%）
+    cultBonus?: number    // 全宗修炼效率加成（%）
+    alchemyBonus?: number // 炼丹效率加成（%）
+    forgeBonus?: number   // 炼器效率加成（%）
+    defenseBonus?: number // 宗门防御加成（固定值）
+    prestigeBonus?: number // 声望产出加成（%）
+  }
 }
 
 /** 灵根配置 */
@@ -229,6 +241,7 @@ export function generateDisciple(rng: () => number, sectLevel: number): Disciple
   const { root, tier } = randomRoot(rng)
   const talents = randomTalents(rng)
   const stats = calcStats(0, root, tier, talents)
+  const sectBuffs = generateSectBuffs(rng, talents)
 
   return {
     uid: 'd_' + Date.now().toString(36) + '_' + Math.floor(rng() * 9999).toString(36),
@@ -252,7 +265,62 @@ export function generateDisciple(rng: () => number, sectLevel: number): Disciple
     role: null,
     ...stats,
     equipment: { weapon: null, head: null, armor: null, boots: null, charm: null },
+    sectBuffs,
   }
+}
+
+/** 根据天赋生成宗门经营 buff */
+function generateSectBuffs(rng: () => number, talents: TalentId[]): Disciple['sectBuffs'] {
+  const buffs: NonNullable<Disciple['sectBuffs']> = {}
+  // 基础 buff 随天赋生效
+  for (const t of talents) {
+    switch (t) {
+      case 'heavenly_root':
+        buffs.cultBonus = (buffs.cultBonus ?? 0) + 10
+        buffs.prestigeBonus = (buffs.prestigeBonus ?? 0) + 5
+        break
+      case 'body_tempering':
+        buffs.defenseBonus = (buffs.defenseBonus ?? 0) + 50
+        break
+      case 'spirit_eye':
+        buffs.alchemyBonus = (buffs.alchemyBonus ?? 0) + 8
+        buffs.forgeBonus = (buffs.forgeBonus ?? 0) + 8
+        break
+      case 'thick_skin':
+        buffs.stoneBonus = (buffs.stoneBonus ?? 0) + 5
+        buffs.woodBonus = (buffs.woodBonus ?? 0) + 5
+        break
+      case 'stone_skin':
+        buffs.oreBonus = (buffs.oreBonus ?? 0) + 8
+        buffs.defenseBonus = (buffs.defenseBonus ?? 0) + 30
+        break
+      case 'merciless':
+        buffs.defenseBonus = (buffs.defenseBonus ?? 0) + 40
+        buffs.prestigeBonus = (buffs.prestigeBonus ?? 0) + 3
+        break
+    }
+  }
+  // 随机额外 buff（50% 几率获得一项随机经营 buff）
+  if (rng() < 0.5) {
+    const randomBuffs: (keyof NonNullable<Disciple['sectBuffs']>)[] = [
+      'stoneBonus', 'herbBonus', 'oreBonus', 'woodBonus', 'cultBonus', 'prestigeBonus'
+    ]
+    const key = randomBuffs[Math.floor(rng() * randomBuffs.length)]
+    ;(buffs as Record<string, number>)[key] = ((buffs as Record<string, number>)[key] ?? 0) + Math.floor(3 + rng() * 7)
+  }
+  return Object.keys(buffs).length > 0 ? buffs : undefined
+}
+
+/** 汇总弟子宗门经营 buff */
+export function aggregateSectBuffs(disciples: Disciple[]): NonNullable<Disciple['sectBuffs']> {
+  const total: NonNullable<Disciple['sectBuffs']> = {}
+  for (const d of disciples) {
+    if (!d.sectBuffs) continue
+    for (const [key, val] of Object.entries(d.sectBuffs)) {
+      ;(total as Record<string, number>)[key] = ((total as Record<string, number>)[key] ?? 0) + (val as number)
+    }
+  }
+  return total
 }
 
 /** 宗门任务模板 */
