@@ -1,8 +1,8 @@
-# 修仙与地上城 — 项目长期记忆
+# 修仙与地下城 — 项目长期记忆
 
 ## 技术栈与项目约定
-- 项目：`修仙与地上城`（xiuxian-dungeon），Phaser 3.90 + Vite 5.4 + TypeScript 5.6 + Vitest，竖屏 9:16 像素风修仙 Roguelike。
-- 仓库路径：`C:\kimi\修仙与地上城`（注意是「地上城」）。
+- 项目：`修仙与地下城`（xiuxian-dungeon），Phaser 3.90 + Vite 5.4 + TypeScript 5.6 + Vitest。**当前实际是大型复合游戏**（宗门经营 + 大世界 + 弟子养成 + 战斗 VFX + 外交 + 渡劫/心魔 + 程序化 NPC），不是单纯 Roguelike。
+- 仓库路径：`C:\kimi\修仙与地下城`（注意是「地下城」）。
 
 ## 关键环境限制
 - **npm run build / npm run dev 必须在 WorkBuddy 沙箱外运行**。沙箱中的 `genie-safe-delete` shim 会拦截 Vite 对 `dist/` 的批量清理，报错 `SAFE_DELETE_BULK_GUARD_ERROR`。
@@ -26,7 +26,7 @@
 
 ## 验证命令
 - 类型检查：`npm run typecheck`（沙箱内可运行）
-- 单元测试：`npm run test`（沙箱内可运行，当前 21 files / 562 tests）
+- 单元测试：`npm run test`（沙箱内可运行，当前 23 files / ~562 tests）
 - 资源校验：`npm run validate:assets`（沙箱内可运行）；`validate:assets:strict` 严格模式
 - 一键校验：`npm run validate`（data + assets）
 - 生产构建：`npm run build`（沙箱外运行）
@@ -42,7 +42,9 @@
 ## 美术资产盘点（2026-08-30 完成，结论见 docs/art/art-gap-backlog.md）
 - **清单落盘**：`docs/art/art-gap-backlog.md`（354 行）。含 5 项正式清单、1 项已关闭、10 项待研究疑问、执行路线图、已知风险。**疑问项按用户要求保留，不擅自解答，研究后回填。**
 - **总预算 18-28 人天**（v4 重画 270 张 11-16 / fx 缩放整改 4-8 / sect_bg 0.5-1 / npc.png 0.5-1 / player.png 0.5 可选）。
-- **v4 三十套 1140 张 = 零渲染负债**：`src/v4/` 零渲染调用，`scene-adapter.ts` 100% 走 Graphics，`BootScene.ts:387-398` 却逐张 `load.image` 全部 1140 张。**评估 v4 必须先决定"接不接渲染管线"，再谈画工。** 若决定不接，应移除该加载循环。
+- **v4 三十套 1140 张 = 零渲染负债**：`src/v4/` 零渲染调用，`scene-adapter.ts` 100% 走 Graphics 兜底，**BootScene.ts 不再逐张 `load.image` 1140 张**（v4 资产加载分支已转用 kit-manifest 静态枚举）。但 `src/v4/scene-adapter.ts`（330 行）是完整实现，8 原语全部 Phaser 落地。
+- **PRS v4 与 src/lore.ts 双轨并存**：v4 独立轨（src/v4/{kit-data,scene-adapter,runtime,executor}）+ PRS 通用轨（src/lore.ts DYNAMIC_SET_COMBAT_PROFILES 27+ 条含 KitPrimitive 路线 4 + Tier3 新贴图 10）。两条轨道的边界**未在文档中明示**，需主理人审批。
+- **30 套 v4 Kit 元组已全部独立**（2026-09-09 实测核对）：每个 (normalPrimitive, artPrimitive) 唯一。原"k02≡k26/k03≡k09 重复"问题已修复——无需再排重。
 - **抖音 28 张已裁定沿用**（2026-08-30 用户）：不删不换不重画，合规项关闭。注意 douyin 只存在于 PNG 内嵌 tEXt 元数据，**项目内无任何文件名含 douyin**。若日后要降险，可写脚本剥离 tEXt 块（不改像素，约 5 分钟），需用户批准。
 
 ## 资产盘点可复用方法（本库已验证有效）
@@ -55,3 +57,14 @@
 
 ## Agent 派发约束
 - **`art-director` 角色没有 Bash 工具**（启动即报 `Bash not found in agent art-director`，首次尝试仅存活 4 秒）。派发时必须在 prompt 中显式声明「禁止调用 Bash / TaskList，只能用 Read / Grep / Glob」，并把已采集的数据直接喂给它，让它只做专业判断层。
+
+## 文档-代码现状（2026-09-09 盘点，详见 docs/project-review/2026-09-09-项目现状盘点与文档一致性审查.md）
+- **package.json version = 0.2.0**，但产品已迭代到 **v0.7**（2026-09-08 TapTap 包），`release/` 最高 v0.7-taptap-20260908.zip。
+- **SAVE_VERSION = 11**（`src/state.ts:189`），注释却写 v8（`src/state.ts:1`）—— **注释错**。
+- **AttackMode 联合 = 29 项 / ArtMode 联合 = 20 项**（`src/data.ts:82-83` + `validate-data.mjs:14-20`），远多于 v4 ADR §6 声称的 10/4 与 mechanics-tech-plan 估计的 10/4。
+- **GameState 100+ 字段**（`src/state.ts:51-160`），含 Phase 1-7 全系统（NPC/任务/外交/心魔/渡劫/法宝/灵窍/3D）。
+- **9 个场景**（`src/main.ts:60` 注册）：BootScene/TitleScene/TownScene/CityScene/WorldScene/SectScene/SectWarScene/DungeonScene/TribulationScene（外加 anim-guard.ts 工具）。
+- **公共资源全树 1949 张 PNG**（`public/sprites/` 顶层 431 张）；**音频 40 个**；**配置表 13 张**（src/data/ 含 5 个 world-map-*）。
+- **3D 路径**已添加：`src/state.ts:153 renderMode: '3d'\|'2d'` + `vite.config.ts` three manualChunks + `src/three-bridge.ts`（working tree 新增）。
+- **PRS v4 ADR §6 期望的「原语分布表」与 v4-kits.json 实际分布不匹配**：期望回旋 7 / 雷网 1；实际回旋 6 / 雷网 3。**推荐**：将 `validate-data.mjs:188-210` 原语计数硬校验改为软警告（30 套既已主理签收独立分配，硬校验就是错的硬约束）。
+- **P0 阻断**：docs/v0.7版本说明.md 工作树未提交；docs/01 完全过期；SAVE_VERSION 至少在 5 处表达为不同数字。

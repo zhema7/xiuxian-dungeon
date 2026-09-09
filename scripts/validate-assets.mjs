@@ -310,6 +310,7 @@ export function buildAssetManifest(rootDir = DEFAULT_ROOT) {
   const warnings = []
 
   const bootPath = join(rootDir, 'src', 'scenes', 'BootScene.ts')
+  const lazyPath = join(rootDir, 'src', 'lazy-assets.ts')
   const audioPath = join(rootDir, 'src', 'audio.ts')
   const texturesPath = join(rootDir, 'src', 'textures.ts')
   const dataPath = join(rootDir, 'src', 'data.ts')
@@ -317,16 +318,18 @@ export function buildAssetManifest(rootDir = DEFAULT_ROOT) {
   const v4ManifestPath = join(rootDir, 'src', 'v4', 'manifest.ts')
 
   const boot = readSource(bootPath, 'src/scenes/BootScene.ts')
+  const lazy = readSource(lazyPath, 'src/lazy-assets.ts')
   const audio = readSource(audioPath, 'src/audio.ts')
   const textures = readSource(texturesPath, 'src/textures.ts')
   const data = readSource(dataPath, 'src/data.ts')
   const seq = readSource(seqPath, 'src/fx/sequence-contract.ts')
   const v4Manifest = readSource(v4ManifestPath, 'src/v4/manifest.ts')
 
-  for (const r of [boot, audio, textures, data, seq, v4Manifest]) if (r.error) errors.push(r.error)
+  for (const r of [boot, lazy, audio, textures, data, seq, v4Manifest]) if (r.error) errors.push(r.error)
   if (boot.src === null) return { errors, warnings, groups: [], sources: {} }
 
   const bootSrc = boot.src
+  const lazySrc = lazy.src ?? ''
   const audioSrc = audio.src ?? ''
   const texturesSrc = textures.src ?? ''
   const dataSrc = data.src ?? ''
@@ -340,17 +343,21 @@ export function buildAssetManifest(rootDir = DEFAULT_ROOT) {
   const ANIM_CLASSES = extractStringArray(bootSrc, 'ANIM_CLASSES')
   const BEAST_ANIM_IDS = extractStringArray(bootSrc, 'BEAST_ANIM_IDS')
   const FORMATION_ANIM_TYPES = extractStringArray(bootSrc, 'FORMATION_ANIM_TYPES')
-  const NPC_ANIM_IDS = extractStringArray(bootSrc, 'NPC_ANIM_IDS')
-  const BUILDING_IDS = extractStringArray(bootSrc, 'BUILDING_IDS')
-  const BUILDING_SHEET_MAP = extractStringMap(bootSrc, 'BUILDING_SHEET_MAP')
-  const BUILDING_SHEET_FILES = extractStringArray(bootSrc, 'BUILDING_SHEET_FILES')
   const FX_ANIMS_KEYS = extractObjectKeyList(bootSrc, 'FX_ANIMS')
   const terrainTiles = extractStringArray(bootSrc, 'terrainTiles')
-  const xianEnemies = extractStringArray(bootSrc, 'xianEnemies')
-  const aiEffectSheets = extractStringArray(bootSrc, 'aiEffectSheets')
+
+  // --- lazy-assets.ts 内的 ID 清单（从 BootScene 迁移至此） ---
+  const NPC_ANIM_IDS = extractStringArray(lazySrc, 'NPC_ANIM_IDS')
+  const BUILDING_IDS = extractStringArray(lazySrc, 'BUILDING_IDS')
+  const BUILDING_SHEET_MAP = extractStringMap(lazySrc, 'BUILDING_SHEET_MAP')
+  const BUILDING_SHEET_FILES = extractStringArray(lazySrc, 'BUILDING_SHEET_FILES')
+  const xianEnemies = extractStringArray(lazySrc, 'xianEnemies')
+  const aiEffectSheets = extractStringArray(lazySrc, 'aiEffectSheets')
 
   // --- 跨模块清单 ---
   const AUDIO_KEYS = audioSrc ? extractStringArray(audioSrc, 'AUDIO_KEYS') : null
+  const M4A_ONLY_KEYS = audioSrc ? extractStringArray(audioSrc, 'M4A_ONLY_KEYS') : new Set()
+  const m4aOnlySet = new Set(M4A_ONLY_KEYS ?? [])
   const SPRITE_KEYS = texturesSrc ? extractStringArray(texturesSrc, 'SPRITE_KEYS') : null
   const terrainPrefixes = dataSrc ? extractFieldValues(dataSrc, 'terrainPrefix') : null
   const seqNumberedKeys = seqSrc ? extractNumberedCalls(seqSrc, 'numberedTextureKeys') : null
@@ -492,12 +499,16 @@ export function buildAssetManifest(rootDir = DEFAULT_ROOT) {
     label: '音频',
     severity: 'required',
     source: 'src/audio.ts#AUDIO_KEYS',
-    template: 'audio/${key}.mp3',
-    entries: (AUDIO_KEYS ?? []).map((key) => ({
-      id: key,
-      files: [{ publicPath: `audio/${key}.mp3`, rel: `${key}.mp3` }],
-      bundle: null,
-    })),
+    template: 'audio/${key}.mp3 (mp3) / .m4a (m4a-only)',
+    entries: (AUDIO_KEYS ?? []).map((key) => {
+      const isM4aOnly = m4aOnlySet.has(key)
+      const ext = isM4aOnly ? 'm4a' : 'mp3'
+      return {
+        id: key,
+        files: [{ publicPath: `audio/${key}.${ext}`, rel: `${key}.${ext}` }],
+        bundle: null,
+      }
+    }),
   })
 
   // --- 2.7 序列帧特效（FX_ANIMS ∩ sequence-contract 注册包）---
@@ -576,7 +587,7 @@ export function buildAssetManifest(rootDir = DEFAULT_ROOT) {
   })
 
   // --- 2.11 AI 特效帧（6 × 16）---
-  const aiLoopBound = extractLoopBoundNear(bootSrc, 'sprites/${prefix}_${i}.png', 16)
+  const aiLoopBound = extractLoopBoundNear(lazySrc, 'sprites/${prefix}_${i}.png', 16)
   groups.push({
     id: 'ai-effect',
     label: 'AI 生成特效帧',
@@ -591,7 +602,7 @@ export function buildAssetManifest(rootDir = DEFAULT_ROOT) {
   })
 
   // --- 2.12 thunder_prison ---
-  const thunderBound = extractLoopBoundNear(bootSrc, 'sprites/thunder_prison_${i}.png', 4)
+  const thunderBound = extractLoopBoundNear(lazySrc, 'sprites/thunder_prison_${i}.png', 4)
   groups.push({
     id: 'thunder-prison',
     label: 'thunder_prison 神通帧',
@@ -607,7 +618,7 @@ export function buildAssetManifest(rootDir = DEFAULT_ROOT) {
     ],
   })
 
-  // --- 2.13 具名单张贴图（从 BootScene 字面量里抓，模板串一律跳过）---
+  // --- 2.13 具名单张贴图（从 BootScene + lazy-assets 字面量里抓，模板串一律跳过）---
   const literalStatic = new Set()
   for (const m of bootSrc.matchAll(/this\.load\.(?:image|audio|atlas|json|svg)\([^)]*?,\s*(['"])((?:sprites|audio)\/[^'"]+)\1/g)) {
     literalStatic.add(m[2])
@@ -615,11 +626,21 @@ export function buildAssetManifest(rootDir = DEFAULT_ROOT) {
   for (const m of bootSrc.matchAll(/this\.load\.image\([^)]*?,\s*(['"])(sprites\/[^'"]+)\1/g)) {
     literalStatic.add(m[2])
   }
+  // lazy-assets.ts 里通过 loadImageIfMissing / loadAtlasIfMissing 间接加载
+  for (const m of lazySrc.matchAll(/load(?:Image|Atlas|Json)IfMissing\([^)]*?,\s*['"](?:sprites\/[^'"]+)['"]/g)) {
+    const pathMatch = lazySrc.slice(m.index).match(/['"](sprites\/[^'"]+)['"]/)
+    if (pathMatch) literalStatic.add(pathMatch[1])
+  }
+  // lazy-assets.ts 里通过 loadImageIfMissing 加载的具名路径
+  for (const m of lazySrc.matchAll(/loadImageIfMissing\([^)]*?,\s*['"]sprites\/[^'"]+['"]/g)) {
+    const pathMatch = lazySrc.slice(m.index).match(/['"](sprites\/[^'"]+)['"]/)
+    if (pathMatch) literalStatic.add(pathMatch[1])
+  }
   groups.push({
     id: 'named-static',
     label: '具名静态资源',
     severity: 'warn',
-    source: 'BootScene.ts 字面量',
+    source: 'BootScene.ts + lazy-assets.ts 字面量',
     template: null,
     entries: [...literalStatic].map((p) => ({ id: p, files: [{ publicPath: p, rel: p }], bundle: null })),
   })
@@ -666,9 +687,12 @@ export function buildAssetManifest(rootDir = DEFAULT_ROOT) {
   // ---------------------------------------------------------------- 3. 命名模板防漂移
   for (const g of groups) {
     if (!g.template) continue
-    if (!bootSrc.includes(g.template)) {
+    if (g.id === 'audio') continue // 音频路径由 audioUrls() 动态生成，无固定模板字面量
+    const foundInBoot = bootSrc.includes(g.template)
+    const foundInLazy = lazySrc.includes(g.template)
+    if (!foundInBoot && !foundInLazy) {
       errors.push(
-        `[${g.label}] 命名模板漂移：校验器使用 \`${g.template}\`，但 BootScene.ts 中已找不到该字面量。请同步 scripts/validate-assets.mjs`,
+        `[${g.label}] 命名模板漂移：校验器使用 \`${g.template}\`，但 BootScene.ts / lazy-assets.ts 中均找不到该字面量。请同步 scripts/validate-assets.mjs`,
       )
     }
   }

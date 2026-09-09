@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>修仙与地下城 - 小红书图文</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { background: #0a0a0a; font-family: "PingFang SC", "Microsoft YaHei", sans-serif; display: flex; flex-direction: column; align-items: center; gap: 20px; padding: 20px; }
+.card {
+  width: 1080px; height: 1440px; position: relative; overflow: hidden;
+  display: flex; flex-direction: column;
+}
+.watermark {
+  position: absolute; bottom: 30px; right: 40px;
+  font-size: 24px; color: rgba(255,255,255,0.5);
+  font-weight: bold; letter-spacing: 2px;
+  z-index: 100; pointer-events: none;
+}
+.page-num {
+  position: absolute; top: 30px; right: 40px;
+  font-size: 22px; color: rgba(255,255,255,0.4);
+  z-index: 100;
+}
+
+/* ===== 图1 封面 ===== */
+.card-1 {
+  background: linear-gradient(135deg, #0a0e1a 0%, #1a1040 30%, #2d1b69 50%, #1a1040 70%, #0a0e1a 100%);
+}
+.card-1::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  background: radial-gradient(ellipse at 50% 40%, rgba(138,43,226,0.3) 0%, transparent 60%),
+              radial-gradient(ellipse at 80% 20%, rgba(255,215,0,0.15) 0%, transparent 40%);
+}
+.card-1 .content { position: relative; z-index: 2; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.card-1 .title-cn { font-size: 100px; font-weight: 900; color: #f0f0ff; text-shadow: 0 0 30px rgba(138,43,226,0.8), 0 0 60px rgba(255,215,0,0.4); letter-spacing: 8px; margin-bottom: 10px; }
+.card-1 .subtitle { font-size: 42px; color: #c8b8ff; letter-spacing: 4px; margin-bottom: 50px; }
+.card-1 .version-tag { background: linear-gradient(90deg, #8a2be2, #ff8c00); padding: 12px 50px; border-radius: 40px; font-size: 36px; color: #fff; font-weight: bold; margin-bottom: 60px; }
+.card-1 .tags { display: flex; gap: 20px; margin-bottom: 50px; }
+.card-1 .tag { padding: 14px 30px; border: 2px solid rgba(255,255,255,0.3); border-radius: 30px; font-size: 28px; color: rgba(255,255,255,0.7); }
+.card-1 .desc { font-size: 32px; color: rgba(255,255,255,0.6); max-width: 800px; text-align: center; line-height: 1.6; }
+.card-1 .stars { position: absolute; width: 100%; height: 100%; top: 0; left: 0; pointer-events: none; }
+.star { position: absolute; width: 3px; height: 3px; background: #fff; border-radius: 50%; opacity: 0.6; }
+
+/* ===== 通用内容卡片 ===== */
+.card-base {
+  background: linear-gradient(160deg, #0d0d1a 0%, #151528 50%, #0d0d1a 100%);
+}
+.card-base::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  background: radial-gradient(ellipse at 50% 0%, rgba(138,43,226,0.15) 0%, transparent 50%);
+}
+.card-base .content { position: relative; z-index: 2; padding: 80px 70px; height: 100%; display: flex; flex-direction: column; }
+.card-base .header { display: flex; align-items: center; gap: 20px; margin-bottom: 50px; }
+.card-base .header-num { width: 70px; height: 70px; border-radius: 50%; background: linear-gradient(135deg, #8a2be2, #ff8c00); display: flex; align-items: center; justify-content: center; font-size: 36px; font-weight: bold; color: #fff; flex-shrink: 0; }
+.card-base .header-title { font-size: 52px; font-weight: 800; color: #f0f0ff; }
+.card-base .section { margin-bottom: 35px; }
+.card-base .section-title { font-size: 34px; font-weight: 700; color: #ffd700; margin-bottom: 15px; display: flex; align-items: center; gap: 10px; }
+.card-base .section-title::before { content: ''; width: 8px; height: 8px; background: #ffd700; border-radius: 50%; flex-shrink: 0; }
+.card-base .section-desc { font-size: 28px; color: #c0c0d0; line-height: 1.7; }
+.card-base .item-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
+.card-base .item-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(138,43,226,0.3); border-radius: 16px; padding: 24px; }
+.card-base .item-name { font-size: 30px; font-weight: 700; color: #e0d0ff; margin-bottom: 8px; }
+.card-base .item-text { font-size: 24px; color: #a0a0b0; line-height: 1.5; }
+.card-base .highlight { color: #ff8c00; font-weight: 700; }
+.card-base .purple { color: #c8b8ff; }
+.card-base .gold { color: #ffd700; }
+.card-base .green { color: #4ade80; }
+.card-base .blue { color: #60a5fa; }
+.card-base .red { color: #f87171; }
+.card-base .tag-row { display: flex; flex-wrap: wrap; gap: 12px; margin: 10px 0; }
+.card-base .mini-tag { padding: 6px 18px; border-radius: 20px; font-size: 22px; }
+.card-base .mini-tag.purple { background: rgba(138,43,226,0.2); color: #c8b8ff; }
+.card-base .mini-tag.gold { background: rgba(255,215,0,0.15); color: #ffd700; }
+.card-base .mini-tag.green { background: rgba(74,222,128,0.15); color: #4ade80; }
+.card-base .mini-tag.blue { background: rgba(96,165,250,0.15); color: #60a5fa; }
+.card-base .table-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.08); font-size: 26px; }
+.card-base .table-row:last-child { border: none; }
+.card-base .table-row .label { color: #a0a0b0; }
+.card-base .table-row .value { color: #e0d0ff; font-weight: 600; }
+
+/* ===== 图7 结尾 ===== */
+.card-7 {
+  background: linear-gradient(135deg, #0a0e1a 0%, #1a1040 50%, #0a0e1a 100%);
+}
+.card-7::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  background: radial-gradient(ellipse at 50% 50%, rgba(138,43,226,0.2) 0%, transparent 60%);
+}
+.card-7 .content { position: relative; z-index: 2; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.card-7 .end-title { font-size: 72px; font-weight: 900; color: #f0f0ff; text-shadow: 0 0 30px rgba(138,43,226,0.6); margin-bottom: 30px; letter-spacing: 4px; }
+.card-7 .end-sub { font-size: 40px; color: #c8b8ff; margin-bottom: 60px; }
+.card-7 .qr-box { width: 300px; height: 300px; background: rgba(255,255,255,0.05); border: 2px solid rgba(255,255,255,0.2); border-radius: 20px; display: flex; align-items: center; justify-content: center; margin-bottom: 40px; }
+.card-7 .qr-text { font-size: 28px; color: rgba(255,255,255,0.4); }
+.card-7 .brand { font-size: 48px; font-weight: 900; background: linear-gradient(90deg, #8a2be2, #ff8c00); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 20px; }
+.card-7 .platform { font-size: 28px; color: rgba(255,255,255,0.5); margin-bottom: 15px; }
+.card-7 .tip { font-size: 24px; color: rgba(255,255,255,0.3); margin-top: 30px; }
+</style>
+</head>
+<body>
+
+<!-- ===== 图1 封面 ===== -->
+<div class="card card-1">
+  <div class="stars" id="stars"></div>
+  <div class="content">
+    <div class="title-cn">修仙与地下城</div>
+    <div class="subtitle">竖屏像素修仙 Roguelike RPG</div>
+    <div class="version-tag">v0.5 正式版</div>
+    <div class="tags">
+      <div class="tag">修仙养成</div>
+      <div class="tag">随机迷宫</div>
+      <div class="tag">宗门经营</div>
+      <div class="tag">离线单机</div>
+    </div>
+    <div class="desc">以中国古典修仙文化为背景，融合Roguelike地下城探险与宗门养成经营，在竖屏像素世界中体验从炼气到合体的完整修仙之旅</div>
+  </div>
+  <div class="page-num">1/7</div>
+  <div class="watermark">哲码游戏</div>
+</div>
+
+<!-- ===== 图2 五大职业 & 七大境界 ===== -->
+<div class="card card-base">
+  <div class="content">
+    <div class="header">
+      <div class="header-num">2</div>
+      <div class="header-title">五大职业 · 七大境界</div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">选择你的修仙之路</div>
+      <div class="section-desc">五种职业各有独特技能体系和属性成长曲线，选哪条路，决定了你的修仙风格</div>
+    </div>
+
+    <div class="item-grid">
+      <div class="item-card">
+        <div class="item-name">⚔️ 剑修</div>
+        <div class="item-text">飞剑斩击 · 旋风斩 · 重击<br>近战物理输出，连绵不绝的剑气</div>
+      </div>
+      <div class="item-card">
+        <div class="item-name">❄️ 仙子</div>
+        <div class="item-text">寒冰法术 · 冰冻减速<br>远程控制，封锁敌人行动</div>
+      </div>
+      <div class="item-card">
+        <div class="item-name">⚡ 道修</div>
+        <div class="item-text">闪电链 · 雷球穿透<br>群体连锁伤害，清怪利器</div>
+      </div>
+      <div class="item-card">
+        <div class="item-name">🌸 合欢</div>
+        <div class="item-text">魅惑控制 · 生命吸取<br>以弱胜强，策略型首选</div>
+      </div>
+    </div>
+    <div class="item-card" style="grid-column: 1/3;">
+      <div class="item-name">🔥 法修</div>
+      <div class="item-text">火球 · 冰锥 · 雷链，五行法术自由切换，根据敌人弱点灵活应变，最全面的法系职业</div>
+    </div>
+
+    <div class="section" style="margin-top: 30px;">
+      <div class="section-title">七大境界 · 逐步突破</div>
+      <div class="table-row"><span class="label">第一境 · 炼气期</span><span class="value">初入修仙，踏入青冥山脉</span></div>
+      <div class="table-row"><span class="label">第二境 · 筑基期</span><span class="value">解锁天赋系统</span></div>
+      <div class="table-row"><span class="label">第三境 · 金丹期</span><span class="value">解锁灵窍、法宝、宗门创建</span></div>
+      <div class="table-row"><span class="label">第四境 · 元婴期</span><span class="value">法宝进阶，宗门扩展</span></div>
+      <div class="table-row"><span class="label">第五境 · 化神期</span><span class="value">高阶精炼，秘境探索</span></div>
+      <div class="table-row"><span class="label">第六境 · 炼虚期</span><span class="value">极高成长，顶级内容</span></div>
+      <div class="table-row"><span class="label">第七境 · 合体期</span><span class="value">最终境界，全部解锁</span></div>
+    </div>
+  </div>
+  <div class="page-num">2/7</div>
+  <div class="watermark">哲码游戏</div>
+</div>
+
+<!-- ===== 图3 战斗·装备·功法 ===== -->
+<div class="card card-base">
+  <div class="content">
+    <div class="header">
+      <div class="header-num">3</div>
+      <div class="header-title">战斗 · 装备 · 功法</div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">20种神通招式</div>
+      <div class="section-desc">涵盖近战斩击、飞剑系、元素法术、控制系、范围技五大类型，配合功法套装产生多样战斗风格</div>
+      <div class="tag-row">
+        <span class="mini-tag purple">旋风斩</span>
+        <span class="mini-tag purple">飞剑分裂</span>
+        <span class="mini-tag gold">剑阵</span>
+        <span class="mini-tag blue">冰锥</span>
+        <span class="mini-tag blue">雷链</span>
+        <span class="mini-tag red">火球</span>
+        <span class="mini-tag green">魅惑</span>
+        <span class="mini-tag green">生命吸取</span>
+        <span class="mini-tag gold">冰封领域</span>
+        <span class="mini-tag gold">烈焰风暴</span>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">装备品质 · 五个等级</div>
+      <div class="item-grid">
+        <div class="item-card">
+          <div class="item-name" style="color:#9ca3af;">⚪ 普通</div>
+          <div class="item-text">基础属性，新手过渡</div>
+        </div>
+        <div class="item-card">
+          <div class="item-name" style="color:#4ade80;">🟢 精良</div>
+          <div class="item-text">附加词条，初具战力</div>
+        </div>
+        <div class="item-card">
+          <div class="item-name" style="color:#60a5fa;">🔵 稀有</div>
+          <div class="item-text">多条附加，套装雏形</div>
+        </div>
+        <div class="item-card">
+          <div class="item-name" style="color:#c084fc;">🟣 史诗</div>
+          <div class="item-text">强力词条，战斗核心</div>
+        </div>
+      </div>
+      <div class="item-card" style="background: rgba(255,215,0,0.08); border-color: rgba(255,215,0,0.4);">
+        <div class="item-name" style="color:#ffd700;">🟡 传说</div>
+        <div class="item-text" style="color:#ffd700;">顶级装备，战力天花板</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">功法套装系统</div>
+      <div class="section-desc">收集同套装功法激活套装效果，2件/4件/6件递增加成<br><span class="highlight">6套配装方案</span> 自由切换，不同Boss不同配装</div>
+    </div>
+  </div>
+  <div class="page-num">3/7</div>
+  <div class="watermark">哲码游戏</div>
+</div>
+
+<!-- ===== 图4 宗门养成系统 ===== -->
+<div class="card card-base">
+  <div class="content">
+    <div class="header">
+      <div class="header-num">4</div>
+      <div class="header-title">宗门养成经营</div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">14种功能建筑 · 自由建造</div>
+      <div class="section-desc">金丹期后消耗10000灵石创建宗门，打造属于你的修仙门派</div>
+    </div>
+
+    <div class="item-grid">
+      <div class="item-card">
+        <div class="item-name">🏛️ 核心大殿</div>
+        <div class="item-text">宗门核心，等级影响所有建筑上限</div>
+      </div>
+      <div class="item-card">
+        <div class="item-name">💎 聚灵阵</div>
+        <div class="item-text">提升灵气浓度，加速修炼</div>
+      </div>
+      <div class="item-card">
+        <div class="item-name">🌾 灵田 · 药园</div>
+        <div class="item-text">种植灵药，产出炼丹材料</div>
+      </div>
+      <div class="item-card">
+        <div class="item-name">🔥 丹房</div>
+        <div class="item-text">炼制丹药，提供战斗补给</div>
+      </div>
+      <div class="item-card">
+        <div class="item-name">⚒️ 炼器坊</div>
+        <div class="item-text">锻造装备，提升品质</div>
+      </div>
+      <div class="item-card">
+        <div class="item-name">⛏️ 矿脉</div>
+        <div class="item-text">产出灵石和矿石</div>
+      </div>
+      <div class="item-card">
+        <div class="item-name">📚 藏书阁</div>
+        <div class="item-text">研习功法，解锁招式</div>
+      </div>
+      <div class="item-card">
+        <div class="item-name">⚔️ 演武场</div>
+        <div class="item-text">弟子切磋，提升战力</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">弟子招募 · 培养派遣</div>
+      <div class="section-desc">
+        <span class="purple">招募弟子</span> → 灵根决定成长上限<br>
+        <span class="purple">安排修炼</span> → 闭关突破，提升修为<br>
+        <span class="purple">派遣任务</span> → 获取资源和奖励<br>
+        <span class="purple">切磋晋升</span> → 提升职级，解锁功能
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">随机事件 · 每90秒触发</div>
+      <div class="tag-row">
+        <span class="mini-tag gold">灵脉涌动</span>
+        <span class="mini-tag purple">弟子顿悟</span>
+        <span class="mini-tag green">游方修士到访</span>
+        <span class="mini-tag blue">宝物发现</span>
+        <span class="mini-tag red">灵兽闯入</span>
+        <span class="mini-tag gold">气运提升</span>
+      </div>
+    </div>
+  </div>
+  <div class="page-num">4/7</div>
+  <div class="watermark">哲码游戏</div>
+</div>
+
+<!-- ===== 图5 法宝·天赋·天劫 ===== -->
+<div class="card card-base">
+  <div class="content">
+    <div class="header">
+      <div class="header-num">5</div>
+      <div class="header-title">法宝 · 天赋 · 天劫</div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">六大法宝 · 炼制精炼</div>
+      <div class="section-desc">金丹期解锁法宝炼制，精炼至+9，装配为宗门圣物提供全属性加成</div>
+    </div>
+
+    <div class="item-grid">
+      <div class="item-card">
+        <div class="item-name gold">⚔️ 天地剑心</div>
+        <div class="item-text">剑修每次攻击额外召唤飞剑</div>
+      </div>
+      <div class="item-card">
+        <div class="item-name gold">🪞 万象宝镜</div>
+        <div class="item-text">反射伤害，提升防御</div>
+      </div>
+      <div class="item-card">
+        <div class="item-name gold">🪷 净世莲华</div>
+        <div class="item-text">净化驱散，攻防一体</div>
+      </div>
+      <div class="item-card">
+        <div class="item-name gold">🐉 九龙神火罩</div>
+        <div class="item-text">受击释放火焰反击</div>
+      </div>
+      <div class="item-card">
+        <div class="item-name gold">🗼 混元一气塔</div>
+        <div class="item-text">全属性提升，增加生命</div>
+      </div>
+      <div class="item-card">
+        <div class="item-name gold">🏺 乾坤鼎</div>
+        <div class="item-text">提升炼丹锻造成功率</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">后天灵窍 · 九窍贯通</div>
+      <div class="section-desc">金丹期解锁，消耗灵石依次打通9个灵窍，大幅提升属性</div>
+      <div class="table-row"><span class="label">灵海 → 气海 → 神庭</span><span class="value green">95% → 88% → 81%</span></div>
+      <div class="table-row"><span class="label">百会 → 玉枕 → 夹脊</span><span class="value gold">74% → 67% → 60%</span></div>
+      <div class="table-row"><span class="label">命门 → 丹田 → 泥丸</span><span class="value red">53% → 42% → 31%</span></div>
+      <div class="section-desc" style="margin-top: 8px; font-size: 24px;">境界每级额外+3%成功率，失败仅消耗灵石</div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">天劫考验 · 雷劫生存</div>
+      <div class="section-desc">境界突破时需在雷劫中存活，雷电随机劈落，被击中造成大量伤害<br><span class="highlight">存活至倒计时结束即突破成功</span></div>
+    </div>
+  </div>
+  <div class="page-num">5/7</div>
+  <div class="watermark">哲码游戏</div>
+</div>
+
+<!-- ===== 图6 世界探索·秘境 ===== -->
+<div class="card card-base">
+  <div class="content">
+    <div class="header">
+      <div class="header-num">6</div>
+      <div class="header-title">世界探索 · 秘境探险</div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">五大域 · 3D/2D双模式大地图</div>
+      <div class="section-desc">支持3D幻境与2D平面无缝切换，在设置面板随时切换</div>
+    </div>
+
+    <div class="item-grid">
+      <div class="item-card" style="border-color: rgba(96,165,250,0.3);">
+        <div class="item-name blue">🌍 中域</div>
+        <div class="item-text">天枢城所在地，传送枢纽</div>
+      </div>
+      <div class="item-card" style="border-color: rgba(74,222,128,0.3);">
+        <div class="item-name green">🌳 南域</div>
+        <div class="item-text">新手区域，青冥山脉</div>
+      </div>
+      <div class="item-card" style="border-color: rgba(255,215,0,0.3);">
+        <div class="item-name gold">🏜️ 西域</div>
+        <div class="item-text">沙漠地形，楼兰秘境</div>
+      </div>
+      <div class="item-card" style="border-color: rgba(96,165,250,0.3);">
+        <div class="item-name blue">🌊 东域</div>
+        <div class="item-text">海域地形，海市蜃楼</div>
+      </div>
+      <div class="item-card" style="border-color: rgba(255,255,255,0.3); grid-column: 1/3;">
+        <div class="item-name">❄️ 北域</div>
+        <div class="item-text">冰原地形，冰原秘境</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">12个秘境 · 独立特殊地下城</div>
+      <div class="item-grid">
+        <div class="item-card">
+          <div class="item-name red">🐉 黄龙山</div>
+          <div class="item-text">坚守战玩法，波次防御</div>
+        </div>
+        <div class="item-card">
+          <div class="item-name red">🐺 万妖谷</div>
+          <div class="item-text">妖兽聚集，高难战斗</div>
+        </div>
+        <div class="item-card">
+          <div class="item-name purple">⚔️ 天剑冢</div>
+          <div class="item-text">剑修圣地，飞剑掉落</div>
+        </div>
+        <div class="item-card">
+          <div class="item-name blue">🏰 海市蜃楼</div>
+          <div class="item-text">幻术迷宫，随机传送</div>
+        </div>
+        <div class="item-card">
+          <div class="item-name gold">⚒️ 古战场</div>
+          <div class="item-text">远古遗迹，稀有材料</div>
+        </div>
+        <div class="item-card">
+          <div class="item-name gold">🐪 楼兰秘境</div>
+          <div class="item-text">沙漠迷宫，火系装备</div>
+        </div>
+        <div class="item-card">
+          <div class="item-name blue">🧊 冰原秘境</div>
+          <div class="item-text">冰系怪物，冰系装备</div>
+        </div>
+        <div class="item-card">
+          <div class="item-name red">🌋 破碎仙宫</div>
+          <div class="item-text">高难度挑战，顶级奖励</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">6个随机日常秘境</div>
+      <div class="tag-row">
+        <span class="mini-tag green">灵药园</span>
+        <span class="mini-tag purple">古修洞府</span>
+        <span class="mini-tag gold">矿脉秘境</span>
+        <span class="mini-tag red">魔修遗迹</span>
+        <span class="mini-tag blue">妖兽巢穴</span>
+        <span class="mini-tag gold">试炼秘境</span>
+      </div>
+    </div>
+  </div>
+  <div class="page-num">6/7</div>
+  <div class="watermark">哲码游戏</div>
+</div>
+
+<!-- ===== 图7 结尾 ===== -->
+<div class="card card-7">
+  <div class="content">
+    <div class="end-title">开启你的仙途</div>
+    <div class="end-sub">v0.5 正式版 · 离线单机 · 无需联网</div>
+    <div class="qr-box">
+      <div class="qr-text">扫码下载</div>
+    </div>
+    <div class="brand">哲码游戏</div>
+    <div class="platform">Android APK · TapTap H5</div>
+    <div class="tip">搜索「修仙与地下城」开始你的修仙之旅</div>
+    <div class="tip" style="margin-top: 15px;">关注获取更多更新资讯</div>
+  </div>
+  <div class="page-num">7/7</div>
+  <div class="watermark">哲码游戏</div>
+</div>
+
+<script>
+// 生成星空效果
+const starsContainer = document.getElementById('stars');
+if (starsContainer) {
+  for (let i = 0; i < 100; i++) {
+    const star = document.createElement('div');
+    star.className = 'star';
+    star.style.left = Math.random() * 100 + '%';
+    star.style.top = Math.random() * 100 + '%';
+    star.style.opacity = Math.random() * 0.8 + 0.2;
+    star.style.width = Math.random() * 3 + 1 + 'px';
+    star.style.height = star.style.width;
+    starsContainer.appendChild(star);
+  }
+}
+</script>
+
+</body>
+</html>

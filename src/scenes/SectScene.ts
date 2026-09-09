@@ -1,4 +1,4 @@
-// ---------- 宗门场景 · 俯视视角 ----------
+﻿// ---------- 宗门场景 · 俯视视角 ----------
 
 import Phaser from 'phaser'
 import { Player } from '../entities'
@@ -12,7 +12,8 @@ import { QUALITY_NAMES } from '../data'
 import {
   BUILDINGS, BUILDING_IDS, buildingUpgradeCost, canUpgradeBuilding,
   spiritVeinProduction, spiritFarmProduction, oreMineProduction, woodPavilionProduction, discipleCapacity,
-  type BuildingId, type SectData, type SectResources,
+  addDiscipleEvent,
+  type BuildingId, type SectData, type SectResources, type RevengeTarget,
 } from '../sect-data'
 import {
   generateDisciple, cultivationSpeed, expToNextRealm,
@@ -21,8 +22,8 @@ import {
   effectiveStats, disciplePower, sparDisciples, SPAR_COOLDOWN,
   DISCIPLE_RANKS, DISCIPLE_ROLES, canPromote, promoteDisciple, rankName,
   SPIRIT_ROOTS, TALENTS, REALM_NAMES, SECT_QUESTS,
-  aggregateSectBuffs,
-  type Disciple, type DiscipleRealm, type SectQuest,
+  aggregateSectBuffs, stoneCultivateCost, stoneCultivate, checkAmbush, ambushResultName,
+  type Disciple, type DiscipleRealm, type SectQuest, type AmbushEvent,
 } from '../disciple-data'
 import {
   PILL_RECIPES, FORGE_RECIPES, CROPS, TECHS, TECH_IDS,
@@ -36,6 +37,7 @@ import { getDiplomacyStatus, diplomacyStatusName, dispositionDesc, type AiSect }
 import { executeDiplomacy, launchSectWar, tickAllAiSects, processTradeIncome, processResourceIncome, processSectDefense } from '../diplomacy'
 import { tryCompleteQuest, onDiplomacyAction, onSectWarWon, getQuestHudText } from '../storyline-system'
 import { checkAchievements } from '../achievement-system'
+import { loadLazyGroup, registerLazyAnimations } from '../lazy-assets'
 import {
   BEAST_SPECIES, BEAST_SPECIES_MAP, RARITY_NAMES, RARITY_COLORS, ELEMENT_NAMES,
   beastCapacity, generateBeast, feedBeast, captureRate, mountSpeedBonus,
@@ -79,6 +81,13 @@ export class SectScene extends Phaser.Scene {
   private npcSprites: { id: string; sprite: Phaser.Physics.Arcade.Sprite; nameText: Phaser.GameObjects.Text; baseX: number; baseY: number }[] = []
   private nearNpcId: string | null = null
   private npcShadows: Map<string, Phaser.GameObjects.Graphics> = new Map()
+  /** 弟子渲染对象 */
+  private discipleSprites: { uid: string; sprite: Phaser.Physics.Arcade.Sprite; nameText: Phaser.GameObjects.Text; shadow: Phaser.GameObjects.Graphics; activity: string; wanderTimer: number; targetX: number; targetY: number }[] = []
+  private nearDiscipleUid: string | null = null
+  /** 弟子间互动冷却 */
+  private discipleChatCooldown = 0
+  /** 弟子任务上次检查时间（用于疲劳恢复计算） */
+  private lastTaskCheck = 0
   private nearBuilding: BuildingId | '__exit' | null = null
   private promptText: Phaser.GameObjects.Text | null = null
   private timeText: Phaser.GameObjects.Text | null = null
@@ -93,12 +102,12 @@ export class SectScene extends Phaser.Scene {
   private placeMode: false | 'building' | 'npc' = false
   private placeTargetId: string | null = null
   private placeGhost: Phaser.GameObjects.Container | null = null
-  /** 当前待招募弟子候补 */
-  private recruitCandidate: Disciple | null = null
-  /** 宗门随机事件计时器 */
-  private sectEventTimer = 0
 
   constructor() { super('Sect') }
+
+  preload() {
+    loadLazyGroup(this, 'sect')
+  }
 
   create(data?: { fromScene?: string }) {
     this.state = this.registry.get('state')
@@ -110,6 +119,7 @@ export class SectScene extends Phaser.Scene {
     }
     this.sect = this.state.sect
     this.worldTime = this.state.worldTime
+    registerLazyAnimations(this, 'sect')
     this.transitioning = false
     this.lastTickMs = this.time.now
     this.rng = makeRng(Date.now() % 2147483647)
@@ -117,6 +127,8 @@ export class SectScene extends Phaser.Scene {
     this.diplomacyTimer = 0
     this.npcSprites = []
     this.npcShadows.clear()
+    this.discipleSprites = []
+    this.nearDiscipleUid = null
 
     playBgm(BGM_SECT)
     setFloorText(`宗门 · ${this.sect.name}`)
@@ -184,6 +196,9 @@ export class SectScene extends Phaser.Scene {
     // NPC
     initNpcStates(this.state)
     this.renderNpcs()
+
+    // 弟子
+    this.renderDisciples()
 
     const questHud = this.add.text(4, 4, getQuestHudText(this.state), {
       fontSize: '8px', color: '#fbbf24', backgroundColor: '#00000088',
@@ -339,6 +354,98 @@ export class SectScene extends Phaser.Scene {
     }
   }
 
+  /** 渲染宗门内弟子（程序化贴图 + 游荡/修炼） */
+  private renderDisciples(): void {
+    for (const d of this.sect.disciples) {
+      // 派遣中的弟子不显示在宗门内
+      if (d.status === 'dispatched') continue
+
+      // 确定初始位置：修炼弟子在演武场/悟道殿附近，空闲弟子随机分布
+      let cx: number, cy: number
+      let activity = '游荡'
+
+      if (d.status === 'cultivating') {
+        // 修炼中的弟子：在演武场（120,200）或悟道殿（200,120）附近
+        if (d.daoPath === '体修' || Math.random() < 0.5) {
+          cx = 120 + Math.random() * 80
+          cy = 200 + Math.random() * 40
+          activity = '修炼'
+        } else {
+          cx = 200 + Math.random() * 60
+          cy = 120 + Math.random() * 40
+          activity = '打坐悟道'
+        }
+      } else if (d.status === 'retreating') {
+        // 闭关弟子在主殿附近
+        cx = 160 + Math.random() * 80
+        cy = 60 + Math.random() * 30
+        activity = '闭关'
+      } else {
+        // 空闲弟子：随机分布在宗门下半区域
+        cx = 40 + Math.random() * (SECT_W - 80)
+        cy = 280 + Math.random() * (SECT_H - 350)
+        activity = '闲逛'
+      }
+
+      // 保存到弟子数据中（用于状态同步）
+      d.sectX = cx
+      d.sectY = cy
+      d.currentActivity = activity
+
+      // 程序化贴图
+      const tex = getOrCreateNpcTexture(this, {
+        id: d.uid,
+        appearanceSeed: d.appearanceSeed,
+        gender: d.gender,
+        daoPath: d.daoPath,
+        realm: d.realm,
+      })
+
+      let sprite: Phaser.Physics.Arcade.Sprite
+      if (tex) {
+        sprite = this.physics.add.sprite(cx, cy, tex.key)
+        sprite.setScale(0.6).setImmovable(true).setDepth(3)
+      } else {
+        sprite = this.physics.add.sprite(cx, cy, 'npc_junior')
+        sprite.setScale(0.5).setImmovable(true).setDepth(3)
+      }
+
+      this.physics.add.collider(this.player.sprite, sprite)
+
+      // 名字 + 境界
+      // SPIRIT_ROOTS / REALM_NAMES already imported at file top
+      const rankLabel = d.rank >= 3 ? '【长老】' : d.rank >= 2 ? '【执事】' : d.rank >= 1 ? '【内门】' : ''
+      const nameStr = `${rankLabel}${d.name}`
+      const nameText = this.add.text(cx, cy - 28, nameStr, {
+        fontSize: '8px', color: '#a3e4d7', stroke: '#000', strokeThickness: 2,
+      }).setOrigin(0.5).setDepth(4)
+
+      // 状态小标签（修炼中/闭关中）
+      if (d.status === 'cultivating' || d.status === 'retreating') {
+        const statusText = this.add.text(cx, cy - 38, d.status === 'retreating' ? '✦闭关✦' : '✦修炼中✦', {
+          fontSize: '7px', color: '#fbbf24', stroke: '#000', strokeThickness: 2,
+        }).setOrigin(0.5).setDepth(4)
+      }
+
+      // 阴影
+      const shadow = this.add.graphics().setDepth(2.5)
+      shadow.fillStyle(0x000000, 0.3)
+      shadow.fillEllipse(0, 0, 20, 6)
+      shadow.setPosition(cx + 1, cy + 8)
+
+      this.discipleSprites.push({
+        uid: d.uid,
+        sprite,
+        nameText,
+        shadow,
+        activity,
+        wanderTimer: Math.random() * 3000,
+        targetX: cx,
+        targetY: cy,
+      })
+    }
+  }
+
   /** HD-2D：NPC 动态效果（呼吸缩放 + 浮动 + 阴影联动） */
   private updateNpcAnimations(): void {
     const t = this.time.now * 0.001
@@ -408,14 +515,14 @@ export class SectScene extends Phaser.Scene {
     this.sect.productionTimer += delta
     if (this.sect.productionTimer >= 5000) {
       this.produceResources(this.sect.productionTimer / 1000)
-      this.sect.productionTimer = 0
+      this.sect.productionTimer -= 5000 // 保留余数，保证长期精确
       this.updateResourceDisplay()
     }
 
     // 宗门随机事件（每 90~120 秒触发一次）
-    this.sectEventTimer += delta
-    if (this.sectEventTimer >= 90000 + Math.floor(Math.random() * 30000)) {
-      this.sectEventTimer = 0
+    this.sect.eventTimer += delta
+    if (this.sect.eventTimer >= 90000 + Math.floor(Math.random() * 30000)) {
+      this.sect.eventTimer = 0
       this.triggerSectEvent()
     }
 
@@ -458,13 +565,36 @@ export class SectScene extends Phaser.Scene {
     if (nearNpc && nearNpc !== this.nearNpcId) {
       this.nearNpcId = nearNpc
       this.nearBuilding = null
+      this.nearDiscipleUid = null
       this.promptText?.setText('【对话】\n点击与 NPC 交流').setVisible(true)
     } else if (!nearNpc && this.nearNpcId) {
       this.nearNpcId = null
     }
 
-    // 检测出口传送阵和建筑（NPC 在附近时跳过，避免交互冲突）
+    // 检测最近弟子
     if (!this.nearNpcId) {
+      let nearDisc: string | null = null
+      let discDist = TILE * 0.9
+      for (const ds of this.discipleSprites) {
+        const dd = Phaser.Math.Distance.Between(px, py, ds.sprite.x, ds.sprite.y)
+        if (dd < discDist) {
+          discDist = dd
+          nearDisc = ds.uid
+        }
+      }
+      if (nearDisc && nearDisc !== this.nearDiscipleUid) {
+        this.nearDiscipleUid = nearDisc
+        this.nearBuilding = null
+        const d = this.sect.disciples.find(x => x.uid === nearDisc)
+        const statusStr = d?.status === 'cultivating' ? '（修炼中）' : d?.status === 'retreating' ? '（闭关中）' : d?.status === 'dispatched' ? '（外派中）' : ''
+        this.promptText?.setText(`【查看弟子】\n点击查看${statusStr}`).setVisible(true)
+      } else if (!nearDisc && this.nearDiscipleUid) {
+        this.nearDiscipleUid = null
+      }
+    }
+
+    // 检测出口传送阵和建筑（NPC/弟子在附近时跳过，避免交互冲突）
+    if (!this.nearNpcId && !this.nearDiscipleUid) {
       const exitX = 4 * TILE + TILE / 2
       const exitY = 19 * TILE + TILE / 2
       const exitDist = Phaser.Math.Distance.Between(px, py, exitX, exitY)
@@ -509,6 +639,8 @@ export class SectScene extends Phaser.Scene {
     if (input.consumeAct()) {
       if (this.nearNpcId) {
         talkToNpc(this.state, this.nearNpcId)
+      } else if (this.nearDiscipleUid) {
+        this.openDiscipleDetail(this.nearDiscipleUid)
       } else if (this.nearBuilding === '__exit') {
         this.exitSect()
       } else if (this.nearBuilding) {
@@ -552,6 +684,16 @@ export class SectScene extends Phaser.Scene {
 
     // HD-2D：NPC 动态效果（每帧）
     this.updateNpcAnimations()
+
+    // 弟子游荡 + 动画
+    this.updateDiscipleAnimations(delta)
+
+    // 弟子间随机互动
+    this.discipleChatCooldown -= delta
+    if (this.discipleChatCooldown <= 0 && this.discipleSprites.length >= 2) {
+      this.discipleChatCooldown = 8000 + Math.random() * 12000
+      this.tryDiscipleChat()
+    }
 
     // AI 宗门外交 tick（每5分钟结算一次）
     this.diplomacyTimer = (this.diplomacyTimer ?? 0) + delta
@@ -622,6 +764,207 @@ export class SectScene extends Phaser.Scene {
     if (this.timeText) this.timeText.setText(formatTime(this.worldTime))
   }
 
+  /** 弟子动画 + 游荡 AI */
+  private updateDiscipleAnimations(delta: number): void {
+    const t = this.time.now * 0.001
+    for (const entry of this.discipleSprites) {
+      const d = this.sect.disciples.find(x => x.uid === entry.uid)
+      if (!d) continue
+      if (entry.sprite.alpha < 0.05) continue
+
+      // 呼吸缩放（基于appearanceSeed错开相位）
+      const phase = (d.appearanceSeed % 100) * 0.06
+      const breathe = 1 + Math.sin(t * 1.6 + phase) * 0.02
+      entry.sprite.setScale(d.status === 'cultivating' ? 0.5 * breathe : d.status === 'retreating' ? 0.48 * breathe : 0.6 * breathe)
+
+      // 修炼中弟子轻微浮动（打坐效果）
+      if (d.status === 'cultivating' || d.status === 'retreating') {
+        const floatY = Math.sin(t * 1.2 + phase) * 2
+        entry.sprite.y = (d.sectY ?? entry.sprite.y) + floatY
+        entry.nameText.setPosition(entry.sprite.x, entry.sprite.y - 28)
+        entry.shadow.setPosition(entry.sprite.x + 1, entry.sprite.y + 8)
+        // 修炼弟子周围闪烁光点
+        if (Math.random() < 0.03) {
+          const p = this.add.circle(entry.sprite.x + (Math.random() - 0.5) * 20, entry.sprite.y - 10, 1.5, 0xfbbf24, 0.8)
+          this.tweens.add({
+            targets: p, y: p.y - 15, alpha: 0, duration: 800, onComplete: () => p.destroy(),
+          })
+        }
+        continue
+      }
+
+      // 空闲弟子游荡
+      entry.wanderTimer -= delta
+      if (entry.wanderTimer <= 0) {
+        // 重新选择目标点
+        entry.wanderTimer = 2000 + Math.random() * 4000
+        const range = 40
+        const baseX = d.sectX ?? entry.sprite.x
+        const baseY = d.sectY ?? entry.sprite.y
+        entry.targetX = Phaser.Math.Clamp(baseX + (Math.random() - 0.5) * range * 2, 30, SECT_W - 30)
+        entry.targetY = Phaser.Math.Clamp(baseY + (Math.random() - 0.5) * range * 2, 30, SECT_H - 30)
+      }
+
+      // 向目标点移动
+      const dx = entry.targetX - entry.sprite.x
+      const dy = entry.targetY - entry.sprite.y
+      const dist = Math.hypot(dx, dy)
+      if (dist > 3) {
+        const speed = 20 // 像素/秒
+        const vx = (dx / dist) * speed * (delta / 1000)
+        const vy = (dy / dist) * speed * (delta / 1000)
+        entry.sprite.x += vx
+        entry.sprite.y += vy
+        entry.nameText.setPosition(entry.sprite.x, entry.sprite.y - 28)
+        entry.shadow.setPosition(entry.sprite.x + 1, entry.sprite.y + 8)
+        // 走动时轻微上下浮动
+        const bob = Math.abs(Math.sin(t * 6 + phase)) * 1.5
+        entry.sprite.y -= bob
+      }
+    }
+  }
+
+  /** 弟子间随机互动对话 */
+  private tryDiscipleChat(): void {
+    // 找一对距离较近的空闲弟子
+    const idle = this.discipleSprites.filter(ds => {
+      const d = this.sect.disciples.find(x => x.uid === ds.uid)
+      return d && (d.status === 'idle') && ds.sprite.alpha > 0.05
+    })
+    if (idle.length < 2) return
+
+    // 随机选一对
+    const a = idle[Math.floor(Math.random() * idle.length)]
+    let b = idle[Math.floor(Math.random() * idle.length)]
+    let attempts = 0
+    while (b === a && attempts < 5) {
+      b = idle[Math.floor(Math.random() * idle.length)]
+      attempts++
+    }
+    if (b === a) return
+
+    const dist = Phaser.Math.Distance.Between(a.sprite.x, a.sprite.y, b.sprite.x, b.sprite.y)
+    if (dist > 80) return // 太远不互动
+
+    const dA = this.sect.disciples.find(x => x.uid === a.uid)
+    const dB = this.sect.disciples.find(x => x.uid === b.uid)
+    if (!dA || !dB) return
+
+    // 生成对话内容
+    const chats = this.generateDiscipleChat(dA, dB)
+    if (chats.length === 0) return
+
+    // 显示对话气泡
+    this.showDiscipleBubble(a.sprite.x, a.sprite.y - 35, chats[0], dA.name)
+    if (chats.length > 1) {
+      this.time.delayedCall(2500, () => {
+        this.showDiscipleBubble(b.sprite.x, b.sprite.y - 35, chats[1], dB.name)
+      })
+    }
+  }
+
+  /** 生成弟子间对话内容 */
+  private generateDiscipleChat(dA: Disciple, dB: Disciple): string[] {
+    const topics: string[] = []
+
+    // 修炼交流
+    if (dA.status === 'cultivating' || dB.status === 'cultivating') {
+      topics.push(
+        `师兄，我这功法修炼到瓶颈了，可有指点？`,
+        `${dA.name}，修炼之道在于心境，不可操之过急。`,
+      )
+    }
+
+    // 性格相关
+    if (dA.personality.includes('好战') && dB.personality.includes('好战')) {
+      topics.push(`${dB.name}，来比划比划？`, `正合我意！`)
+    }
+    if (dA.personality.includes('贪婪')) {
+      topics.push(`听说灵脉阵下面藏着宝贝...`, `${dB.name}你别乱来，小心掌门责罚。`)
+    }
+    if (dA.personality.includes('孤僻') && dB.personality.includes('热情')) {
+      topics.push(`${dA.name}，怎么又是你...`, `哈哈，咱们有缘嘛！一起去灵药园走走？`)
+    }
+
+    // 境界差距
+    if (dA.realm > dB.realm) {
+      topics.push(`${dB.name}师弟，可要勤加修炼，莫要荒废了。`, `师兄教训的是。`)
+    } else if (dA.realm < dB.realm) {
+      topics.push(`${dA.name}，你根骨不凡，假以时日必成大器。`, `多谢师兄吉言！`)
+    }
+
+    // 出身相关
+    if (dA.background === '寒门子弟' && dB.background === '世家嫡子') {
+      topics.push(`你们世家的功法就是不一样。`, `哪里哪里，修行之路不分出身。`)
+    }
+    if (dA.background === '魔修遗脉') {
+      topics.push(`...你不会告诉别人我的身世吧？`, `放心，宗门之内不分彼此。`)
+    }
+
+    // 通用日常
+    topics.push(`今天灵气似乎格外充沛。`, `是啊，正适合修炼。`)
+    topics.push(`听说大地图上又出了新的秘境。`, `等宗门实力够了，一起去探索。`)
+    topics.push(`掌门最近在闭关吗？好久没见了。`, `应该在修炼突破吧。`)
+    topics.push(`炼丹房的丹药又被偷吃了...`, `咳，不是我。`)
+    topics.push(`你看天边那道剑光，是哪位前辈？`, `或许是哪位大能路过。`)
+
+    // 随机选一组
+    const idx = Math.floor(Math.random() * topics.length)
+    const lines: string[] = []
+    if (idx % 2 === 0 && idx + 1 < topics.length) {
+      lines.push(topics[idx])
+      lines.push(topics[idx + 1])
+    } else if (idx > 0) {
+      lines.push(topics[idx - 1])
+      lines.push(topics[idx])
+    } else {
+      lines.push(topics[0])
+      if (topics.length > 1) lines.push(topics[1])
+    }
+    return lines
+  }
+
+  /** 显示弟子对话气泡 */
+  private showDiscipleBubble(x: number, y: number, text: string, speakerName: string): void {
+    const bubble = this.add.container(x, y).setDepth(6)
+
+    const txt = this.add.text(0, 0, text, {
+      fontSize: '8px',
+      color: '#ffffff',
+      align: 'center',
+      wordWrap: { width: 100 },
+    }).setOrigin(0.5)
+
+    const w = txt.width + 10
+    const h = txt.height + 6
+
+    const bg = this.add.graphics()
+    bg.fillStyle(0x000000, 0.8)
+    bg.fillRoundedRect(-w / 2, -h / 2, w, h, 4)
+    bg.lineStyle(1, 0xffffff, 0.3)
+    bg.strokeRoundedRect(-w / 2, -h / 2, w, h, 4)
+
+    bubble.add(bg)
+    bubble.add(txt)
+
+    this.tweens.add({
+      targets: bubble,
+      y: y - 10,
+      alpha: { from: 0, to: 1 },
+      duration: 300,
+      ease: 'Back.out',
+    })
+
+    this.time.delayedCall(4000, () => {
+      this.tweens.add({
+        targets: bubble,
+        alpha: 0,
+        duration: 500,
+        onComplete: () => bubble.destroy(),
+      })
+    })
+  }
+
   private updateResourceDisplay() {
     if (!this.resText) return
     const r = this.sect.resources
@@ -686,6 +1029,7 @@ export class SectScene extends Phaser.Scene {
       onPlaceNpc: () => { this.startNpcPlacement() },
       onManageDisciples: () => { this.openDisciplePanel() },
       onDiplomacy: () => { this.openDiplomacyPanel() },
+      onRevengeList: () => { this.openRevengeList() },
     })
 
     openSectDashboard(dashData)
@@ -1070,8 +1414,8 @@ export class SectScene extends Phaser.Scene {
     const cdRemain = Math.max(0, Math.ceil((sect.recruitCooldown - now) / 1000))
 
     let candidate: RecruitCandidate | null = null
-    if (this.recruitCandidate) {
-      const c = this.recruitCandidate
+    if (this.sect.recruitCandidate) {
+      const c = this.sect.recruitCandidate
       const rootInfo = SPIRIT_ROOTS[c.root]
       candidate = {
         name: c.name,
@@ -1138,25 +1482,26 @@ export class SectScene extends Phaser.Scene {
         if (d) this.openPromotionPanel(d)
       },
       onRecruitAccept: () => {
-        if (this.recruitCandidate) {
+        if (this.sect.recruitCandidate) {
           // 确认招募当前候补
-          const c = this.recruitCandidate
+          const c = this.sect.recruitCandidate
           sect.disciples.push(c)
           sect.recruitCooldown = Date.now() + 300000
+          addDiscipleEvent(sect, c, 'recruit', `${c.name}拜入山门，成为${rankName(c)}弟子`)
           saveGame(this.state)
           sfx('sfx_sect_recruit', 0.6)
           toast(`${c.name} 已加入宗门！`, '#34d399')
-          this.recruitCandidate = null
+          this.sect.recruitCandidate = null
         } else {
           // 生成新候补
-          this.recruitCandidate = generateDisciple(this.rng, sect.level)
+          this.sect.recruitCandidate = generateDisciple(this.rng, sect.level)
         }
         this.refreshDiscipleDashboard()
       },
       onRecruitReject: () => {
-        if (this.recruitCandidate) {
+        if (this.sect.recruitCandidate) {
           sect.recruitCooldown = Date.now() + 60000
-          this.recruitCandidate = null
+          this.sect.recruitCandidate = null
           toast('婉拒了来人', '#a3a3a3')
         }
         this.refreshDiscipleDashboard()
@@ -1435,6 +1780,7 @@ export class SectScene extends Phaser.Scene {
         d.status = 'dispatched'
         d.questId = quest.id
         d.questStartTime = Date.now()
+        addDiscipleEvent(this.sect, d, 'quest_start', `出发执行「${quest.name}」`, { questId: quest.id })
         saveGame(this.state)
         sfx('sfx_sect_dispatch', 0.5)
         toast(`已派遣 ${d.name} 执行「${quest.name}」`, '#60a5fa')
@@ -1450,11 +1796,11 @@ export class SectScene extends Phaser.Scene {
     const accum = delta / 1000
 
     let instructorBonus = 0
-    let elderBonus = 0
     let grandElderBonus = 0
     for (const d of this.sect.disciples) {
       if (d.role === 'instructor') instructorBonus = 0.30
       if (d.rank === 4) grandElderBonus = 0.15
+      if (instructorBonus > 0 && grandElderBonus > 0) break // 都已找到，提前退出
     }
     for (const d of this.sect.disciples) {
       if (d.status !== 'cultivating') continue
@@ -1476,6 +1822,7 @@ export class SectScene extends Phaser.Scene {
         d.status = 'idle'
         d.retreatEndTime = 0
         this.checkDiscipleBreakthrough(d)
+        addDiscipleEvent(this.sect, d, 'retreat_end', `闭关结束，获得 ${expGain} 经验`)
         toast(`${d.name} 闭关结束，获得 ${expGain} 经验`, '#a78bfa')
         saveGame(this.state)
       }
@@ -1489,10 +1836,46 @@ export class SectScene extends Phaser.Scene {
           }
         }
       }
+      // 修炼疲劳结算
+      if (d.status === 'cultivating' && d.cultivateStartTime > 0) {
+        const cultElapsed = (now - d.cultivateStartTime) / 1000 // 秒
+        // 每60秒疲劳+10，修炼获得经验
+        const fatigueGain = (cultElapsed / 60) * 10
+        const expGain = Math.floor(cultElapsed * 0.5) // 每秒0.5经验
+        d.fatigue = Math.min(100, d.fatigue + fatigueGain)
+        d.exp += expGain
+        d.cultivateStartTime = now // 重置计时，避免重复累加
+        this.checkDiscipleBreakthrough(d)
+
+        // 疲劳满100自动休息
+        if (d.fatigue >= 100) {
+          d.status = 'idle'
+          d.cultivateStartTime = 0
+          addDiscipleEvent(this.sect, d, 'cultivate', `${d.name}修炼过度，疲惫休息`)
+          toast(`${d.name} 修炼过度，需要休息`, '#f0c987')
+          this.recreateDisciples()
+          saveGame(this.state)
+        }
+      }
+      // 空闲弟子恢复疲劳
+      if (d.status === 'idle' && d.fatigue > 0) {
+        // 每秒恢复约0.5疲劳
+        const recover = 0.5 * (this.lastTaskCheck > 0 ? (now - this.lastTaskCheck) / 1000 : 0)
+        d.fatigue = Math.max(0, d.fatigue - recover)
+      }
     }
+    this.lastTaskCheck = now
   }
 
   private completeQuest(d: Disciple, quest: SectQuest) {
+    // 先检查是否遭遇袭击（影响任务结果）
+    const ambush = checkAmbush(d, quest.type, this.rng)
+
+    if (ambush) {
+      this.handleAmbush(d, quest, ambush)
+      return
+    }
+
     const rate = questSuccessRate(quest, d)
     const success = this.rng() < rate
     d.status = 'idle'
@@ -1510,15 +1893,435 @@ export class SectScene extends Phaser.Scene {
       this.sect.resources.prestige += r.prestige
       d.loyalty = Math.min(100, d.loyalty + 3)
       d.affection = Math.min(100, d.affection + 2)
+      addDiscipleEvent(this.sect, d, 'quest_success',
+        `完成「${quest.name}」，获得灵石${r.stone}、声望${r.prestige}`,
+        { questId: quest.id, stone: r.stone, prestige: r.prestige })
       sfx('sfx_quest_complete', 0.6)
       toast(`${d.name} 完成「${quest.name}」，获得奖励！`, '#34d399')
     } else {
       d.loyalty = Math.max(0, d.loyalty - 5)
+      addDiscipleEvent(this.sect, d, 'quest_fail',
+        `执行「${quest.name}」失败，受挫而归`,
+        { questId: quest.id })
       sfx('sfx_hit', 0.3)
       toast(`${d.name} 执行「${quest.name}」失败，忠诚下降`, '#f87171')
     }
     this.updateResourceDisplay()
     saveGame(this.state)
+  }
+
+  /** 处理弟子遇袭事件 */
+  private handleAmbush(d: Disciple, quest: SectQuest, ambush: AmbushEvent) {
+    d.status = 'idle'
+    d.questId = null
+
+    const attackerName = ambush.attackerName
+    const resultName = ambushResultName(ambush.result)
+    const questName = quest.name
+
+    switch (ambush.result) {
+      case 'victory':
+        // 击退敌人：任务仍可完成，但获得额外战利品和经验
+        d.exp += Math.floor(quest.rewards.exp * 1.5)
+        this.checkDiscipleBreakthrough(d)
+        const r = quest.rewards
+        const bonusStone = Math.floor(ambush.attackerPower * 0.3)
+        this.sect.resources.stone += r.stone + bonusStone
+        this.sect.resources.herb += r.herb
+        this.sect.resources.ore += r.ore
+        this.sect.resources.prestige += r.prestige + 5
+        d.loyalty = Math.min(100, d.loyalty + 5)
+        d.affection = Math.min(100, d.affection + 3)
+        addDiscipleEvent(this.sect, d, 'quest_success',
+          `路遇${attackerName}，力战击退！完成「${questName}」并缴获灵石${bonusStone}`,
+          { questId: quest.id, attacker: attackerName, bonusStone })
+        sfx('sfx_quest_complete', 0.6)
+        toast(`${d.name} 击退${attackerName}，超额完成任务！`, '#fbbf24')
+        break
+
+      case 'injured':
+        // 负伤而归：任务失败，忠诚下降，需休养
+        d.loyalty = Math.max(0, d.loyalty - 8)
+        // 损失部分资源
+        if (ambush.lootLost.stone) {
+          this.sect.resources.stone = Math.max(0, this.sect.resources.stone - ambush.lootLost.stone)
+        }
+        if (ambush.lootLost.herb) {
+          this.sect.resources.herb = Math.max(0, this.sect.resources.herb - ambush.lootLost.herb)
+        }
+        if (ambush.lootLost.ore) {
+          this.sect.resources.ore = Math.max(0, this.sect.resources.ore - ambush.lootLost.ore)
+        }
+        addDiscipleEvent(this.sect, d, 'attacked',
+          `执行「${questName}」途中遭${attackerName}袭击，负伤而归`,
+          { questId: quest.id, attacker: attackerName, damage: ambush.damage })
+        // 记录仇人
+        this.addRevengeTarget(attackerName, ambush, d.name, d.uid, 'attacked')
+        sfx('sfx_hit', 0.4)
+        toast(`${d.name} 遭${attackerName}袭击，负伤而归！`, '#f87171')
+        // 弹出报仇通知
+        this.showAmbushNotification(d.name, attackerName, ambush, 'injured')
+        break
+
+      case 'fled':
+        // 侥幸逃脱：任务失败，丢失部分物资
+        d.loyalty = Math.max(0, d.loyalty - 3)
+        if (ambush.lootLost.stone) {
+          this.sect.resources.stone = Math.max(0, this.sect.resources.stone - ambush.lootLost.stone)
+        }
+        addDiscipleEvent(this.sect, d, 'attacked',
+          `执行「${questName}」途中遇${attackerName}，侥幸逃脱但遗失物资`,
+          { questId: quest.id, attacker: attackerName, fled: true })
+        this.addRevengeTarget(attackerName, ambush, d.name, d.uid, 'attacked')
+        sfx('sfx_hit', 0.2)
+        toast(`${d.name} 遇${attackerName}，侥幸逃脱`, '#f0c987')
+        break
+
+      case 'killed':
+        // 不幸遇害：弟子阵亡，任务失败
+        addDiscipleEvent(this.sect, d, 'killed',
+          `执行「${questName}」时遭${attackerName}杀害，不幸陨落`,
+          { questId: quest.id, attacker: attackerName })
+        this.addRevengeTarget(attackerName, ambush, d.name, '', 'killed')
+        // 从弟子列表中移除
+        const idx = this.sect.disciples.indexOf(d)
+        if (idx >= 0) this.sect.disciples.splice(idx, 1)
+        sfx('sfx_boss_death', 0.5)
+        toast(`${d.name} 遭${attackerName}杀害，不幸陨落...`, '#f87171')
+        // 宗门声望下降
+        this.sect.resources.prestige = Math.max(0, this.sect.resources.prestige - 10)
+        // 弹出报仇通知
+        this.showAmbushNotification(d.name, attackerName, ambush, 'killed')
+        break
+    }
+
+    this.updateResourceDisplay()
+    saveGame(this.state)
+  }
+
+  /** 添加报仇目标 */
+  private addRevengeTarget(
+    attackerName: string,
+    ambush: AmbushEvent,
+    victimName: string,
+    victimUid: string,
+    eventType: 'attacked' | 'killed',
+  ): void {
+    if (!this.sect.revengeTargets) this.sect.revengeTargets = []
+    this.sect.revengeTargets.push({
+      id: 'rev_' + Date.now().toString(36) + '_' + Math.floor(Math.random() * 1000).toString(36),
+      attackerName,
+      attackerType: ambush.attackerType,
+      attackerRealm: ambush.attackerRealm,
+      attackerPower: ambush.attackerPower,
+      victimName,
+      victimUid,
+      eventType,
+      timestamp: Date.now(),
+      resolved: false,
+    })
+    // 保留最近 20 条
+    if (this.sect.revengeTargets.length > 20) {
+      this.sect.revengeTargets = this.sect.revengeTargets.slice(-20)
+    }
+  }
+
+  /** 弹出遇袭通知面板 */
+  private async showAmbushNotification(
+    discipleName: string,
+    attackerName: string,
+    ambush: AmbushEvent,
+    eventType: 'injured' | 'killed',
+  ): Promise<void> {
+    const lines: string[] = []
+    if (eventType === 'killed') {
+      lines.push(`弟子「${discipleName}」在外出任务时遭${attackerName}袭击，不幸陨落！`)
+      lines.push(`敌修境界：${REALM_NAMES[ambush.attackerRealm]}`)
+      lines.push(`敌修战力：约${ambush.attackerPower}`)
+      lines.push('')
+      lines.push('宗门声望下降10点，弟子弟心受挫。')
+      lines.push('是否前往追杀仇人，为弟子报仇？')
+    } else {
+      lines.push(`弟子「${discipleName}」在外出途中遭${attackerName}袭击，负伤而归。`)
+      lines.push(`敌修境界：${REALM_NAMES[ambush.attackerRealm]}`)
+      lines.push(`敌修战力：约${ambush.attackerPower}`)
+      lines.push('')
+      lines.push('是否前往追杀仇人，为弟子雪耻？')
+    }
+
+    const result = await showDialog('弟子遇袭', lines, [
+      { label: '前往报仇', value: 'revenge' },
+      { label: '暂且作罢', value: 'ignore' },
+    ])
+
+    if (result === 'revenge') {
+      await this.startRevengeBattle(attackerName, ambush)
+    }
+    input.clearQueues()
+  }
+
+  /** 发起复仇战斗 */
+  private async startRevengeBattle(attackerName: string, ambush: AmbushEvent): Promise<void> {
+    // 根据敌人类型生成战斗
+    const enemyHp = Math.floor(ambush.attackerPower * 2 + 200)
+    const enemyAtk = Math.floor(ambush.attackerPower * 0.3 + 20)
+
+    const lines: string[] = []
+    lines.push(`你追踪至一处荒野，${attackerName}正在此处歇息。`)
+    lines.push(`对方察觉到你的杀意，拔出法器迎面而来！`)
+    lines.push(`敌人境界：${REALM_NAMES[ambush.attackerRealm]}`)
+    lines.push(`敌人体魄：${enemyHp}`)
+    lines.push(`敌人攻击：${enemyAtk}`)
+
+    await showDialog('仇人现身', lines, [{ label: '出手', value: 'fight' }])
+
+    // 进入地牢战斗场景
+    this.scene.start('Dungeon', {
+      state: this.state,
+      mode: 'npc_combat' as any,
+      npcEnemy: {
+        name: attackerName,
+        hp: enemyHp,
+        atk: enemyAtk,
+        realm: ambush.attackerRealm,
+        sprite: 'enemy_bandit',
+        isRevengeTarget: true,
+      },
+    })
+
+    // 标记报仇目标为已处理（将在战斗胜利后清除）
+    const target = this.sect.revengeTargets?.find(t => t.attackerName === attackerName && !t.resolved)
+    if (target) {
+      target.resolved = true
+      saveGame(this.state)
+    }
+
+    stopBgm()
+  }
+
+  /** 从场景内点击弟子打开详情面板（背景/性格/道途/事件日志 + 灵石灌顶） */
+  private async openDiscipleDetail(uid: string) {
+    input.clearQueues()
+    const d = this.sect.disciples.find(x => x.uid === uid)
+    if (!d) return
+
+    const rootInfo = SPIRIT_ROOTS[d.root]
+    const tierLabel = d.rootTier === 'epic' ? '变异' : d.rootTier === 'rare' ? '稀有' : '普通'
+    const rankDef = DISCIPLE_RANKS[d.rank]
+    const eff = effectiveStats(d)
+    const power = disciplePower(d)
+    const statusLabel = d.status === 'idle' ? '空闲' : d.status === 'cultivating' ? '修炼中' : d.status === 'retreating' ? '闭关中' : '派遣中'
+
+    const lines: string[] = []
+    lines.push(`【${rankDef?.name ?? '外门'}】${d.name}`)
+    lines.push(`境界：${REALM_NAMES[d.realm]}（${d.exp}/${d.expToNext}）`)
+    lines.push(`灵根：${rootInfo.name}（${tierLabel}）`)
+    lines.push(`战力：${power}  攻${eff.atk} 防${eff.def} 体${eff.maxHp}`)
+    lines.push(`状态：${statusLabel}`)
+    lines.push(`忠诚：${d.loyalty}  好感：${d.affection}  疲劳：${Math.floor(d.fatigue)}/100`)
+    lines.push('')
+    lines.push('—— 出身履历 ——')
+    lines.push(`道途：${d.daoPath}`)
+    lines.push(`出身：${d.background}`)
+    lines.push(`体质：${d.physique}`)
+    lines.push(`志向：${d.lifeGoal}`)
+    lines.push(`性格：${d.personality.join('、')}`)
+    lines.push(`天赋：${d.talents.map(t => TALENTS[t as keyof typeof TALENTS]?.name ?? t).join('、') || '无'}`)
+
+    // 装备
+    const eqParts: string[] = []
+    if (d.equipment.weapon) eqParts.push(`武:${d.equipment.weapon.name}`)
+    if (d.equipment.head) eqParts.push(`头:${d.equipment.head.name}`)
+    if (d.equipment.armor) eqParts.push(`甲:${d.equipment.armor.name}`)
+    if (d.equipment.boots) eqParts.push(`靴:${d.equipment.boots.name}`)
+    if (d.equipment.charm) eqParts.push(`饰:${d.equipment.charm.name}`)
+    if (eqParts.length > 0) {
+      lines.push('')
+      lines.push(`装备：${eqParts.join(' ')}`)
+    }
+
+    // 最近事件（5条）
+    const allEvents = this.sect.discipleEvents.filter(e => e.discipleUid === d.uid)
+    const events = allEvents.slice(0, 5)
+    if (events.length > 0) {
+      lines.push('')
+      lines.push(`—— 近期动态（共${allEvents.length}条）——`)
+      for (const ev of events) {
+        const timeStr = new Date(ev.timestamp).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
+        lines.push(`[${timeStr}] ${ev.description}`)
+      }
+    }
+
+    const options: { label: string; value: string }[] = []
+
+    // 灵石灌顶（仅非派遣/非闭关状态可用）
+    if (d.status === 'idle' || d.status === 'cultivating') {
+      const cost = stoneCultivateCost(d.realm, d.exp, d.expToNext)
+      options.push({ label: `灵石灌顶（${cost}灵石→满级）`, value: 'stone' })
+    }
+
+    options.push({ label: '指点（+50经验）', value: 'guide' })
+    if (d.status === 'idle') {
+      if (d.fatigue >= 80) {
+        toast(`${d.name} 疲劳过高，需要休息`, '#f87171')
+      } else {
+        options.push({ label: '开始修炼', value: 'cultivate' })
+      }
+    }
+    if (d.status === 'cultivating') options.push({ label: '停止修炼', value: 'stop_cultivate' })
+    if (d.status === 'idle' && d.realm >= 1) options.push({ label: '闭关修炼', value: 'retreat' })
+    options.push({ label: '装备法器', value: 'equip' })
+    options.push({ label: '派遣任务', value: 'dispatch' })
+    if (allEvents.length > 5) options.push({ label: `查看全部事件（${allEvents.length}条）`, value: 'all_events' })
+    options.push({ label: '关闭', value: 'close' })
+
+    const result = await showDialog(d.name, lines, options)
+    if (result === 'stone') {
+      await this.stoneCultivateDisciple(d)
+      this.openDiscipleDetail(d.uid) // 刷新面板
+      return
+    }
+    if (result === 'guide') {
+      if (Date.now() < d.guidanceCooldown) {
+        toast('指点冷却中', '#f87171')
+      } else {
+        await this.guideDisciple(d)
+        addDiscipleEvent(this.sect, d, 'guidance', `掌门亲自指点，${d.name}受益匪浅`)
+        saveGame(this.state)
+      }
+      this.openDiscipleDetail(d.uid)
+      return
+    }
+    if (result === 'cultivate') {
+      d.status = 'cultivating'
+      d.cultivateStartTime = Date.now()
+      addDiscipleEvent(this.sect, d, 'cultivate', `${d.name}开始潜心修炼`)
+      saveGame(this.state)
+      toast(`${d.name} 开始修炼`, '#a78bfa')
+      this.recreateDisciples()
+    }
+    if (result === 'stop_cultivate') {
+      d.status = 'idle'
+      d.cultivateStartTime = 0
+      saveGame(this.state)
+      toast(`${d.name} 停止修炼`, '#fbbf24')
+      this.recreateDisciples()
+    }
+    if (result === 'retreat') {
+      await this.startRetreat(d)
+      this.recreateDisciples()
+    }
+    if (result === 'equip') {
+      await this.openDiscipleEquip(d)
+      this.openDiscipleDetail(d.uid)
+      return
+    }
+    if (result === 'dispatch') {
+      await this.dispatchDisciple(d)
+      this.recreateDisciples()
+    }
+    if (result === 'all_events') {
+      await this.showDiscipleEventLog(d)
+      this.openDiscipleDetail(d.uid)
+      return
+    }
+    input.clearQueues()
+  }
+
+  /** 显示弟子完整事件日志（分页） */
+  private async showDiscipleEventLog(d: Disciple): Promise<void> {
+    const allEvents = this.sect.discipleEvents.filter(e => e.discipleUid === d.uid)
+    if (allEvents.length === 0) {
+      await showDialog(`${d.name}·事件日志`, ['暂无事件记录'], [{ label: '关闭', value: 'close' }])
+      input.clearQueues()
+      return
+    }
+
+    const PAGE_SIZE = 10
+    let page = 0
+    const totalPages = Math.ceil(allEvents.length / PAGE_SIZE)
+
+    while (true) {
+      const start = page * PAGE_SIZE
+      const pageEvents = allEvents.slice(start, start + PAGE_SIZE)
+      const lines: string[] = [`—— ${d.name}·事件日志（第${page + 1}/${totalPages}页，共${allEvents.length}条）——`, '']
+      for (const ev of pageEvents) {
+        const timeStr = new Date(ev.timestamp).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+        const typeLabel = this.eventTypeLabel(ev.type)
+        lines.push(`[${timeStr}] ${typeLabel} ${ev.description}`)
+      }
+
+      const options: { label: string; value: string }[] = []
+      if (page > 0) options.push({ label: '上一页', value: 'prev' })
+      if (page < totalPages - 1) options.push({ label: '下一页', value: 'next' })
+      options.push({ label: '关闭', value: 'close' })
+
+      const result = await showDialog(`${d.name}·事件日志`, lines, options)
+      if (result === 'prev' && page > 0) page--
+      else if (result === 'next' && page < totalPages - 1) page++
+      else break
+    }
+    input.clearQueues()
+  }
+
+  /** 事件类型中文标签 */
+  private eventTypeLabel(type: string): string {
+    const labels: Record<string, string> = {
+      recruit: '招募',
+      cultivate: '修炼',
+      breakthrough: '突破',
+      quest_start: '出发',
+      quest_success: '完成',
+      quest_fail: '失败',
+      attacked: '遇袭',
+      killed: '遇害',
+      rescued: '获救',
+      promote: '晋升',
+      retreat_start: '闭关',
+      retreat_end: '出关',
+      spar_win: '切磋胜',
+      spar_lose: '切磋败',
+      guidance: '指点',
+    }
+    return labels[type] ? `[${labels[type]}]` : ''
+  }
+
+  /** 灵石灌顶弟子 */
+  private async stoneCultivateDisciple(d: Disciple) {
+    const cost = stoneCultivateCost(d.realm, d.exp, d.expToNext)
+    if (this.sect.resources.stone < cost) {
+      toast(`灵石不足（需要${cost}）`, '#f87171')
+      return
+    }
+    const result = await showDialog('灵石灌顶', [
+      `消耗 ${cost} 灵石，将 ${d.name} 推升至下一境界`,
+      `<span class="dim">当前：${REALM_NAMES[d.realm]}（${d.exp}/${d.expToNext}）</span>`,
+    ], [{ label: '确认灌顶', value: 'yes' }, { label: '取消', value: 'no' }])
+
+    if (result === 'yes') {
+      this.sect.resources.stone -= cost
+      const res = stoneCultivate(d, cost)
+      addDiscipleEvent(this.sect, d, res.breakthrough ? 'breakthrough' : 'cultivate',
+        res.breakthrough
+          ? `灵石灌顶，一举突破至${REALM_NAMES[d.realm]}！`
+          : `灵石灌顶，获得${res.expGained}点经验`)
+      this.checkDiscipleBreakthrough(d)
+      saveGame(this.state)
+      sfx('sfx_levelup')
+      toast(res.breakthrough ? `${d.name} 突破至${REALM_NAMES[d.realm]}！` : `${d.name} 获得 ${res.expGained} 经验`, '#fbbf24')
+    }
+    input.clearQueues()
+  }
+
+  /** 重建弟子渲染（状态变化后调用） */
+  private recreateDisciples(): void {
+    for (const ds of this.discipleSprites) {
+      ds.sprite.destroy()
+      ds.nameText.destroy()
+      ds.shadow.destroy()
+    }
+    this.discipleSprites = []
+    this.renderDisciples()
   }
 
   private checkDiscipleBreakthrough(d: Disciple) {
@@ -2432,6 +3235,52 @@ export class SectScene extends Phaser.Scene {
     }
   }
 
+  // ===== 仇人名录 =====
+
+  private async openRevengeList() {
+    input.clearQueues()
+    const targets = (this.sect.revengeTargets ?? []).filter(t => !t.resolved)
+
+    if (targets.length === 0) {
+      await showDialog('仇人名录', ['目前没有待报仇的仇人。'], [{ label: '关闭', value: 'close' }])
+      input.clearQueues()
+      return
+    }
+
+    const lines: string[] = ['—— 仇人名录 ——', '']
+    const options: { label: string; value: string }[] = []
+
+    for (const t of targets) {
+      const typeLabel = t.attackerType === 'bandit' ? '盗匪' : t.attackerType === 'demon' ? '魔修' : t.attackerType === 'beast' ? '妖兽' : '邪修'
+      const eventLabel = t.eventType === 'killed' ? '杀害' : '袭击'
+      lines.push(`${t.attackerName}（${typeLabel}·${REALM_NAMES[t.attackerRealm]}）`)
+      lines.push(`  战力约${t.attackerPower}，${eventLabel}弟子「${t.victimName}」`)
+      lines.push(`  时间：${new Date(t.timestamp).toLocaleString('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}`)
+      lines.push('')
+      options.push({ label: `追杀${t.attackerName}`, value: t.id })
+    }
+
+    options.push({ label: '关闭', value: 'close' })
+
+    const result = await showDialog('仇人名录', lines, options)
+    if (result !== 'close' && result) {
+      const target = targets.find(t => t.id === result)
+      if (target) {
+        const ambush: AmbushEvent = {
+          attackerName: target.attackerName,
+          attackerType: target.attackerType,
+          attackerRealm: target.attackerRealm,
+          attackerPower: target.attackerPower,
+          result: target.eventType === 'killed' ? 'killed' : 'injured',
+          damage: 0,
+          lootLost: {},
+        }
+        await this.startRevengeBattle(target.attackerName, ambush)
+      }
+    }
+    input.clearQueues()
+  }
+
   // ===== 外交系统 =====
 
   private async openDiplomacyPanel() {
@@ -2714,7 +3563,7 @@ export class SectScene extends Phaser.Scene {
       }
       case 'wandering_cultivator': {
         if (sect.disciples.length < discipleCapacity(sect.buildings.disciple_room ?? 0) && Date.now() > sect.recruitCooldown) {
-          this.recruitCandidate = generateDisciple(this.rng, sect.level)
+          this.sect.recruitCandidate = generateDisciple(this.rng, sect.level)
           sfx('sfx_wandering_cultivator', 0.5)
           toast('有游方修士叩访山门，可往弟子堂招募', '#34d399')
         } else {
@@ -2736,6 +3585,11 @@ export class SectScene extends Phaser.Scene {
           d.loyalty = Math.min(100, d.loyalty + 5)
           sfx('sfx_treasure_find', 0.5)
           toast(`${d.name} 在后山发现矿脉，矿石 +${oreGain} 木材 +${woodGain}`, '#a78bfa')
+        } else {
+          // 全员在外奔波，给宗门一笔小保底收益
+          const stone = 20 + sect.level * 5
+          sect.resources.stone += stone
+          toast(`弟子们皆在外奔波，意外收获了一些灵石 +${stone}`, '#a78bfa')
         }
         break
       }

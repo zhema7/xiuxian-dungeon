@@ -231,8 +231,8 @@ export function getWorldEvolutionState(state: GameState): WorldEvolutionState {
     totalNpcBreakthroughs: state.npcLifeEventsLog?.filter(e => e.eventType === 'breakthrough').length || 0,
     totalSectWars: state.totalSectWarsWon || 0,
     totalAnnualEvents: annualEvents.length,
-    activeAlliances: 0,
-    fallenSects: 0,
+    activeAlliances: (state as any).alliances?.filter((a: any) => a.status === 'active').length || 0,
+    fallenSects: state.aiSects?.filter(s => s.defeated).length || 0,
     powerBalance: morality,
   }
 }

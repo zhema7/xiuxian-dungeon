@@ -5,7 +5,7 @@ import Phaser from 'phaser'
 import { input } from '../input'
 import { saveGame, type GameState } from '../state'
 import { toast, showDialog, dialogOpen, panelOpen, resetControls, setFloorText, updateHUD } from '../ui'
-import { sfx, playBgm, stopBgm } from '../audio'
+import { sfx, playBgm, stopBgm, BGM_SECT_WAR } from '../audio'
 import { BUILDINGS, BUILDING_IDS, type SectData, type BuildingId } from '../sect-data'
 import { evaluateSectPower } from '../sect-war'
 import type { AiSect } from '../ai-sect-data'
@@ -28,6 +28,9 @@ const PATH: { x: number; y: number }[] = [
 interface TowerUnit {
   sprite: Phaser.GameObjects.Rectangle
   rangeCircle: Phaser.GameObjects.Arc
+  hpBar: Phaser.GameObjects.Rectangle
+  hp: number
+  maxHp: number
   id: string
   name: string
   atk: number
@@ -36,7 +39,7 @@ interface TowerUnit {
   lastFire: number
   gridX: number
   gridY: number
-  type: 'building' | 'disciple' | 'formation'
+  type: 'building' | 'disciple' | 'formation' | 'player'
 }
 
 interface EnemyUnit {
@@ -89,6 +92,7 @@ export class SectWarScene extends Phaser.Scene {
     this.isDefense = data.isDefense
 
     sfx('sfx_boss_spawn', 0.6)
+    playBgm(BGM_SECT_WAR) // 宗门战专属BGM：仙魔血战
     setFloorText(`宗门防御战 · vs ${this.enemySect.name}`)
 
     document.getElementById('hud')!.style.display = 'block'
@@ -116,6 +120,26 @@ export class SectWarScene extends Phaser.Scene {
 
     this.updateInfoText()
     toast(`${this.isDefense ? '防守' : '进攻'}战开始！共 ${this.totalWaves} 波`, '#f87171')
+
+    // 首次教学
+    if (!this.state.sectWarTutorialSeen) {
+      this.state.sectWarTutorialSeen = true
+      saveGame(this.state)
+      this.time.delayedCall(500, () => this.showTutorial())
+    }
+  }
+
+  private async showTutorial() {
+    await showDialog('宗门战教学', [
+      '【宗门战规则】',
+      '1. 敌方从地图上方沿路径进攻主殿',
+      '2. 点击「部署」可派遣弟子或亲自上阵',
+      '3. 已建造的建筑自动防御（有血量，可被摧毁）',
+      '4. 击退所有波次即为胜利',
+      '5. 弟子被击败不会真正死亡，仅退场',
+      '提示：将弟子部署在路径拐角处效果最佳！',
+    ], [{ label: '明白了', value: 'ok' }])
+    input.clearQueues()
   }
 
   private renderMap() {
@@ -172,14 +196,17 @@ export class SectWarScene extends Phaser.Scene {
     const atk = 15 + level * 8
     const range = TILE * (2 + level * 0.3)
     const fireRate = Math.max(400, 1200 - level * 80)
+    const maxHp = id === 'main_hall' ? 500 + level * 200 : 150 + level * 50
 
     const sprite = this.add.rectangle(cx, cy, TILE * 0.8, TILE * 0.8, color, 0.7)
       .setDepth(5).setStrokeStyle(1, 0xffffff, 0.5)
     const rangeCircle = this.add.arc(cx, cy, range, 0x00ff00, 0.05)
       .setStrokeStyle(1, 0x00ff00, 0.2).setDepth(4)
+    const hpBar = this.add.rectangle(cx, cy - TILE * 0.5, TILE * 0.7, 3, 0x00ff00)
+      .setDepth(6).setOrigin(0.5)
 
     const tower: TowerUnit = {
-      sprite, rangeCircle, id, name, atk, range, fireRate, lastFire: 0,
+      sprite, rangeCircle, hpBar, hp: maxHp, maxHp, id, name, atk, range, fireRate, lastFire: 0,
       gridX: gx, gridY: gy, type: 'building',
     }
     this.towers.push(tower)
@@ -189,26 +216,32 @@ export class SectWarScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(6)
   }
 
-  private deployDisciple(d: Disciple, gx: number, gy: number) {
+  private deployDisciple(d: Disciple, gx: number, gy: number, isPlayer = false) {
     const cx = gx * TILE + TILE / 2
     const cy = gy * TILE + TILE / 2
-    const atk = d.atk + d.realm * 10
+    const atk = (d.atk ?? 20) + (d.realm ?? 0) * 10
     const range = TILE * 2.5
     const fireRate = 600
+    const maxHp = d.maxHp ?? 200
 
-    const sprite = this.add.rectangle(cx, cy, TILE * 0.6, TILE * 0.6, 0xa78bfa, 0.8)
+    const color = isPlayer ? 0xfbbf24 : 0xa78bfa
+    const sprite = this.add.rectangle(cx, cy, TILE * 0.6, TILE * 0.6, color, 0.8)
       .setDepth(5).setStrokeStyle(1, 0xffffff, 0.5)
     const rangeCircle = this.add.arc(cx, cy, range, 0xff00ff, 0.05)
       .setStrokeStyle(1, 0xff00ff, 0.2).setDepth(4)
+    const hpBar = this.add.rectangle(cx, cy - TILE * 0.5, TILE * 0.6, 3, 0x00ff00)
+      .setDepth(6).setOrigin(0.5)
 
     const tower: TowerUnit = {
-      sprite, rangeCircle, id: d.uid, name: d.name, atk, range, fireRate, lastFire: 0,
-      gridX: gx, gridY: gy, type: 'disciple',
+      sprite, rangeCircle, hpBar, hp: maxHp, maxHp, id: isPlayer ? 'player' : d.uid,
+      name: isPlayer ? `${this.state.classId === 'sword' ? '剑修' : this.state.classId === 'fairy' ? '仙子' : '道修'}(你)` : d.name,
+      atk, range, fireRate, lastFire: 0,
+      gridX: gx, gridY: gy, type: isPlayer ? 'player' : 'disciple',
     }
     this.towers.push(tower)
 
-    this.add.text(cx, cy - TILE * 0.7, d.name, {
-      fontSize: '7px', color: '#a3e4d7', stroke: '#000', strokeThickness: 1,
+    this.add.text(cx, cy - TILE * 0.7, isPlayer ? '你' : d.name, {
+      fontSize: '7px', color: isPlayer ? '#fbbf24' : '#a3e4d7', stroke: '#000', strokeThickness: 1,
     }).setOrigin(0.5).setDepth(6)
   }
 
@@ -241,7 +274,7 @@ export class SectWarScene extends Phaser.Scene {
         const gx = Math.floor(wx / TILE)
         const gy = Math.floor(wy / TILE)
         if (gx >= 0 && gx < COLS && gy >= 0 && gy < ROWS && this.selectedDisciple) {
-          this.deployDisciple(this.selectedDisciple, gx, gy)
+          this.deployDisciple(this.selectedDisciple, gx, gy, this.selectedDisciple.uid === 'player')
           this.placementMode = false
           this.ghost?.destroy()
           this.ghost = null
@@ -297,7 +330,7 @@ export class SectWarScene extends Phaser.Scene {
     const enemy: EnemyUnit = {
       sprite, hpBar, hp, maxHp: hp, speed: 30 + Math.random() * 20,
       atk: Math.floor(10 * waveMult), pathIndex: 0,
-      name: `妖兵${this.spawnedInWave + 1}`,
+      name: `${this.enemySect.name}·妖兵${this.spawnedInWave + 1}`,
     }
     this.enemies.push(enemy)
   }
@@ -331,25 +364,50 @@ export class SectWarScene extends Phaser.Scene {
         this.endWar(false, '主殿被攻破')
         return
       }
-      const next = PATH[e.pathIndex + 1]
-      const tx = next.x * TILE + TILE / 2
-      const ty = next.y * TILE + TILE / 2
-      const dx = tx - e.sprite.x
-      const dy = ty - e.sprite.y
-      const dist = Math.hypot(dx, dy)
-      if (dist < 5) {
-        e.pathIndex++
-      } else {
-        const vx = (dx / dist) * e.speed * (delta / 1000)
-        const vy = (dy / dist) * e.speed * (delta / 1000)
-        e.sprite.x += vx
-        e.sprite.y += vy
+      // 检查附近是否有防御塔可攻击
+      let blockingTower: TowerUnit | null = null
+      for (const t of this.towers) {
+        const td = Phaser.Math.Distance.Between(e.sprite.x, e.sprite.y, t.sprite.x, t.sprite.y)
+        if (td < TILE * 0.8) { blockingTower = t; break }
       }
-      // 血条
+      if (blockingTower) {
+        // 攻击防御塔
+        blockingTower.hp -= e.atk * (delta / 1000)
+        if (blockingTower.hp <= 0) {
+          toast(`${blockingTower.name} 被摧毁！`, '#f87171')
+          blockingTower.sprite.destroy()
+          blockingTower.rangeCircle.destroy()
+          blockingTower.hpBar.destroy()
+          this.towers.splice(this.towers.indexOf(blockingTower), 1)
+        }
+      } else {
+        // 向下一路径点移动
+        const next = PATH[e.pathIndex + 1]
+        const tx = next.x * TILE + TILE / 2
+        const ty = next.y * TILE + TILE / 2
+        const dx = tx - e.sprite.x
+        const dy = ty - e.sprite.y
+        const dist = Math.hypot(dx, dy)
+        if (dist < 5) {
+          e.pathIndex++
+        } else {
+          const vx = (dx / dist) * e.speed * (delta / 1000)
+          const vy = (dy / dist) * e.speed * (delta / 1000)
+          e.sprite.x += vx
+          e.sprite.y += vy
+        }
+      }
+      // 敌人血条
       const ratio = e.hp / e.maxHp
       e.hpBar.width = TILE * 0.6 * ratio
       e.hpBar.fillColor = ratio > 0.5 ? 0x00ff00 : ratio > 0.25 ? 0xffff00 : 0xff0000
       e.hpBar.setPosition(e.sprite.x, e.sprite.y - TILE * 0.5)
+    }
+    // 更新防御塔血条
+    for (const t of this.towers) {
+      const ratio = t.hp / t.maxHp
+      t.hpBar.width = (t.type === 'building' ? TILE * 0.7 : TILE * 0.6) * ratio
+      t.hpBar.fillColor = ratio > 0.5 ? 0x00ff00 : ratio > 0.25 ? 0xffff00 : 0xff0000
     }
   }
 
@@ -392,28 +450,59 @@ export class SectWarScene extends Phaser.Scene {
   private async openDeployPanel() {
     input.clearQueues()
     const disciples = this.sect.disciples.filter(d => d.status === 'idle')
-    if (disciples.length === 0) {
-      await showDialog('部署弟子', ['无空闲弟子可部署'], [{ label: '关闭', value: 'close' }])
-      input.clearQueues()
-      return
-    }
-    const lines = ['选择要部署的弟子：', `空闲弟子：${disciples.length} 人`]
+    const playerDeployed = this.towers.some(t => t.type === 'player')
+    const lines = [`空闲弟子：${disciples.length} 人　${playerDeployed ? '（你已上阵）' : '你可亲自上阵'}`]
     const options: { label: string; value: string }[] = []
+    // 玩家自己角色
+    if (!playerDeployed) {
+      const stats = this.state
+      lines.push(`你：${['练气','筑基','金丹','元婴','化神','合体','大乘','渡劫'][stats.realm]} Lv.${stats.level}`)
+      options.push({ label: '亲自上阵', value: 'player' })
+    }
     for (let i = 0; i < disciples.length; i++) {
       const d = disciples[i]
       lines.push(`${i + 1}. ${d.name} 攻${d.atk} 防${d.def} 气血${d.maxHp}`)
       options.push({ label: d.name, value: d.uid })
     }
+    if (options.length === 0) {
+      await showDialog('部署', ['无可部署人员'], [{ label: '关闭', value: 'close' }])
+      input.clearQueues()
+      return
+    }
     options.push({ label: '关闭', value: 'close' })
-    const result = await showDialog('部署弟子', lines, options)
+    const result = await showDialog('部署 · 宗门战', lines, options)
     if (result === 'close' || result === null) { input.clearQueues(); return }
-    const d = disciples.find(d => d.uid === result)
-    if (d) {
-      this.selectedDisciple = d
+    if (result === 'player') {
+      // 玩家自己角色作为弟子部署
+      const playerDisc: Disciple = {
+        uid: 'player', name: '你', gender: 'male', daoPath: '剑道',
+        background: '散修传承', physique: '天灵根', lifeGoal: '飞升长生',
+        profession: '散修', personality: ['好战'], appearanceSeed: 12345,
+        root: 'gold', rootTier: 'common',
+        realm: Math.max(0, Math.min(6, this.state.realm)) as any,
+        exp: 0, expToNext: 100, talents: [], loyalty: 100, affection: 100,
+        skills: [], status: 'idle', questId: null, questStartTime: 0,
+        retreatEndTime: 0, guidanceCooldown: 0, sparCooldown: 0,
+        cultivateStartTime: 0, fatigue: 0,
+        atk: Math.floor(50 + this.state.level * 5), def: Math.floor(20 + this.state.level * 3),
+        maxHp: 500 + this.state.level * 50, crit: 10,
+        equipment: { weapon: null, head: null, armor: null, boots: null, charm: null },
+        rank: 4, role: null,
+      }
+      this.selectedDisciple = playerDisc
       this.placementMode = true
-      this.ghost = this.add.rectangle(0, 0, TILE * 0.6, TILE * 0.6, 0xa78bfa, 0.4)
-        .setStrokeStyle(2, 0xa78bfa, 0.8).setDepth(50)
-      toast('点击地图位置部署弟子', '#a3e4d7')
+      this.ghost = this.add.rectangle(0, 0, TILE * 0.6, TILE * 0.6, 0xfbbf24, 0.4)
+        .setStrokeStyle(2, 0xfbbf24, 0.8).setDepth(50)
+      toast('点击地图位置部署（你）', '#fbbf24')
+    } else {
+      const d = disciples.find(d => d.uid === result)
+      if (d) {
+        this.selectedDisciple = d
+        this.placementMode = true
+        this.ghost = this.add.rectangle(0, 0, TILE * 0.6, TILE * 0.6, 0xa78bfa, 0.4)
+          .setStrokeStyle(2, 0xa78bfa, 0.8).setDepth(50)
+        toast('点击地图位置部署弟子', '#a3e4d7')
+      }
     }
     input.clearQueues()
   }
@@ -437,11 +526,11 @@ export class SectWarScene extends Phaser.Scene {
     if (victory) {
       this.sect.resources.prestige += 20
       this.state.sect!.resources.stone += Math.floor(this.enemySect.power * 0.1)
-      toast(`宗门防御战胜利！+20声望 +灵石`, '#fbbf24')
+      toast(`击败${this.enemySect.name}来犯之敌！+20声望 +灵石`, '#fbbf24')
     } else {
       this.sect.resources.stone = Math.floor(this.sect.resources.stone * 0.8)
       this.sect.resources.prestige = Math.max(0, this.sect.resources.prestige - 10)
-      toast(`宗门防御战失败：${reason} -20%灵石`, '#f87171')
+      toast(`宗门防御战败于${this.enemySect.name}：${reason} -20%灵石`, '#f87171')
     }
     saveGame(this.state)
 

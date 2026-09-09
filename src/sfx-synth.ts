@@ -3,13 +3,16 @@
 
 let ctx: AudioContext | null = null
 let masterGain: GainNode | null = null
+// 当前音效的音量缩放（由 synthSfx 设置，每个音效独立，不污染全局）
+let currentVolScale = 1
+const SYNTH_BASE_SCALE = 0.6 // 合成器基础音量，与文件音效对齐
 
 function getCtx(): AudioContext | null {
   if (ctx) return ctx
   try {
     ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
     masterGain = ctx.createGain()
-    masterGain.gain.value = 0.6
+    masterGain.gain.value = 1 // 总增益固定，单音效音量通过各自 gain 节点控制
     masterGain.connect(ctx.destination)
     return ctx
   } catch { return null }
@@ -29,11 +32,12 @@ function tone(freq: number, dur: number, type: OscillatorType, vol: number, dela
   const t = c.currentTime + delay
   const osc = c.createOscillator()
   const gain = c.createGain()
+  const v = vol * currentVolScale * SYNTH_BASE_SCALE
   osc.type = type
   osc.frequency.setValueAtTime(freq, t)
   if (freqEnd !== undefined) osc.frequency.exponentialRampToValueAtTime(freqEnd, t + dur)
   gain.gain.setValueAtTime(0, t)
-  gain.gain.linearRampToValueAtTime(vol, t + 0.005)
+  gain.gain.linearRampToValueAtTime(v, t + 0.005)
   gain.gain.exponentialRampToValueAtTime(0.001, t + dur)
   osc.connect(gain)
   gain.connect(masterGain ?? c.destination)
@@ -55,7 +59,8 @@ function noise(dur: number, vol: number, delay = 0, filterFreq = 1000, filterQ =
   filter.frequency.value = filterFreq
   filter.Q.value = filterQ
   const gain = c.createGain()
-  gain.gain.setValueAtTime(vol, t)
+  const v = vol * currentVolScale * SYNTH_BASE_SCALE
+  gain.gain.setValueAtTime(v, t)
   gain.gain.exponentialRampToValueAtTime(0.001, t + dur)
   src.connect(filter)
   filter.connect(gain)
@@ -70,11 +75,12 @@ function sweep(fStart: number, fEnd: number, dur: number, type: OscillatorType, 
   const t = c.currentTime + delay
   const osc = c.createOscillator()
   const gain = c.createGain()
+  const v = vol * currentVolScale * SYNTH_BASE_SCALE
   osc.type = type
   osc.frequency.setValueAtTime(fStart, t)
   osc.frequency.exponentialRampToValueAtTime(fEnd, t + dur)
   gain.gain.setValueAtTime(0, t)
-  gain.gain.linearRampToValueAtTime(vol, t + 0.01)
+  gain.gain.linearRampToValueAtTime(v, t + 0.01)
   gain.gain.exponentialRampToValueAtTime(0.001, t + dur)
   osc.connect(gain)
   gain.connect(masterGain ?? c.destination)
@@ -320,6 +326,66 @@ const synthMap: Record<string, () => void> = {
     tone(880, 0.15, 'triangle', 0.06, 0.2)
     noise(0.15, 0.04, 0, 2000, 2)
   },
+  // === 基础UI音效（文件缺失时的合成兜底）===
+  sfx_click: () => {
+    tone(800, 0.04, 'square', 0.08)
+  },
+  sfx_open: () => {
+    tone(523, 0.06, 'sine', 0.08)
+    tone(784, 0.08, 'sine', 0.06, 0.04)
+  },
+  sfx_equip: () => {
+    tone(660, 0.05, 'triangle', 0.08)
+    tone(990, 0.08, 'sine', 0.06, 0.04)
+    noise(0.04, 0.04, 0, 3000, 1)
+  },
+  sfx_skill: () => {
+    sweep(440, 880, 0.1, 'sine', 0.08)
+    tone(660, 0.08, 'triangle', 0.06, 0.05)
+  },
+  sfx_swing: () => {
+    sweep(700, 150, 0.12, 'sawtooth', 0.1)
+    noise(0.06, 0.05, 0, 1500, 0.5)
+  },
+  sfx_magic: () => {
+    tone(440, 0.1, 'sine', 0.08)
+    tone(660, 0.12, 'sine', 0.06, 0.05)
+    tone(880, 0.15, 'sine', 0.04, 0.1)
+  },
+  sfx_art: () => {
+    tone(110, 0.2, 'sawtooth', 0.12)
+    sweep(660, 220, 0.25, 'sine', 0.08, 0.1)
+    noise(0.15, 0.06, 0.1, 600, 0.5)
+  },
+  sfx_hit: () => {
+    tone(200, 0.08, 'square', 0.1)
+    noise(0.05, 0.07, 0, 2000, 1)
+  },
+  sfx_die: () => {
+    sweep(330, 80, 0.4, 'sawtooth', 0.12)
+    noise(0.3, 0.06, 0.1, 300, 0.5)
+  },
+  sfx_pickup: () => {
+    tone(880, 0.06, 'sine', 0.08)
+    tone(1320, 0.08, 'sine', 0.06, 0.05)
+  },
+  sfx_chest: () => {
+    tone(440, 0.08, 'square', 0.08)
+    tone(660, 0.1, 'sine', 0.06, 0.08)
+    tone(880, 0.12, 'triangle', 0.05, 0.16)
+    noise(0.08, 0.05, 0.2, 1000, 0.5)
+  },
+  sfx_potion: () => {
+    sweep(330, 660, 0.15, 'sine', 0.08)
+    tone(990, 0.1, 'sine', 0.05, 0.1)
+  },
+  sfx_levelup: () => {
+    tone(523, 0.1, 'sine', 0.1)
+    tone(659, 0.1, 'sine', 0.09, 0.08)
+    tone(784, 0.1, 'sine', 0.08, 0.16)
+    tone(1047, 0.2, 'triangle', 0.07, 0.24)
+    tone(1568, 0.3, 'sine', 0.05, 0.34)
+  },
 }
 
 /** 播放程序化合成音效 */
@@ -328,6 +394,7 @@ export function synthSfx(key: string, volume = 1) {
   if (!fn) return
   const c = getCtx()
   if (!c || c.state === 'suspended') return
-  if (masterGain) masterGain.gain.value = volume * 0.6
+  currentVolScale = volume
   fn()
+  currentVolScale = 1 // 恢复默认，避免污染后续音效
 }

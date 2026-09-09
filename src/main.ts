@@ -1,6 +1,7 @@
 import './style.css'
 import Phaser from 'phaser'
-import { GAME_W, GAME_H } from './constants'
+import { GAME_W, GAME_H, isWideScreen } from './constants'
+import { input } from './input'
 import { BootScene } from './scenes/BootScene'
 import { TitleScene } from './scenes/TitleScene'
 import { TownScene } from './scenes/TownScene'
@@ -15,7 +16,7 @@ import { registerV4KitBases } from './v4/kit-data'
 
 registerV4KitBases()
 
-// ---------- 全局错误捕获：把未处理异常显示为红色横幅，便于手机端反馈 ----------
+// ---------- 全局错误捕获：把未处理异常显示为红色横幅，便于反馈 ----------
 const errBox = document.createElement('div')
 errBox.style.cssText =
   'display:none;position:fixed;left:0;right:0;top:0;z-index:9999;padding:6px 10px;' +
@@ -33,6 +34,13 @@ window.addEventListener('unhandledrejection', (e) => {
   const stack = e.reason?.stack || ''
   showErr(`Promise: ${String(e.reason?.message || e.reason)}\n${stack.slice(0, 500)}`)
 })
+
+// ---------- 平台检测：PC / 移动 ----------
+const wide = isWideScreen()
+// 在 body 上添加模式类，CSS 据此切换布局
+document.body.classList.add(wide ? 'mode-wide' : 'mode-portrait')
+// 宽屏下启用鼠标瞄准
+input.useMouseAim = wide
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -55,18 +63,19 @@ const config: Phaser.Types.Core.GameConfig = {
 const game = new Phaser.Game(config)
 ;(window as unknown as { __game: Phaser.Game }).__game = game  // 调试钩子（测试脚本用）
 
-// ---------- Webview 稳健性：内嵌容器（TapTap 等）初始化时可视区可能未就绪 ----------
-// FIT 缩放只在 resize 时重算；容器晚布局会导致画布停在初始尺寸，地图看起来被裁掉一块。
-// 因此在多种时机强制刷新缩放管理器。
+/** 当前是否为宽屏模式 */
+export function isWideMode(): boolean { return wide }
+
+// ---------- Webview 稳健性：内嵌容器初始化时可视区可能未就绪 ----------
+// FIT 缩放只在 resize 时重算；容器晚布局会导致画布停在初始尺寸。
 const refreshScale = () => { try { game.scale.refresh() } catch { /* 忽略 */ } }
 window.addEventListener('resize', refreshScale)
 window.addEventListener('orientationchange', refreshScale)
 document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshScale() })
 window.visualViewport?.addEventListener('resize', refreshScale)
-// 启动后多次兜底刷新，覆盖 webview 延迟上报真实尺寸的情况
 for (const ms of [100, 300, 800, 1500, 3000]) setTimeout(refreshScale, ms)
 
-// 退出游戏时自动存档（pagehide 兼容移动端 WebView，visibilitychange 覆盖后台切换）
+// 退出游戏时自动存档
 const autoSave = () => {
   try {
     const state = game.registry.get('state')

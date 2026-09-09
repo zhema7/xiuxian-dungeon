@@ -20,6 +20,7 @@ export const BGM_XIAN = 'bgm_xian'        // 破碎仙宫
 export const BGM_SY1 = 'bgm_sy1'          // 无尽妖域 BGM 1
 export const BGM_SY2 = 'bgm_sy2'          // 无尽妖域 BGM 2
 export const BGM_SECT = 'bgm_sect'        // 宗门场景（仅 m4a）
+export const BGM_SECT_WAR = 'bgm_sect_war'  // 宗门战争（仅 m4a）
 export const BGM_ARENA = 'bgm_arena'      // 擂台
 export const BGM_LADDER = 'bgm_ladder'    // 天梯
 export const BGM_TRIBULATION = 'bgm_tribulation'  // 渡劫（仅 m4a）
@@ -32,14 +33,14 @@ export const BGM_LOULAN = 'bgm_loulan'    // 楼兰秘境（仅 m4a）
 export const BGM_BINGYUAN = 'bgm_bingyuan'  // 冰原秘境
 
 export const AUDIO_KEYS = [
-  BGM_TITLE, BGM_TOWN, BGM_DUNGEON, BGM_SOUTH, BGM_SOUTH_ALT, BGM_SWAMP, BGM_CENTRAL, BGM_CITY, BGM_WEST, BGM_EAST, BGM_NORTH, BGM_XIAN, BGM_SY1, BGM_SY2, BGM_SECT, BGM_ARENA, BGM_LADDER, BGM_TRIBULATION, BGM_HUANGLONG, BGM_WANYAO, BGM_TIANJIAN, BGM_HAISHI, BGM_GUZHAN, BGM_LOULAN, BGM_BINGYUAN,
+  BGM_TITLE, BGM_TOWN, BGM_DUNGEON, BGM_SOUTH, BGM_SOUTH_ALT, BGM_SWAMP, BGM_CENTRAL, BGM_CITY, BGM_WEST, BGM_EAST, BGM_NORTH, BGM_XIAN, BGM_SY1, BGM_SY2, BGM_SECT, BGM_SECT_WAR, BGM_ARENA, BGM_LADDER, BGM_TRIBULATION, BGM_HUANGLONG, BGM_WANYAO, BGM_TIANJIAN, BGM_HAISHI, BGM_GUZHAN, BGM_LOULAN, BGM_BINGYUAN,
   'sfx_click', 'sfx_open', 'sfx_equip', 'sfx_skill',
   'sfx_swing', 'sfx_magic', 'sfx_art', 'sfx_hit', 'sfx_die',
   'sfx_pickup', 'sfx_chest', 'sfx_potion', 'sfx_levelup', 'sfx_portal',
 ] as const
 
 /** 只有 m4a 格式的音频 key（mp3 缺失，避免 Phaser 加载 SPA fallback 的 HTML） */
-const M4A_ONLY_KEYS = new Set<string>([BGM_TOWN, BGM_SWAMP, BGM_WEST, BGM_EAST, BGM_SECT, BGM_TRIBULATION, BGM_HUANGLONG, BGM_WANYAO, BGM_HAISHI, BGM_LOULAN])
+const M4A_ONLY_KEYS = new Set<string>([BGM_TOWN, BGM_SWAMP, BGM_WEST, BGM_EAST, BGM_SECT, BGM_SECT_WAR, BGM_TRIBULATION, BGM_HUANGLONG, BGM_WANYAO, BGM_HAISHI, BGM_LOULAN])
 
 /** 获取音频加载 URL 列表（按浏览器支持顺序排列） */
 export function audioUrls(key: string): string[] {
@@ -106,7 +107,7 @@ export function stopBgm() {
 
 /** 播放一次性音效；文件音效优先，缺失时走合成器 */
 export function sfx(key: string, volume = 1) {
-  const vol = sfxVolume * volume
+  const vol = sfxVolume * Math.max(0, Math.min(1, volume))
   // 先尝试 Phaser 缓存的音频文件
   if (sm) {
     try {

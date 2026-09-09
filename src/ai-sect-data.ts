@@ -282,6 +282,29 @@ export function aiSectTick(ai: AiSect, playerPower: number, rng: () => number): 
   // 战力随等级缓慢增长
   if (rng() < 0.1) ai.power += Math.floor(ai.level * 5)
 
+  // 战力随玩家进度自动调整（保持竞争力）
+  const targetPower = playerPower * (0.6 + ai.level * 0.15)
+  if (ai.power < targetPower * 0.7 && rng() < 0.15) {
+    ai.power += Math.floor(ai.level * 8)
+  }
+
+  // 宗门等级提升（资源充足时有概率升级）
+  if (ai.resources.stone > ai.level * 200 && ai.resources.herb > ai.level * 100 && rng() < 0.05) {
+    ai.level = Math.min(8, ai.level + 1)
+    ai.discipleCount += Math.floor(5 + rng() * 10)
+    ai.power += ai.level * 50
+    ai.resources.stone -= ai.level * 100
+    ai.resources.herb -= ai.level * 50
+    return `${ai.name} 实力精进，宗门等级提升至 ${ai.level} 级！`
+  }
+
+  // 资源充裕时招收弟子
+  if (ai.resources.stone > 100 && rng() < 0.08) {
+    const newDisciples = Math.floor(1 + rng() * 3)
+    ai.discipleCount += newDisciples
+    ai.resources.stone -= 50
+  }
+
   // 战争疲劳衰减
   if (ai.warExhaustion > 0) ai.warExhaustion = Math.max(0, ai.warExhaustion - 2)
 
@@ -342,8 +365,13 @@ export function aiSectTick(ai: AiSect, playerPower: number, rng: () => number): 
 
     case 'diplomatic':
       if (ai.relationValue < 50 && rng() < 0.15) {
-        ai.relationValue += 5
-        return `${ai.name} 派遣使者改善关系`
+        ai.relationValue = Math.min(100, ai.relationValue + 5)
+        return `${ai.name} 派遣使者前来，赠送灵石${ai.level * 20}，外交关系改善`
+      }
+      // 高好感时主动提议通商
+      if (!ai.tradeAgreement && ai.relationValue > 40 && rng() < 0.1) {
+        ai.tradeAgreement = true
+        return `${ai.name} 遣使前来，主动提出通商互惠`
       }
       break
 

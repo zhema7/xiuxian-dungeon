@@ -145,7 +145,11 @@ export class TribulationScene extends Phaser.Scene {
 
     this.updateHUD(time)
 
-    if (time - this.startTime >= this.def.durationMs && this.strikes.every(s => s.struck)) {
+    if (time - this.startTime >= this.def.durationMs && this.strikesFired > 0 && this.strikes.every(s => s.struck)) {
+      this.successTribulation()
+    }
+    // 安全超时：超过1.5倍时长后强制结束（防止卡死）
+    if (time - this.startTime >= this.def.durationMs * 1.5) {
       this.successTribulation()
     }
     if (this.curHp <= 0) {

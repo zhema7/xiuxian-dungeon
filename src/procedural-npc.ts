@@ -2,6 +2,7 @@
 // 基于确定性种子生成完整 NPC：属性/背景/性格/故事/背包/装备/关系网
 
 import type { GameState } from './state'
+import { SKILLS } from './data'
 
 // ===== 类型定义 =====
 
@@ -554,4 +555,76 @@ export function calculateDivineSense(realm: number): number {
 
 export function getRealmDiff(playerRealm: number, npcRealm: number): number {
   return playerRealm - npcRealm
+}
+
+// ===== NPC 显示名称中文化 =====
+
+/** 获取境界中文名称 */
+export function getRealmName(realm: number): string {
+  return REALM_NAMES[realm] ?? '未知'
+}
+
+/** NPC武器中文名称（按境界） */
+const NPC_WEAPON_NAMES = [
+  '铁剑', '精钢长剑', '玄铁重剑', '灵剑', '金丹法剑', '元婴魂剑', '化神剑罡', '合体天刃',
+]
+
+/** NPC护甲中文名称（按境界） */
+const NPC_ARMOR_NAMES = [
+  '布衣', '皮甲', '锁子甲', '玄铁甲', '金丹法袍', '元婴灵甲', '化神宝衣', '合体天蚕甲',
+]
+
+/** NPC饰品中文名称（按境界） */
+const NPC_ACCESSORY_NAMES = [
+  '木牌', '玉佩', '铜铃', '灵珠', '金丹戒', '元婴链', '化神簪', '合体环',
+]
+
+/** 获取NPC装备中文名称 */
+export function getNpcEquipName(eqId: string): string {
+  if (eqId.startsWith('npc_w_')) {
+    const realm = parseInt(eqId.slice(6)) || 0
+    return NPC_WEAPON_NAMES[realm] ?? `法器（${realm}品）`
+  }
+  if (eqId.startsWith('npc_a_')) {
+    const realm = parseInt(eqId.slice(6)) || 0
+    return NPC_ARMOR_NAMES[realm] ?? `护甲（${realm}品）`
+  }
+  if (eqId.startsWith('npc_acc_')) {
+    const realm = parseInt(eqId.slice(8)) || 0
+    return NPC_ACCESSORY_NAMES[realm] ?? `饰品（${realm}品）`
+  }
+  return eqId
+}
+
+/** 获取NPC功法中文名称 */
+const NPC_SKILL_FALLBACK: Record<string, string> = {
+  sk_chuancheng: '传承秘法',
+  sk_shanbi: '闪避身法',
+  sk_liehuo: '烈火诀',
+}
+export function getNpcSkillName(skillId: string): string {
+  return SKILLS.get(skillId)?.name ?? NPC_SKILL_FALLBACK[skillId] ?? skillId
+}
+
+/** 获取NPC物品中文名称 */
+const ITEM_NAME_MAP: Record<string, string> = {
+  gold: '灵石',
+  hp_pill: '回气丹',
+  tupo: '突破石',
+}
+
+const HERB_NAMES = ['凝气草', '筑基花', '金丹丹', '元婴果', '化神莲', '合体叶', '大乘花', '渡劫藤']
+const ORE_NAMES = ['铁精矿', '玄铁矿', '金精矿', '灵玉矿', '天罡石', '混元矿', '太初晶', '混沌矿']
+
+export function getNpcItemName(key: string): string {
+  if (ITEM_NAME_MAP[key]) return ITEM_NAME_MAP[key]
+  if (key.startsWith('herb_')) {
+    const idx = parseInt(key.slice(5)) || 0
+    return HERB_NAMES[idx % HERB_NAMES.length]
+  }
+  if (key.startsWith('ore_')) {
+    const idx = parseInt(key.slice(4)) || 0
+    return ORE_NAMES[idx % ORE_NAMES.length]
+  }
+  return key
 }

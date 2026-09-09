@@ -1,7 +1,7 @@
 // ---------- 宗门系统数据定义 ----------
 
 import type { WorldTime } from './world-time'
-import type { Disciple } from './disciple-data'
+import type { Disciple, DiscipleEvent, DiscipleEventType } from './disciple-data'
 import type { CropSlot } from './sect-production'
 
 /** 宗门建筑 ID */
@@ -69,6 +69,35 @@ export interface SectData {
   farmSlots: (CropSlot | null)[]
   /** 宗门圣物槽（法宝装配，3个槽位） */
   relics: (import('./artifact-data').ArtifactInstance | null)[]
+  /** 随机事件计时器（ms，累积计时） */
+  eventTimer: number
+  /** 待招募候补弟子（游方修士/招募生成的候选） */
+  recruitCandidate: Disciple | null
+  /** 弟子事件日志（最近50条） */
+  discipleEvents: import('./disciple-data').DiscipleEvent[]
+  /** 在外执行任务的弟子是否遇到事件（袭击等）的冷却计时 */
+  discipleEventCooldown: number
+  /** 待报仇列表（弟子遇袭/遇害后记录的仇人） */
+  revengeTargets: RevengeTarget[]
+}
+
+/** 仇人目标 */
+export interface RevengeTarget {
+  id: string
+  attackerName: string
+  attackerType: 'bandit' | 'demon' | 'beast' | 'rogue_cultivator'
+  attackerRealm: number
+  attackerPower: number
+  /** 受害弟子名 */
+  victimName: string
+  /** 受害弟子UID（如已遇害则为空） */
+  victimUid: string
+  /** 事件类型：attacked=受伤 killed=遇害 */
+  eventType: 'attacked' | 'killed'
+  /** 记录时间 */
+  timestamp: number
+  /** 是否已报仇 */
+  resolved: boolean
 }
 
 /** 建筑配置表 */
@@ -168,6 +197,11 @@ export function createNewSect(name: string, foundedTime: WorldTime, mapX: number
     techs: {},
     farmSlots: [null, null, null],
     relics: [null, null, null],
+    eventTimer: 0,
+    recruitCandidate: null,
+    discipleEvents: [],
+    discipleEventCooldown: 0,
+    revengeTargets: [],
   }
 }
 
@@ -203,6 +237,27 @@ export function spiritVeinProduction(level: number): number {
 /** 弟子房弟子容量 */
 export function discipleCapacity(level: number): number {
   return level > 0 ? 2 + level * 2 : 0
+}
+
+/** 记录弟子事件（保留最近50条） */
+export function addDiscipleEvent(
+  sect: SectData,
+  disciple: Disciple,
+  type: DiscipleEventType,
+  description: string,
+  data?: Record<string, any>,
+): void {
+  const event: DiscipleEvent = {
+    id: 'evt_' + Date.now().toString(36) + '_' + Math.floor(Math.random() * 1000).toString(36),
+    type,
+    discipleUid: disciple.uid,
+    discipleName: disciple.name,
+    timestamp: Date.now(),
+    description,
+    data,
+  }
+  sect.discipleEvents.unshift(event)
+  if (sect.discipleEvents.length > 50) sect.discipleEvents.length = 50
 }
 
 /** 灵田每分钟灵草产出 */

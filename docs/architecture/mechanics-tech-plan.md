@@ -9,18 +9,23 @@
 
 ## 0. 现状基线（已读代码确认）
 
+> ⚠️ **基线时效声明（2026-09-09）**：本节基线冻结在 **v0.2 / 2026-08**。当前实际版本 **v0.7**。
+> 表中**数量型数据已全部过时**（实测修正见各行 `【v0.7 回填】`）：攻击模式 10→**29**、神通 4→**20**、配置表 8→**14 张**、测试 2→**21 个 .test.ts**、sprites 49→**1949 张**、音频 17→**40 文件**、`DungeonScene` 1564→**4768 行**、src 模块 19→**83 个**。
+> 由此，**本文对「重构工作量 / 技术债规模」的估值是严重偏低的**，重新立项时必须按新倍数重算。
+> 本文的**架构论证**（把战斗逻辑从场景抽成纯 TS 注册表 + 解算层）依然成立且更紧迫。
+
 | 维度 | 现状（实测） | 对机制线的影响 |
 |---|---|---|
 | 核心玩法 | `core.ts` / `effects.ts` / `skills.ts` / `talents.ts` / `favor.ts` / `levelgen.ts` / `lore.ts` 均为**纯 TS，不 import Phaser** | ✅ 可头less 复用，是模拟器与重构的基石 |
 | 攻击模式解析 | `resolveAttackMode()` 已在 `effects.ts`（纯 TS）求值；但**模式执行**在 `DungeonScene.doAttack()` 的 `if (mode===...)` 长链（约 777–908 行） | ⚠️ 加新攻击模式必须改场景分支 |
-| 攻击模式数量 | 10 种（melee_arc / whirlwind / flying_sword / flying_sword_burst / magic_bolt / frost_nova / frost_nova_burst / thunder_chain / sword_array / giant_sword） | 三职业会带来 4–6 个新模式 + 3 个签名机制 |
+| 攻击模式数量 | **【v0.7 回填】29 种攻击模式 + 20 种神通**（原写 10 种；权威定义 `scripts/validate-data.mjs:14,17`），另有 v4 八原语独立轨道 | v0.7 已改走 v4 Kit 配装路线，不再靠「加三职业」扩模式；但 29×20 的组合爆炸使「场景 if 链」完全不可维护，注册表重构从「建议」升为「必需」 |
 | 套装/效果 | `aggregateMods()` 已聚合装备/词缀/套装/心法/天赋 → `Mods`；`SetBonus` 支持 `mods` / `attackMode` / `artMode`（JSON） | ✅ 纯数值套装已可纯 JSON 加；缺「触发器类」效果 |
 | 神通执行 | `castArt()` 同样是 `if (artMode===...)` 链（1055–1107 行） | ⚠️ 同攻击模式问题 |
 | 实体 | `entities.ts` 传统 class（`Player`/`Enemy`/`Ally`），AI 与战斗在 `update()` 内（Phaser 耦合） | ⚠️ 模拟器无法直接复用战斗循环 |
-| 配置表 | `src/data/*.json`（8 张）+ `validate-data.mjs` 构建期校验 | ✅ 加职业/套装/技能基本是加 JSON |
-| 测试 | `tests/` 下仅 `core.test.ts` / `state.test.ts`（2 个 Vitest） | ⚠️ 无平衡模拟器，无战斗回归 |
-| 包体 | `dist/` = **5.3MB**；`public/sprites` 49 张 PNG ≈ 5.3MB（主体）；`public/audio` 17 mp3 ≈ 1.4MB；JS 包（Phaser+游戏）较小 | ⚠️ 已逼近 <5MB 目标，且散图无图集、无对象池、无分包 |
-| 引擎 | Phaser 3.90（`DungeonScene.ts` 1564 行「上帝场景」） | 重构重点是**把逻辑从场景抽回纯 TS** |
+| 配置表 | **【v0.7 回填】`src/data/*.json` 14 张**（原写 8 张，新增 5 张 world-map-* + v4-kits）+ `validate-data.mjs` 构建期校验 | ✅ 加职业/套装/技能基本是加 JSON |
+| 测试 | **【v0.7 回填】`tests/` 21 个 .test.ts**（原写 2 个）；`vitest.config.ts` 已固定 worker=2，可稳定跑通 | ⚠️ 仍无平衡模拟器，无战斗回归 |
+| 包体 | **【v0.7 回填】** `public/sprites` **1949 张 PNG**（原写 49 张 / 5.3MB）；`public/audio` **40 文件**（原写 17 个 / 1.4MB）；TapTap 整包已约 **250MB**，远超原「<5MB 首包」目标 | ⚠️ 原目标已失守。散图无图集、无对象池、无分包，**包体治理应单独立项** |
+| 引擎 | Phaser 3.90 + Three.js 0.185（混合 2D/3D）；**【v0.7 回填】`DungeonScene.ts` 4768 行**（原写 1564 行），另有 `WorldScene.ts` 5278 行、`SectScene.ts` 3635 行两个新「上帝场景」 | 重构重点是**把逻辑从场景抽回纯 TS**；场景膨胀已从单点扩散为三处 |
 
 > 结论先讲：本迭代真正的杠杆点是**「把战斗逻辑从 `DungeonScene` 抽成纯 TS 的攻击模式注册表 + 战斗解算层」**。这一步同时解决【三职业接入低侵入】与【平衡模拟器可复用】，是两份交付物的最大公约数。
 

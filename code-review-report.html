@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>修仙与地下城 v0.5 全面复盘测试报告</title>
+<style>
+@page { size: A4; margin: 2cm; }
+body { font-family: "Microsoft YaHei", sans-serif; font-size: 14px; line-height: 1.8; color: #333; }
+h1 { text-align: center; font-size: 28px; margin: 30px 0 10px; color: #1a1a2e; }
+h2 { font-size: 20px; margin: 30px 0 12px; color: #16213e; border-left: 4px solid #8a2be2; padding-left: 12px; }
+h3 { font-size: 16px; margin: 20px 0 8px; color: #4a3f9e; }
+.subtitle { text-align: center; color: #666; margin-bottom: 30px; }
+.summary-box { background: linear-gradient(135deg, #f0edff, #fff8ee); padding: 20px 24px; border-radius: 12px; margin: 20px 0; }
+.summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 15px 0; }
+.summary-item { background: #fff; border-radius: 8px; padding: 14px; text-align: center; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+.summary-item .num { font-size: 32px; font-weight: bold; }
+.summary-item .num.high { color: #e53e3e; }
+.summary-item .num.mid { color: #dd6b20; }
+.summary-item .num.low { color: #3182ce; }
+.summary-item .num.pass { color: #38a169; }
+.summary-item .label { font-size: 12px; color: #666; margin-top: 4px; }
+table { width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 13px; }
+th { background: #f0edff; color: #4a3f9e; padding: 10px; text-align: left; font-weight: 600; }
+td { border-bottom: 1px solid #eee; padding: 10px; vertical-align: top; }
+.severity-high { color: #e53e3e; font-weight: bold; }
+.severity-mid { color: #dd6b20; font-weight: bold; }
+.severity-low { color: #3182ce; font-weight: bold; }
+.severity-pass { color: #38a169; font-weight: bold; }
+.code-inline { background: #f0f0f0; padding: 2px 6px; border-radius: 4px; font-family: Consolas, monospace; font-size: 12px; }
+.check-list { list-style: none; padding: 0; }
+.check-list li { padding: 6px 0 6px 28px; position: relative; }
+.check-list li::before { content: "✓"; position: absolute; left: 0; color: #38a169; font-weight: bold; }
+.warn-list { list-style: none; padding: 0; }
+.warn-list li { padding: 6px 0 6px 28px; position: relative; }
+.warn-list li::before { content: "!"; position: absolute; left: 6px; color: #e53e3e; font-weight: bold; font-size: 16px; }
+.section-card { background: #fafbff; border: 1px solid #e0d8f0; border-radius: 8px; padding: 16px 20px; margin: 12px 0; }
+.page-break { page-break-before: always; }
+</style>
+</head>
+<body>
+
+<h1>修仙与地下城 v0.5</h1>
+<div class="subtitle">全面代码复盘测试报告 · 2026年9月6日</div>
+
+<div class="summary-box">
+<h3 style="margin-top:0;">审查概览</h3>
+<div class="summary-grid">
+  <div class="summary-item"><div class="num pass">0</div><div class="label">编译错误</div></div>
+  <div class="summary-item"><div class="num high">3</div><div class="label">高优先级问题</div></div>
+  <div class="summary-item"><div class="num mid">13</div><div class="label">中优先级问题</div></div>
+  <div class="summary-item"><div class="num low">30+</div><div class="label">低优先级问题</div></div>
+</div>
+<p style="margin:10px 0 0; color:#666;">审查范围：核心战斗/掉落系统、场景系统（Town/Dungeon/World/Sect）、UI系统、音频系统、存档与数据一致性</p>
+</div>
+
+<h2>一、编译与基础质量</h2>
+<ul class="check-list">
+  <li>TypeScript 编译通过，零类型错误</li>
+  <li>无 <span class="code-inline">console.log</span> 残留</li>
+  <li>无 <span class="code-inline">TODO</span>/<span class="code-inline">FIXME</span>/<span class="code-inline">BUG</span> 遗留标记</li>
+  <li>TypeScript <span class="code-inline">any</span> 使用 30 处，多为动态属性访问，合理可控</li>
+  <li>项目结构清晰：100个TS源文件，约45,991行代码</li>
+</ul>
+
+<h2>二、高优先级问题（3个）</h2>
+
+<div class="section-card">
+<h3>BUG-01 区域秘境 lastSceneData 存档丢失</h3>
+<p><b>文件：</b><span class="code-inline">src/scenes/DungeonScene.ts</span> 第338行</p>
+<p><b>严重程度：</b><span class="severity-high">高</span></p>
+<p><b>问题描述：</b><span class="code-inline">lastSceneData</span> 只保存了 <span class="code-inline">floor</span>、<span class="code-inline">diff</span>、<span class="code-inline">mode</span>，没有保存 <span class="code-inline">regionOverrideId</span>。在区域秘境（楼兰、冰原、破碎仙宫等）中保存退出后，"继续游戏"会进入普通地下城（青冥山脉）而非玩家之前所在的区域秘境。</p>
+<p><b>影响：</b>玩家在区域秘境中下线后重进，会被传送到错误的区域，可能导致进度丢失或体验困惑。</p>
+<p><b>修复建议：</b>在保存 <span class="code-inline">lastSceneData</span> 时加入 <span class="code-inline">regionOverrideId</span>、<span class="code-inline">name</span> 等区域信息，TitleScene 恢复场景时传入完整数据。</p>
+</div>
+
+<div class="section-card">
+<h3>BUG-02 已发现秘境入口场景重启后消失</h3>
+<p><b>文件：</b><span class="code-inline">src/scenes/WorldScene.ts</span> 第120行、第3122-3128行</p>
+<p><b>严重程度：</b><span class="severity-high">高</span></p>
+<p><b>问题描述：</b><span class="code-inline">discoveredRealmDefs</span> 是场景成员变量，场景切换/重启后被清空。虽然 <span class="code-inline">discoverRealm()</span> 将秘境 ID 存入 <span class="code-inline">state.discoveredRealms</span>，但 <span class="code-inline">create()</span> 中从未从 state 恢复并渲染已发现的秘境入口。玩家重新进入大地图后，之前发现的秘境入口全部"消失"。</p>
+<p><b>影响：</b>玩家探索发现的秘境入口在离开大地图后就没了，需要重新发现，严重影响探索体验。</p>
+<p><b>修复建议：</b>在 <span class="code-inline">create()</span> 中遍历 <span class="code-inline">state.discoveredRealms</span>，根据保存的秘境数据重新生成秘境定义并调用 <span class="code-inline">renderSecretRealmEntrance()</span> 渲染入口。需确保秘境入口坐标也持久化到 state。</p>
+</div>
+
+<div class="section-card">
+<h3>BUG-03 死亡时 lastScene 未更新</h3>
+<p><b>文件：</b><span class="code-inline">src/scenes/DungeonScene.ts</span> 第3999行附近</p>
+<p><b>严重程度：</b><span class="severity-high">高</span></p>
+<p><b>问题描述：</b>玩家在地下城中死亡后，存档时 <span class="code-inline">lastScene</span> 仍为 <span class="code-inline">'Dungeon'</span>。若此时关闭游戏，下次继续游戏会以 0 HP 重新进入地下城，可能导致死亡循环。</p>
+<p><b>影响：</b>极端情况下玩家可能无法继续游戏（每次进入都是0血立即死亡）。</p>
+<p><b>修复建议：</b>死亡处理流程中，将 <span class="code-inline">lastScene</span> 重置为 Town 或 City 场景，并恢复一定生命值，确保玩家"复活"在安全区域。</p>
+</div>
+
+<div class="page-break"></div>
+
+<h2>三、中优先级问题（13个）</h2>
+
+<h3>3.1 战斗与掉落系统</h3>
+<table>
+<tr><th style="width:5%">编号</th><th style="width:25%">问题</th><th style="width:35%">描述</th><th style="width:10%">程度</th><th style="width:25%">修复建议</th></tr>
+<tr>
+  <td>M-01</td>
+  <td>伤害计算使用 Math.random</td>
+  <td><span class="code-inline">dealDamage</span> 中暴击判断使用 <span class="code-inline">Math.random</span> 而非 <span class="code-inline">this.rng()</span>，破坏了RNG确定性和可重现性。</td>
+  <td class="severity-mid">中</td>
+  <td>统一使用 <span class="code-inline">this.rng()</span></td>
+</tr>
+<tr>
+  <td>M-02</td>
+  <td>玩家受伤使用 Math.random</td>
+  <td><span class="code-inline">damagePlayer</span> 中伤害浮动同样使用了非确定性随机源。</td>
+  <td class="severity-mid">中</td>
+  <td>统一使用 <span class="code-inline">this.rng()</span></td>
+</tr>
+<tr>
+  <td>M-03</td>
+  <td>gainExp 无等级上限</td>
+  <td>经验升级 while 循环没有最大等级限制，一次性获得巨量经验时可能导致性能问题或数值溢出。</td>
+  <td class="severity-mid">中</td>
+  <td>增加最大等级上限 <span class="code-inline">MAX_LEVEL</span> 保护</td>
+</tr>
+</table>
+
+<h3>3.2 场景系统</h3>
+<table>
+<tr><th style="width:5%">编号</th><th style="width:25%">问题</th><th style="width:35%">描述</th><th style="width:10%">程度</th><th style="width:25%">修复建议</th></tr>
+<tr>
+  <td>M-04</td>
+  <td>sectEventTimer 未持久化</td>
+  <td>宗门随机事件计时器是场景成员变量，离开宗门场景后重置为0。玩家频繁进出宗门会导致随机事件永远无法触发。</td>
+  <td class="severity-mid">中</td>
+  <td>保存到 <span class="code-inline">state.sect.sectEventTimer</span></td>
+</tr>
+<tr>
+  <td>M-05</td>
+  <td>recruitCandidate 未持久化</td>
+  <td>招募候补弟子是场景成员变量，离开宗门场景后丢失。特别是"游方修士到访"事件生成的候补弟子，离开后再回来就消失了。</td>
+  <td class="severity-mid">中</td>
+  <td>序列化保存到 <span class="code-inline">state.sect.recruitCandidate</span></td>
+</tr>
+<tr>
+  <td>M-06</td>
+  <td>宝物发现事件无兜底</td>
+  <td>当宗门没有 idle 或 cultivating 状态的弟子时，宝物发现事件被触发但没有任何提示或效果，玩家完全无感知，事件"空转"。</td>
+  <td class="severity-mid">中</td>
+  <td>添加 else 分支给出提示，或从全体弟子中选取</td>
+</tr>
+<tr>
+  <td>M-07</td>
+  <td>instructorBonus 赋值错误</td>
+  <td>使用 <span class="code-inline">=</span> 赋值而非累加，如果有多名 instructor 或大长老，只有最后一个的加成生效，其余被覆盖。</td>
+  <td class="severity-mid">中</td>
+  <td>若设计为叠加则改用 <span class="code-inline">+=</span>；若单个生效则 break</td>
+</tr>
+<tr>
+  <td>M-08</td>
+  <td>传送菜单目标描述错误</td>
+  <td><span class="code-inline">openTeleportMenu</span> 中列出传送目标时，错误地使用了当前传送阵描述而非目标点描述，导致所有目标显示同一段文字。</td>
+  <td class="severity-mid">中</td>
+  <td>将 <span class="code-inline">p.description</span> 改为 <span class="code-inline">t.description</span></td>
+</tr>
+</table>
+
+<h3>3.3 UI与音频系统</h3>
+<table>
+<tr><th style="width:5%">编号</th><th style="width:25%">问题</th><th style="width:35%">描述</th><th style="width:10%">程度</th><th style="width:25%">修复建议</th></tr>
+<tr>
+  <td>M-09</td>
+  <td>配装方案切换自动覆盖</td>
+  <td>切换方案时，如果有活跃方案，会先将当前配置自动保存到当前活跃方案，再加载目标方案。可能导致用户在不知情的情况下覆盖之前保存的方案。</td>
+  <td class="severity-mid">中</td>
+  <td>增加确认提示，或在 toast 中明确提示"已保存至方案X"</td>
+</tr>
+<tr>
+  <td>M-10</td>
+  <td>基础UI音效无合成回退</td>
+  <td><span class="code-inline">AUDIO_KEYS</span> 中定义了14个基础音效，但 <span class="code-inline">synthMap</span> 中只有 <span class="code-inline">sfx_portal</span> 有对应定义。音频文件加载失败时大部分UI音效会完全静默。</td>
+  <td class="severity-mid">中</td>
+  <td>为 sfx_click、sfx_open、sfx_equip 等高频音效添加合成回退</td>
+</tr>
+<tr>
+  <td>M-11</td>
+  <td>SectWarScene 无专属BGM</td>
+  <td>宗门战争场景的 create() 中未调用 playBgm()，会继续播放进入前的BGM（如宗门BGM），与战斗氛围不匹配。</td>
+  <td class="severity-mid">中</td>
+  <td>复用 BGM_ARENA 或新增战斗BGM</td>
+</tr>
+<tr>
+  <td>M-12</td>
+  <td>activeRelationQuests 类型</td>
+  <td>类型为 <span class="code-inline">unknown[]</span>，缺乏类型安全，存储和读取时不校验内部结构。</td>
+  <td class="severity-mid">中</td>
+  <td>定义 <span class="code-inline">RelationQuest</span> 接口，做数据规范化</td>
+</tr>
+<tr>
+  <td>M-13</td>
+  <td>innerDemons 类型为 any[]</td>
+  <td>使用 <span class="code-inline">any</span> 完全失去类型保护，可能导致运行时错误。</td>
+  <td class="severity-mid">中</td>
+  <td>定义 <span class="code-inline">InnerDemon</span> 接口替换 any</td>
+</tr>
+</table>
+
+<div class="page-break"></div>
+
+<h2>四、低优先级问题（部分列举）</h2>
+
+<div class="section-card">
+<h3>数据与代码质量</h3>
+<ul>
+  <li><b>presets 注释与实际数量不一致</b>：注释写"×5"，实际 PRESET_COUNT = 6</li>
+  <li><b>灵窍成功率缺少下界保护</b>：只有 Math.min(0.99, ...) 上限，无 Math.max 下限</li>
+  <li><b>masterGain 全局音量污染</b>：多音效同时播放时后播放的会改变先播放的音量</li>
+  <li><b>sfx 函数 volume 参数无边界检查</b>：未 clamp 到 [0, 1]</li>
+  <li><b>elderBonus 变量声明但未使用</b>：SectScene 中死代码</li>
+  <li><b>productionTimer 精度累积问题</b>：重置为0会丢失超出的时间精度，长期有微小偏差</li>
+  <li><b>秘境发现概率使用 Math.random</b>：与 this.rng 不一致</li>
+  <li><b>BGM_SOUTH_ALT 导入但未使用</b>：WorldScene 中引入了常量但从未引用</li>
+  <li><b>跨域切换通过 scene.restart()</b>：性能开销大，可优化为增量更新</li>
+  <li><b>BGM 切换时音频不存在静默无提示</b>：建议开发模式增加 warn 日志</li>
+  <li><b>非无尽模式精英率无上限</b>：理论上精英率可能超过100%</li>
+  <li><b>Boss 双重装备掉落</b>：死亡掉落与战利品可能重复</li>
+  <li><b>升级回血不随升级次数叠加</b>：每次升级只加一次上限提升的血量</li>
+</ul>
+</div>
+
+<h2>五、已确认正确的系统</h2>
+
+<div class="summary-grid">
+  <div class="summary-item"><div class="num pass">✓</div><div class="label">TypeScript编译</div></div>
+  <div class="summary-item"><div class="num pass">✓</div><div class="label">暴击率上限</div></div>
+  <div class="summary-item"><div class="num pass">✓</div><div class="label">伤害下限保护</div></div>
+  <div class="summary-item"><div class="num pass">✓</div><div class="label">装备等级上限</div></div>
+  <div class="summary-item"><div class="num pass">✓</div><div class="label">配装方案6槽</div></div>
+  <div class="summary-item"><div class="num pass">✓</div><div class="label">独立滚动容器</div></div>
+  <div class="summary-item"><div class="num pass">✓</div><div class="label">UI数据同步</div></div>
+  <div class="summary-item"><div class="num pass">✓</div><div class="label">自动存档机制</div></div>
+</div>
+
+<ul class="check-list">
+  <li>暴击率有上限保护（不会超过100%）</li>
+  <li>伤害有下限保护（不会出现负数治疗）</li>
+  <li>装备生成有等级上限（不会生成远超等级的装备）</li>
+  <li>6个配装方案槽位实现正确</li>
+  <li>装备与功法面板独立滚动功能实现正确</li>
+  <li>UI刷新与数据持久化同步机制正确（saveGame + updateHUD + renderTab）</li>
+  <li>退出自动存档机制正确（visibilitychange + pagehide 双重保障）</li>
+  <li>灵窍系统数据持久化正确（spiritOrifices 字段）</li>
+  <li>法宝系统数据持久化正确（artifacts 数组）</li>
+  <li>宗门数据（弟子/建筑/资源）持久化正确</li>
+  <li>BGM 音量设置持久化正确</li>
+  <li>音效音量设置持久化正确</li>
+</ul>
+
+<h2>六、修复优先级建议</h2>
+
+<h3>第一梯队（发布前必修）</h3>
+<ul class="warn-list">
+  <li>BUG-01 区域秘境 lastSceneData 存档丢失</li>
+  <li>BUG-02 已发现秘境入口场景重启后消失</li>
+  <li>BUG-03 死亡时 lastScene 未更新</li>
+</ul>
+
+<h3>第二梯队（近期优化）</h3>
+<ul>
+  <li>M-04 sectEventTimer 持久化 + M-05 recruitCandidate 持久化</li>
+  <li>M-01/M-02 战斗随机数统一使用 this.rng</li>
+  <li>M-10 基础UI音效合成回退补充</li>
+  <li>M-07 instructorBonus 赋值逻辑修正</li>
+  <li>M-08 传送菜单目标描述修正</li>
+</ul>
+
+<h3>第三梯队（长期优化）</h3>
+<ul>
+  <li>所有低优先级代码质量问题</li>
+  <li>跨域切换性能优化</li>
+  <li>类型安全提升（替换 any/unknown）</li>
+  <li>弟子属性计算逻辑抽离复用</li>
+</ul>
+
+<div style="text-align:center; margin-top:40px; color:#999; font-size:12px;">
+— 修仙与地下城 v0.5 全面代码复盘测试报告 —
+</div>
+
+</body>
+</html>

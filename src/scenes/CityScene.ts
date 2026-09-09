@@ -13,6 +13,7 @@ import {
 import { BGM_CITY, playBgm, sfx } from '../audio'
 import { initNpcStates, updateNpcGrowth } from '../npc-system'
 import { tryCompleteQuest, getQuestHudText } from '../storyline-system'
+import { loadLazyGroup } from '../lazy-assets'
 
 const WORLD_W = 720
 const WORLD_H = 960
@@ -122,6 +123,10 @@ export class CityScene extends Phaser.Scene {
   private npcGrowTimer = 0
 
   constructor() { super('City') }
+
+  preload() {
+    loadLazyGroup(this, 'city')
+  }
 
   create() {
     this.state = this.registry.get('state')

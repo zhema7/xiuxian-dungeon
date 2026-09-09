@@ -172,6 +172,7 @@ export function discoverRealm(
 ): boolean {
   if (state.discoveredRealms.includes(realm.id)) return false
   state.discoveredRealms.push(realm.id)
+  state.discoveredRealmDefs.push(realm)
   state.realmExplorationRecord[realm.id] = 0
   return true
 }

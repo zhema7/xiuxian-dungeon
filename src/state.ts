@@ -1,9 +1,9 @@
-// ---------- 全局游戏状态 + 存档（v8，含迁移链 + 大地图 + 主线剧情） ----------
+// ---------- 全局游戏状态 + 存档（SAVE_VERSION=11，含迁移链 + 大地图 + 主线剧情 + 多槽位） ----------
 
 import { expNeed, normalizeItem, type EquipItem } from './core'
 import { normalizeDynamicSetRecords, registerDynamicContent, type DynamicSetRecord } from './lore'
 import { updateRecords } from './records'
-import { SKILLS, SLOT_KEYS, type SkillDef, type SlotKey } from './data'
+import { SKILLS, SLOT_KEYS, type SkillDef, type SlotKey, MAX_PLAYER_LEVEL } from './data'
 import { newWorldTime, type WorldTime } from './world-time'
 import { type SectData } from './sect-data'
 import { type NpcState } from './npc-data'
@@ -16,6 +16,7 @@ import { type ProceduralNpc, type NpcRelationEntry, type PlayerNpcRelation } fro
 import { type KarmaEntry } from './karma'
 import { type DiscipleData } from './disciple-system'
 import { type ArtifactInstance } from './artifact-data'
+import type { SecretRealmDef } from './secret-realm'
 export interface SkillSlots {
   style: string | null
   minds: [string | null, string | null]
@@ -54,7 +55,7 @@ export interface GameState {
   skills: Record<string, number>   // 已习得功法 id → 等级
   skillSlots: SkillSlots
   talents: Record<string, number>  // 天赋节点 id → 点数
-  presets: Array<BuildPreset | null>  // 配装方案 ×5
+  presets: Array<BuildPreset | null>  // 配装方案 ×6
   activePreset: number             // 当前启用的方案（-1 = 未启用）
   syCheckpoint: number             // 无尽妖域存档点：下次进入的起始层（默认 7）
   syMaxDepth: number               // 无尽妖域历史最深层（榜单用）
@@ -98,6 +99,7 @@ export interface GameState {
   totalGoldEarned: number                 // 累计获得灵石
   totalDungeonClears: number              // 累计通关秘境次数
   totalSectWarsWon: number                // 累计宗门战争胜利次数
+  sectWarTutorialSeen: boolean            // 是否已查看宗门战教学
   skillPoints: number                     // 可用技能点
   // 日常任务系统
   dailyQuests: DailyQuest[]               // 当前日常任务列表
@@ -136,6 +138,7 @@ export interface GameState {
   activeCompanionNpcId: string | null     // 当前组队NPC ID
   // ===== Phase 4: 秘境系统 =====
   discoveredRealms: string[]              // 已发现的秘境ID
+  discoveredRealmDefs: SecretRealmDef[]   // 已发现的秘境完整定义（用于场景恢复时渲染入口）
   realmExplorationRecord: Record<string, number>  // 秘境探索深度记录
   activeRelationQuests: unknown[]          // Phase 5: 活跃的关系驱动任务
   lastSocialSimDay: number                 // Phase 5: 上次社交模拟结算日
@@ -353,6 +356,7 @@ export function newGame(): GameState {
     totalGoldEarned: 0,
     totalDungeonClears: 0,
     totalSectWarsWon: 0,
+  sectWarTutorialSeen: false,
     skillPoints: 0,
     dailyQuests: [],
     dailyQuestDate: '',
@@ -386,6 +390,7 @@ export function newGame(): GameState {
     activeCompanionNpcId: null,
     // Phase 4
     discoveredRealms: [],
+    discoveredRealmDefs: [],
     realmExplorationRecord: {},
     activeRelationQuests: [],
     lastSocialSimDay: 0,
@@ -511,7 +516,11 @@ function migrate(raw: Record<string, unknown>): GameState {
   s.worldEventCooldown = Number(raw.worldEventCooldown ?? 0) || 0
   s.sectUnlocked = Boolean(raw.sectUnlocked ?? false)
   s.sect = (raw.sect as SectData | undefined) ?? null
-  if (s.sect && !Array.isArray(s.sect.relics)) s.sect.relics = [null, null, null]
+  if (s.sect) {
+    if (!Array.isArray(s.sect.relics)) s.sect.relics = [null, null, null]
+    if (typeof s.sect.eventTimer !== 'number') s.sect.eventTimer = 0
+    if (s.sect.recruitCandidate === undefined) s.sect.recruitCandidate = null
+  }
   s.customBuildingPos = (raw.customBuildingPos as Record<string, { x: number; y: number }> | undefined) ?? undefined
   s.customNpcPos = (raw.customNpcPos as Record<string, { x: number; y: number }> | undefined) ?? undefined
   s.npcStates = (raw.npcStates as Record<string, NpcState>) ?? {}
@@ -525,6 +534,7 @@ function migrate(raw: Record<string, unknown>): GameState {
   s.totalGoldEarned = Number(raw.totalGoldEarned ?? 0) || 0
   s.totalDungeonClears = Number(raw.totalDungeonClears ?? 0) || 0
   s.totalSectWarsWon = Number(raw.totalSectWarsWon ?? 0) || 0
+  s.sectWarTutorialSeen = Boolean(raw.sectWarTutorialSeen ?? false)
   s.skillPoints = Number(raw.skillPoints ?? 0) || 0
   s.dailyQuests = Array.isArray(raw.dailyQuests) ? raw.dailyQuests as DailyQuest[] : []
   s.dailyQuestDate = typeof raw.dailyQuestDate === 'string' ? raw.dailyQuestDate : ''
@@ -558,6 +568,7 @@ function migrate(raw: Record<string, unknown>): GameState {
   s.activeCompanionNpcId = typeof raw.activeCompanionNpcId === 'string' ? raw.activeCompanionNpcId : null
   // Phase 4
   s.discoveredRealms = Array.isArray(raw.discoveredRealms) ? raw.discoveredRealms as string[] : []
+  s.discoveredRealmDefs = Array.isArray(raw.discoveredRealmDefs) ? raw.discoveredRealmDefs as SecretRealmDef[] : []
   s.realmExplorationRecord = (raw.realmExplorationRecord as Record<string, number>) ?? {}
   s.activeRelationQuests = Array.isArray(raw.activeRelationQuests) ? raw.activeRelationQuests : []
   s.lastSocialSimDay = typeof raw.lastSocialSimDay === 'number' ? raw.lastSocialSimDay : 0
@@ -637,9 +648,28 @@ function normalizeGameState(parsed: Record<string, unknown>): GameState {
           d.equipment = { weapon: null, head: null, armor: null, boots: null, charm: null }
         }
         if (d.sparCooldown === undefined) d.sparCooldown = 0
+        if (d.cultivateStartTime === undefined) d.cultivateStartTime = 0
+        if (d.fatigue === undefined) d.fatigue = 0
         if (d.rank === undefined) d.rank = 0
         if (d.role === undefined) d.role = null
+        // v0.6 新增字段：NPC级别信息 + 程序化贴图
+        if (d.gender === undefined) d.gender = Math.random() < 0.5 ? 'male' : 'female'
+        if (d.daoPath === undefined) d.daoPath = '剑道'
+        if (d.background === undefined) d.background = '寒门子弟'
+        if (d.physique === undefined) d.physique = '普通'
+        if (d.lifeGoal === undefined) d.lifeGoal = '飞升长生'
+        if (d.profession === undefined) d.profession = '宗门弟子'
+        if (!Array.isArray(d.personality)) d.personality = ['淡泊']
+        if (d.appearanceSeed === undefined) d.appearanceSeed = Math.floor(Math.random() * 0xffffffff)
+        if (d.sectX === undefined) d.sectX = undefined
+        if (d.sectY === undefined) d.sectY = undefined
+        if (d.currentActivity === undefined) d.currentActivity = undefined
       }
+    }
+    if (s.sect) {
+      if (!Array.isArray((s.sect as any).discipleEvents)) (s.sect as any).discipleEvents = []
+      if (typeof (s.sect as any).discipleEventCooldown !== 'number') (s.sect as any).discipleEventCooldown = 0
+      if (!Array.isArray((s.sect as any).revengeTargets)) (s.sect as any).revengeTargets = []
     }
     if (s.sect && !Array.isArray(s.sect.relics)) s.sect.relics = [null, null, null]
     s.npcStates = s.npcStates ?? {}
@@ -660,6 +690,7 @@ function normalizeGameState(parsed: Record<string, unknown>): GameState {
     s.totalGoldEarned = s.totalGoldEarned ?? 0
     s.totalDungeonClears = s.totalDungeonClears ?? 0
     s.totalSectWarsWon = s.totalSectWarsWon ?? 0
+  s.sectWarTutorialSeen = s.sectWarTutorialSeen ?? false
     s.skillPoints = s.skillPoints ?? 0
     s.dailyQuests = Array.isArray(s.dailyQuests) ? s.dailyQuests : []
     s.dailyQuestDate = typeof s.dailyQuestDate === 'string' ? s.dailyQuestDate : ''
@@ -693,6 +724,7 @@ function normalizeGameState(parsed: Record<string, unknown>): GameState {
     s.activeCompanionNpcId = typeof s.activeCompanionNpcId === 'string' ? s.activeCompanionNpcId : null
     // Phase 4
     s.discoveredRealms = Array.isArray(s.discoveredRealms) ? s.discoveredRealms : []
+    s.discoveredRealmDefs = Array.isArray(s.discoveredRealmDefs) ? s.discoveredRealmDefs : []
     s.realmExplorationRecord = s.realmExplorationRecord ?? {}
     s.activeRelationQuests = Array.isArray(s.activeRelationQuests) ? s.activeRelationQuests : []
     s.lastSocialSimDay = typeof s.lastSocialSimDay === 'number' ? s.lastSocialSimDay : 0
@@ -702,7 +734,7 @@ function normalizeGameState(parsed: Record<string, unknown>): GameState {
     s.worldEvolutionScore = typeof s.worldEvolutionScore === 'number' ? s.worldEvolutionScore : 0
     s.npcLifeEventsLog = Array.isArray(s.npcLifeEventsLog) ? s.npcLifeEventsLog : []
     s.playerLog = Array.isArray(s.playerLog) ? s.playerLog : []
-    s.renderMode = (s.renderMode === '2d' || s.renderMode === '3d') ? s.renderMode : '3d'
+    s.renderMode = (s.renderMode === '2d' || s.renderMode === '3d') ? s.renderMode : '2d'
     s.spiritOrifices = Math.min(9, Math.max(0, s.spiritOrifices ?? 0))
     s.lastScene = typeof s.lastScene === 'string' ? s.lastScene : ''
     s.lastSceneData = s.lastSceneData ?? {}
@@ -764,11 +796,12 @@ export function gainExp(s: GameState, amount: number): number {
   const mult = ascensionBonus(s.ascensionCount).expMult
   s.exp += Math.round(amount * mult)
   let ups = 0
-  while (s.exp >= expNeed(s.level)) {
+  while (s.exp >= expNeed(s.level) && s.level < MAX_PLAYER_LEVEL) {
     s.exp -= expNeed(s.level)
     s.level++
     ups++
   }
+  if (s.level >= MAX_PLAYER_LEVEL) s.exp = Math.min(s.exp, expNeed(MAX_PLAYER_LEVEL) - 1)
   return ups
 }
 

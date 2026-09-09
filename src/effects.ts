@@ -44,7 +44,7 @@ export function orificeSuccessRate(s: GameState, idx: number): number {
   const o = SPIRIT_ORIFICES[idx]
   if (!o) return 0
   const realmBonus = Math.max(0, s.realm - 2) * 0.03
-  return Math.min(0.99, o.successBase + realmBonus)
+  return Math.max(0.01, Math.min(0.99, o.successBase + realmBonus))
 }
 
 /** 灵窍提供的属性加成 */

@@ -4,6 +4,7 @@
 import type { GameState } from './state'
 import type { ProceduralNpc } from './procedural-npc'
 import { addKarma } from './karma'
+import { generateDisciple, expToNextRealm, type Disciple, type DiscipleRealm } from './disciple-data'
 
 export interface DiscipleData {
   npcId: string          // 对应的 ProceduralNpc ID
@@ -60,6 +61,15 @@ export const TRAINING_FOCUS_NAMES: Record<TrainingFocus, string> = {
   crafting: '器道研习',
   talisman: '符道研习',
   balanced: '均衡培养',
+}
+
+// 简易确定性 RNG（基于种子）
+function makeNpcRng(seed: number): () => number {
+  let s = seed || 1
+  return () => {
+    s = (s * 9301 + 49297) % 233280
+    return s / 233280
+  }
 }
 
 // ===== 收徒条件 =====
@@ -120,6 +130,51 @@ export function recruitDisciple(state: GameState, npc: ProceduralNpc): { ok: boo
   }
 
   state.disciples.push(disciple)
+
+  // 同步到宗门弟子列表，使宗门场景中可见
+  if (state.sect) {
+    const rng = makeNpcRng(npc.seed)
+    const d = generateDisciple(rng, state.sect.level)
+    d.uid = 'd_npc_' + npc.id
+    d.name = npc.name
+    d.realm = Math.max(0, Math.min(6, npc.realm)) as DiscipleRealm
+    d.exp = 0
+    d.expToNext = expToNextRealm(d.realm)
+    d.loyalty = 60
+    d.affection = 30
+    d.skills = npc.skills.slice()
+    d.status = 'idle'
+    d.atk = npc.atk
+    d.def = npc.def
+    d.maxHp = npc.maxHp
+    d.crit = 5
+    // 同步NPC的外观和背景信息
+    d.gender = npc.gender
+    d.daoPath = npc.daoPath
+    d.background = npc.background
+    d.physique = npc.physique
+    d.lifeGoal = npc.lifeGoal
+    d.profession = npc.profession
+    d.personality = npc.personality.slice()
+    d.appearanceSeed = npc.appearanceSeed
+    state.sect.disciples.push(d)
+    // 记录招募事件
+    if (typeof (state.sect as any).discipleEvents === 'undefined') {
+      (state.sect as any).discipleEvents = []
+    }
+    ;(state.sect as any).discipleEvents.unshift({
+      id: 'evt_' + Date.now().toString(36),
+      type: 'recruit',
+      discipleUid: d.uid,
+      discipleName: d.name,
+      timestamp: Date.now(),
+      description: `${npc.name}仰慕掌门风采，拜入宗门`,
+    })
+    if ((state.sect as any).discipleEvents.length > 50) {
+      (state.sect as any).discipleEvents.length = 50
+    }
+  }
+
   // 更新关系
   if (!state.playerNpcRelations[npc.id]) {
     state.playerNpcRelations[npc.id] = {

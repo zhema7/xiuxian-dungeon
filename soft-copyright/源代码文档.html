@@ -1,0 +1,3205 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>修仙与地下城 V0.5 源代码文档</title>
+<style>
+@page { size: A4; margin: 2cm 2.5cm; }
+body { font-family: "Courier New", "Consolas", monospace; font-size: 10.5px; line-height: 1.5; color: #333; }
+.page { page-break-after: always; margin-bottom: 20px; }
+.page-header { font-size: 9px; color: #999; border-bottom: 1px solid #ddd; padding-bottom: 3px; margin-bottom: 8px; display: flex; justify-content: space-between; }
+.line { white-space: pre-wrap; word-break: break-all; min-height: 15px; }
+h1 { text-align: center; font-size: 18px; margin-bottom: 30px; font-family: "SimSun", serif; }
+.info { text-align: center; margin-bottom: 30px; color: #666; font-size: 12px; }
+</style>
+</head>
+<body>
+<h1>修仙与地下城 V0.5 源代码文档</h1>
+<div class="info">
+软件名称：修仙与地下城　　版本号：V0.5<br>
+源程序总行数：45991 行　　编程语言：TypeScript / JavaScript<br>
+（本文档包含首页30页及末页30页，每页50行）
+</div>
+
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 1 页</span></div>
+<div class="line">/* ====== 文件: src/main.ts ====== */</div>
+<div class="line">import &#x27;./style.css&#x27;</div>
+<div class="line">import Phaser from &#x27;phaser&#x27;</div>
+<div class="line">import { GAME_W, GAME_H } from &#x27;./constants&#x27;</div>
+<div class="line">import { BootScene } from &#x27;./scenes/BootScene&#x27;</div>
+<div class="line">import { TitleScene } from &#x27;./scenes/TitleScene&#x27;</div>
+<div class="line">import { TownScene } from &#x27;./scenes/TownScene&#x27;</div>
+<div class="line">import { CityScene } from &#x27;./scenes/CityScene&#x27;</div>
+<div class="line">import { WorldScene } from &#x27;./scenes/WorldScene&#x27;</div>
+<div class="line">import { SectScene } from &#x27;./scenes/SectScene&#x27;</div>
+<div class="line">import { SectWarScene } from &#x27;./scenes/SectWarScene&#x27;</div>
+<div class="line">import { saveGame } from &#x27;./state&#x27;</div>
+<div class="line">import { DungeonScene } from &#x27;./scenes/DungeonScene&#x27;</div>
+<div class="line">import { TribulationScene } from &#x27;./scenes/TribulationScene&#x27;</div>
+<div class="line">import { registerV4KitBases } from &#x27;./v4/kit-data&#x27;</div>
+<div class="line"></div>
+<div class="line">registerV4KitBases()</div>
+<div class="line"></div>
+<div class="line">// ---------- 全局错误捕获：把未处理异常显示为红色横幅，便于手机端反馈 ----------</div>
+<div class="line">const errBox = document.createElement(&#x27;div&#x27;)</div>
+<div class="line">errBox.style.cssText =</div>
+<div class="line">  &#x27;display:none;position:fixed;left:0;right:0;top:0;z-index:9999;padding:6px 10px;&#x27; +</div>
+<div class="line">  &#x27;background:#7b1f1f;color:#ffd7d7;font:12px/1.4 monospace;white-space:pre-wrap;pointer-events:none&#x27;</div>
+<div class="line">document.body.appendChild(errBox)</div>
+<div class="line">const showErr = (msg: string) =&gt; {</div>
+<div class="line">  errBox.textContent = `⚠ 运行异常（请截图反馈）：\n${msg}`.slice(0, 600)</div>
+<div class="line">  errBox.style.display = &#x27;block&#x27;</div>
+<div class="line">}</div>
+<div class="line">window.addEventListener(&#x27;error&#x27;, (e) =&gt; {</div>
+<div class="line">  const stack = e.error?.stack || &#x27;&#x27;</div>
+<div class="line">  showErr(`${e.message}\n@ ${e.filename}:${e.lineno}\n${stack.slice(0, 500)}`)</div>
+<div class="line">})</div>
+<div class="line">window.addEventListener(&#x27;unhandledrejection&#x27;, (e) =&gt; {</div>
+<div class="line">  const stack = e.reason?.stack || &#x27;&#x27;</div>
+<div class="line">  showErr(`Promise: ${String(e.reason?.message || e.reason)}\n${stack.slice(0, 500)}`)</div>
+<div class="line">})</div>
+<div class="line"></div>
+<div class="line">const config: Phaser.Types.Core.GameConfig = {</div>
+<div class="line">  type: Phaser.AUTO,</div>
+<div class="line">  parent: &#x27;game&#x27;,</div>
+<div class="line">  width: GAME_W,</div>
+<div class="line">  height: GAME_H,</div>
+<div class="line">  pixelArt: true,</div>
+<div class="line">  transparent: true,</div>
+<div class="line">  scale: {</div>
+<div class="line">    mode: Phaser.Scale.FIT,</div>
+<div class="line">    autoCenter: Phaser.Scale.CENTER_BOTH,</div>
+<div class="line">  },</div>
+<div class="line">  physics: {</div>
+<div class="line">    default: &#x27;arcade&#x27;,</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 2 页</span></div>
+<div class="line">    arcade: { gravity: { x: 0, y: 0 }, debug: false },</div>
+<div class="line">  },</div>
+<div class="line">  scene: [BootScene, TitleScene, TownScene, CityScene, WorldScene, SectScene, SectWarScene, DungeonScene, TribulationScene],</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">const game = new Phaser.Game(config)</div>
+<div class="line">;(window as unknown as { __game: Phaser.Game }).__game = game  // 调试钩子（测试脚本用）</div>
+<div class="line"></div>
+<div class="line">// ---------- Webview 稳健性：内嵌容器（TapTap 等）初始化时可视区可能未就绪 ----------</div>
+<div class="line">// FIT 缩放只在 resize 时重算；容器晚布局会导致画布停在初始尺寸，地图看起来被裁掉一块。</div>
+<div class="line">// 因此在多种时机强制刷新缩放管理器。</div>
+<div class="line">const refreshScale = () =&gt; { try { game.scale.refresh() } catch { /* 忽略 */ } }</div>
+<div class="line">window.addEventListener(&#x27;resize&#x27;, refreshScale)</div>
+<div class="line">window.addEventListener(&#x27;orientationchange&#x27;, refreshScale)</div>
+<div class="line">document.addEventListener(&#x27;visibilitychange&#x27;, () =&gt; { if (!document.hidden) refreshScale() })</div>
+<div class="line">window.visualViewport?.addEventListener(&#x27;resize&#x27;, refreshScale)</div>
+<div class="line">// 启动后多次兜底刷新，覆盖 webview 延迟上报真实尺寸的情况</div>
+<div class="line">for (const ms of [100, 300, 800, 1500, 3000]) setTimeout(refreshScale, ms)</div>
+<div class="line"></div>
+<div class="line">// 退出游戏时自动存档（pagehide 兼容移动端 WebView，visibilitychange 覆盖后台切换）</div>
+<div class="line">const autoSave = () =&gt; {</div>
+<div class="line">  try {</div>
+<div class="line">    const state = game.registry.get(&#x27;state&#x27;)</div>
+<div class="line">    if (state) saveGame(state)</div>
+<div class="line">  } catch { /* 忽略 */ }</div>
+<div class="line">}</div>
+<div class="line">window.addEventListener(&#x27;pagehide&#x27;, autoSave)</div>
+<div class="line">document.addEventListener(&#x27;visibilitychange&#x27;, () =&gt; { if (document.hidden) autoSave() })</div>
+<div class="line"></div>
+<div class="line">/* ====== 文件: src/constants.ts ====== */</div>
+<div class="line">export const GAME_W = 360</div>
+<div class="line">export const GAME_H = 640</div>
+<div class="line"></div>
+<div class="line">/* ====== 文件: src/state.ts ====== */</div>
+<div class="line">// ---------- 全局游戏状态 + 存档（v8，含迁移链 + 大地图 + 主线剧情） ----------</div>
+<div class="line"></div>
+<div class="line">import { expNeed, normalizeItem, type EquipItem } from &#x27;./core&#x27;</div>
+<div class="line">import { normalizeDynamicSetRecords, registerDynamicContent, type DynamicSetRecord } from &#x27;./lore&#x27;</div>
+<div class="line">import { updateRecords } from &#x27;./records&#x27;</div>
+<div class="line">import { SKILLS, SLOT_KEYS, type SkillDef, type SlotKey } from &#x27;./data&#x27;</div>
+<div class="line">import { newWorldTime, type WorldTime } from &#x27;./world-time&#x27;</div>
+<div class="line">import { type SectData } from &#x27;./sect-data&#x27;</div>
+<div class="line">import { type NpcState } from &#x27;./npc-data&#x27;</div>
+<div class="line">import { type AiSect, type ResourceNode } from &#x27;./ai-sect-data&#x27;</div>
+<div class="line">import { type DailyQuest } from &#x27;./daily-quest&#x27;</div>
+<div class="line">import { type Beast } from &#x27;./beast-data&#x27;</div>
+<div class="line">import { type MerchantData } from &#x27;./merchant-system&#x27;</div>
+<div class="line">import { type TribulationRecord, ascensionBonus } from &#x27;./tribulation-data&#x27;</div>
+<div class="line">import { type ProceduralNpc, type NpcRelationEntry, type PlayerNpcRelation } from &#x27;./procedural-npc&#x27;</div>
+<div class="line">import { type KarmaEntry } from &#x27;./karma&#x27;</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 3 页</span></div>
+<div class="line">import { type DiscipleData } from &#x27;./disciple-system&#x27;</div>
+<div class="line">import { type ArtifactInstance } from &#x27;./artifact-data&#x27;</div>
+<div class="line">export interface SkillSlots {</div>
+<div class="line">  style: string | null</div>
+<div class="line">  minds: [string | null, string | null]</div>
+<div class="line">  art: string | null</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">/** 配装方案：装备 + 功法装配 + 天赋分配 */</div>
+<div class="line">export interface BuildPreset {</div>
+<div class="line">  equipment: Record&lt;SlotKey, EquipItem | null&gt;</div>
+<div class="line">  skillSlots: SkillSlots</div>
+<div class="line">  talents: Record&lt;string, number&gt;</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">export const PRESET_COUNT = 6</div>
+<div class="line"></div>
+<div class="line">export interface GameState {</div>
+<div class="line">  version: number</div>
+<div class="line">  classId: string</div>
+<div class="line">  heroName: string</div>
+<div class="line">  level: number</div>
+<div class="line">  exp: number</div>
+<div class="line">  gold: number</div>
+<div class="line">  potions: number</div>
+<div class="line">  consumables: Record&lt;string, number&gt;  // 类型化消耗品（hp_pill/breakthrough_pill/exp_pill/body_pill）</div>
+<div class="line">  insight: number          // 悟道点</div>
+<div class="line">  hp: number               // 当前气血（-1 = 满血）</div>
+<div class="line">  realm: number            // 境界索引（REALMS）</div>
+<div class="line">  materials: Record&lt;string, number&gt;  // 突破石等材料</div>
+<div class="line">  companion: boolean       // 道友是否入队</div>
+<div class="line">  progress: { qmCleared: boolean; ymCleared: boolean }   // 地区进度：青冥/幽冥已通关</div>
+<div class="line">  favor: Record&lt;string, number&gt;      // NPC 好感度</div>
+<div class="line">  quests: Record&lt;string, &#x27;active&#x27; | &#x27;done&#x27;&gt;  // 任务状态</div>
+<div class="line">  totalKills: number                 // 累计击杀（任务用）</div>
+<div class="line">  equipment: Record&lt;SlotKey, EquipItem | null&gt;</div>
+<div class="line">  inventory: EquipItem[]</div>
+<div class="line">  skills: Record&lt;string, number&gt;   // 已习得功法 id → 等级</div>
+<div class="line">  skillSlots: SkillSlots</div>
+<div class="line">  talents: Record&lt;string, number&gt;  // 天赋节点 id → 点数</div>
+<div class="line">  presets: Array&lt;BuildPreset | null&gt;  // 配装方案 ×5</div>
+<div class="line">  activePreset: number             // 当前启用的方案（-1 = 未启用）</div>
+<div class="line">  syCheckpoint: number             // 无尽妖域存档点：下次进入的起始层（默认 7）</div>
+<div class="line">  syMaxDepth: number               // 无尽妖域历史最深层（榜单用）</div>
+<div class="line">  xianMaxDepth: number             // 破碎仙宫历史最深层（用于存档点计算）</div>
+<div class="line">  dynamicSets: DynamicSetRecord[]  // 机缘套装（程序生成，运行时注册进 SETS）</div>
+<div class="line">  dynamicSkills: SkillDef[]        // 无名古卷功法（程序生成，运行时注册进 SKILLS）</div>
+<div class="line">  codex: { items: string[]; skills: string[]; sets: string[] }  // 万象图鉴：已收集条目</div>
+<div class="line">  honor: number                   // 荣誉点：擂台奖励，用于兑换特殊套装</div>
+<div class="line">  arenaRank: number               // 擂台段位（0=初入, 1=铜牌, 2=银牌, 3=金牌, 4=王者）</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 4 页</span></div>
+<div class="line">  arenaWins: number               // 擂台累计胜场</div>
+<div class="line">  arena1v1Wins: number            // 1v1 累计胜场</div>
+<div class="line">  arena1vNWins: number            // 1vN 累计胜场</div>
+<div class="line">  cityUnlocked: boolean            // 大城池是否已解锁</div>
+<div class="line">  // 大地图系统</div>
+<div class="line">  worldUnlocked: boolean            // 大地图是否已解锁</div>
+<div class="line">  worldTime: WorldTime              // 苍玄历时间</div>
+<div class="line">  worldPlayerX: number              // 大地图玩家坐标 X</div>
+<div class="line">  worldPlayerY: number              // 大地图玩家坐标 Y</div>
+<div class="line">  homeX: number                     // 洞府出生点 X（出洞府后固定位置）</div>
+<div class="line">  homeY: number                     // 洞府出生点 Y</div>
+<div class="line">  worldDomain: string               // 当前所在域（south/central/east/west/north）</div>
+<div class="line">  discoveredPoints: string[]        // 已发现的地图点位 ID</div>
+<div class="line">  worldEventCooldown: number        // 随机事件冷却（移动距离累积）</div>
+<div class="line">  // 宗门系统</div>
+<div class="line">  sectUnlocked: boolean             // 宗门是否已建立</div>
+<div class="line">  sect: SectData | null             // 宗门数据</div>
+<div class="line">  customBuildingPos?: Record&lt;string, { x: number; y: number }&gt;  // 自定义建筑摆放位置</div>
+<div class="line">  customNpcPos?: Record&lt;string, { x: number; y: number }&gt;      // 自定义NPC摆放位置</div>
+<div class="line">  // NPC 成长系统</div>
+<div class="line">  npcStates: Record&lt;string, NpcState&gt;  // NPC 运行时状态</div>
+<div class="line">  // AI 宗门势力 + 外交</div>
+<div class="line">  aiSects: AiSect[]                     // AI 宗门列表</div>
+<div class="line">  resourceNodes: ResourceNode[]          // 资源点列表</div>
+<div class="line">  diplomacyTickTimer: number             // 外交系统 tick 计时器</div>
+<div class="line">  // 主线剧情系统</div>
+<div class="line">  mainQuestId: string | null             // 当前进行中的主线任务 ID</div>
+<div class="line">  mainQuestProgress: number              // 当前任务进度计数（用于 collect_kills / win_arena 等）</div>
+<div class="line">  mainQuestCompleted: string[]            // 已完成的主线任务 ID 列表</div>
+<div class="line">  // 成就与统计系统</div>
+<div class="line">  achievementsUnlocked: string[]          // 已解锁成就 ID 列表</div>
+<div class="line">  totalGoldEarned: number                 // 累计获得灵石</div>
+<div class="line">  totalDungeonClears: number              // 累计通关秘境次数</div>
+<div class="line">  totalSectWarsWon: number                // 累计宗门战争胜利次数</div>
+<div class="line">  skillPoints: number                     // 可用技能点</div>
+<div class="line">  // 日常任务系统</div>
+<div class="line">  dailyQuests: DailyQuest[]               // 当前日常任务列表</div>
+<div class="line">  dailyQuestDate: string                  // 日常任务日期（YYYY-MM-DD）</div>
+<div class="line">  // 灵兽驯养系统</div>
+<div class="line">  beasts: Beast[]                         // 灵兽列表</div>
+<div class="line">  activePetUid: string | null             // 出战灵兽 UID</div>
+<div class="line">  activeMountUid: string | null           // 坐骑灵兽 UID</div>
+<div class="line">  // 阵法部署系统</div>
+<div class="line">  formations: string[]                   // 已学阵法 ID 列表</div>
+<div class="line">  formationLastUse: number               // 阵法上次使用时间（ms 时间戳）</div>
+<div class="line">  activeFormation: string | null         // 当前部署的阵法 ID</div>
+<div class="line">  // 商会交易系统</div>
+<div class="line">  merchants: MerchantData[]               // 商人数据列表</div>
+<div class="line">  sectTradeCooldown: number               // 宗门通商冷却</div>
+<div class="line">  // 渡劫飞升系统</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 5 页</span></div>
+<div class="line">  tribulationRecords: Record&lt;number, TribulationRecord&gt;  // 渡劫记录，key为境界索引</div>
+<div class="line">  ascensionCount: number                  // 飞升次数（满级重置后累加）</div>
+<div class="line">  ladderFloor: number                     // 天梯当前层数</div>
+<div class="line">  ladderMaxFloor: number                  // 天梯历史最高层数</div>
+<div class="line">  // ===== Phase 1: 探索体验基础 =====</div>
+<div class="line">  morality: number                        // 道德值 -100~100（0=中性，正=善，负=恶）</div>
+<div class="line">  reputation: number                      // 声望值（正=名扬天下，负=恶名远扬）</div>
+<div class="line">  stamina: number                         // 体力值（0~100，移动消耗，休息恢复）</div>
+<div class="line">  lastStaminaTick: number                 // 上次体力结算时间戳</div>
+<div class="line">  worldFogData: Record&lt;string, boolean&gt;   // 大地图迷雾：key=&quot;domain:x:y&quot; → true=已探索</div>
+<div class="line">  // ===== Phase 2: 程序化NPC =====</div>
+<div class="line">  proceduralNpcs: ProceduralNpc[]         // 程序化生成的NPC列表</div>
+<div class="line">  npcRelationNet: NpcRelationEntry[]      // NPC间关系网</div>
+<div class="line">  playerNpcRelations: Record&lt;string, PlayerNpcRelation&gt;  // 玩家与NPC的关系</div>
+<div class="line">  divineSenseLevel: number                // 神念等级（随境界提升）</div>
+<div class="line">  // ===== Phase 3: 战斗与招募 =====</div>
+<div class="line">  karma: number                           // 业力值（正=善业，负=恶业）</div>
+<div class="line">  karmaLog: KarmaEntry[]                  // 业力事件日志</div>
+<div class="line">  disciples: DiscipleData[]               // 已收弟子列表</div>
+<div class="line">  activeCompanionNpcId: string | null     // 当前组队NPC ID</div>
+<div class="line">  // ===== Phase 4: 秘境系统 =====</div>
+<div class="line">  discoveredRealms: string[]              // 已发现的秘境ID</div>
+<div class="line">  realmExplorationRecord: Record&lt;string, number&gt;  // 秘境探索深度记录</div>
+<div class="line">  activeRelationQuests: unknown[]          // Phase 5: 活跃的关系驱动任务</div>
+<div class="line">  lastSocialSimDay: number                 // Phase 5: 上次社交模拟结算日</div>
+<div class="line">  // ===== Phase 6: 心魔系统 =====</div>
+<div class="line">  innerDemons: any[]                       // 心魔列表</div>
+<div class="line">  // ===== Phase 7: 世界演进 =====</div>
+<div class="line">  annualEventLog: AnnualEventRecord[]      // 年度事件记录</div>
+<div class="line">  lastAnnualEventYear: number               // 上次触发年度事件的年份</div>
+<div class="line">  worldEvolutionScore: number              // 世界宏观演进分数</div>
+<div class="line">  npcLifeEventsLog: NpcLifeEventRecord[]    // NPC人生事件日志</div>
+<div class="line">  playerLog: PlayerLogEntry[]               // 玩家见闻录</div>
+<div class="line">  renderMode: &#x27;3d&#x27; | &#x27;2d&#x27;                   // 大地图渲染模式</div>
+<div class="line">  spiritOrifices: number                     // 已打通的后天灵窍数量（0-9）</div>
+<div class="line">  /** 当前场景与位置（退出时自动存档用） */</div>
+<div class="line">  lastScene: string                          // 退出时所在场景名</div>
+<div class="line">  lastSceneData: Record&lt;string, unknown&gt;     // 退出时场景参数</div>
+<div class="line">  /** 法宝系统：已炼制的法宝列表 */</div>
+<div class="line">  artifacts: ArtifactInstance[]</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">export interface AnnualEventRecord {</div>
+<div class="line">  type: AnnualEventType</div>
+<div class="line">  year: number</div>
+<div class="line">  result: string</div>
+<div class="line">  timestamp: number</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">export type AnnualEventType =</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 6 页</span></div>
+<div class="line">  | &#x27;sect_tournament&#x27;   // 宗门大比</div>
+<div class="line">  | &#x27;market_fair&#x27;       // 坊市集会</div>
+<div class="line">  | &#x27;realm_opening&#x27;     // 秘境开启</div>
+<div class="line"></div>
+<div class="line">export interface NpcLifeEventRecord {</div>
+<div class="line">  npcId: string</div>
+<div class="line">  npcName: string</div>
+<div class="line">  eventType: string</div>
+<div class="line">  description: string</div>
+<div class="line">  year: number</div>
+<div class="line">  timestamp: number</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">export interface PlayerLogEntry {</div>
+<div class="line">  time: number</div>
+<div class="line">  text: string</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">const SAVE_KEY = &#x27;xiuxian_save_v1&#x27;</div>
+<div class="line">export const SAVE_VERSION = 11</div>
+<div class="line"></div>
+<div class="line">// ---------- 多角色存档系统 ----------</div>
+<div class="line">const SAVE_SLOTS_META_KEY = &#x27;xiuxian_save_slots_meta&#x27;</div>
+<div class="line">const SAVE_SLOT_KEY_PREFIX = &#x27;xiuxian_save_slot_&#x27;</div>
+<div class="line">export const MAX_SAVE_SLOTS = 4</div>
+<div class="line"></div>
+<div class="line">let activeSlot = -1</div>
+<div class="line"></div>
+<div class="line">export interface SaveSlotMeta {</div>
+<div class="line">  index: number</div>
+<div class="line">  heroName: string</div>
+<div class="line">  classId: string</div>
+<div class="line">  level: number</div>
+<div class="line">  realm: number</div>
+<div class="line">  updatedAt: number</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">function slotKey(index: number): string {</div>
+<div class="line">  return `${SAVE_SLOT_KEY_PREFIX}${index}`</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">/** 列出所有存档槽的元信息 */</div>
+<div class="line">export function listSaveSlots(): SaveSlotMeta[] {</div>
+<div class="line">  try {</div>
+<div class="line">    const raw = localStorage.getItem(SAVE_SLOTS_META_KEY)</div>
+<div class="line">    if (raw) {</div>
+<div class="line">      const list = JSON.parse(raw) as SaveSlotMeta[]</div>
+<div class="line">      if (list.length &gt; 0) return list</div>
+<div class="line">    }</div>
+<div class="line">    // 向后兼容：如果旧存档存在，迁移到槽 0</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 7 页</span></div>
+<div class="line">    const oldRaw = localStorage.getItem(SAVE_KEY)</div>
+<div class="line">    if (oldRaw) {</div>
+<div class="line">      const parsed = JSON.parse(oldRaw) as Record&lt;string, unknown&gt;</div>
+<div class="line">      const meta: SaveSlotMeta = {</div>
+<div class="line">        index: 0,</div>
+<div class="line">        heroName: String(parsed.heroName ?? &#x27;无名散修&#x27;),</div>
+<div class="line">        classId: String(parsed.classId ?? &#x27;sword&#x27;),</div>
+<div class="line">        level: Number(parsed.level ?? 1),</div>
+<div class="line">        realm: Number(parsed.realm ?? 0),</div>
+<div class="line">        updatedAt: Date.now(),</div>
+<div class="line">      }</div>
+<div class="line">      localStorage.setItem(slotKey(0), oldRaw)</div>
+<div class="line">      localStorage.setItem(SAVE_SLOTS_META_KEY, JSON.stringify([meta]))</div>
+<div class="line">      return [meta]</div>
+<div class="line">    }</div>
+<div class="line">  } catch { /* ignore */ }</div>
+<div class="line">  return []</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">/** 从指定槽位加载存档 */</div>
+<div class="line">export function loadSaveSlot(index: number): GameState | null {</div>
+<div class="line">  try {</div>
+<div class="line">    const raw = localStorage.getItem(slotKey(index))</div>
+<div class="line">    if (!raw) return null</div>
+<div class="line">    const parsed = JSON.parse(raw) as Record&lt;string, unknown&gt;</div>
+<div class="line">    const s = normalizeGameState(parsed)</div>
+<div class="line">    activeSlot = index</div>
+<div class="line">    return s</div>
+<div class="line">  } catch { return null }</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">/** 保存到指定槽位 */</div>
+<div class="line">export function saveToSlot(index: number, s: GameState) {</div>
+<div class="line">  try {</div>
+<div class="line">    s.version = SAVE_VERSION</div>
+<div class="line">    localStorage.setItem(slotKey(index), JSON.stringify(s))</div>
+<div class="line">    const slots = listSaveSlots()</div>
+<div class="line">    const meta: SaveSlotMeta = {</div>
+<div class="line">      index,</div>
+<div class="line">      heroName: s.heroName,</div>
+<div class="line">      classId: s.classId,</div>
+<div class="line">      level: s.level,</div>
+<div class="line">      realm: s.realm,</div>
+<div class="line">      updatedAt: Date.now(),</div>
+<div class="line">    }</div>
+<div class="line">    const existingIdx = slots.findIndex(m =&gt; m.index === index)</div>
+<div class="line">    if (existingIdx &gt;= 0) slots[existingIdx] = meta</div>
+<div class="line">    else slots.push(meta)</div>
+<div class="line">    slots.sort((a, b) =&gt; a.index - b.index)</div>
+<div class="line">    localStorage.setItem(SAVE_SLOTS_META_KEY, JSON.stringify(slots))</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 8 页</span></div>
+<div class="line">    activeSlot = index</div>
+<div class="line">    updateRecords(s)</div>
+<div class="line">  } catch { /* ignore */ }</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">/** 删除指定槽位存档 */</div>
+<div class="line">export function deleteSaveSlot(index: number) {</div>
+<div class="line">  try {</div>
+<div class="line">    localStorage.removeItem(slotKey(index))</div>
+<div class="line">    const slots = listSaveSlots().filter(m =&gt; m.index !== index)</div>
+<div class="line">    localStorage.setItem(SAVE_SLOTS_META_KEY, JSON.stringify(slots))</div>
+<div class="line">    if (activeSlot === index) activeSlot = -1</div>
+<div class="line">  } catch { /* ignore */ }</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">/** 检查指定槽位是否有存档 */</div>
+<div class="line">export function hasSaveSlot(index: number): boolean {</div>
+<div class="line">  try { return !!localStorage.getItem(slotKey(index)) } catch { return false }</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">export function getActiveSlot(): number { return activeSlot }</div>
+<div class="line">export function setActiveSlot(index: number) { activeSlot = index }</div>
+<div class="line"></div>
+<div class="line">function isCodex(value: unknown): value is GameState[&#x27;codex&#x27;] {</div>
+<div class="line">  if (!value || typeof value !== &#x27;object&#x27;) return false</div>
+<div class="line">  const raw = value as Record&lt;string, unknown&gt;</div>
+<div class="line">  return Array.isArray(raw.items) &amp;&amp; Array.isArray(raw.skills) &amp;&amp; Array.isArray(raw.sets)</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">export function newGame(): GameState {</div>
+<div class="line">  return {</div>
+<div class="line">    version: SAVE_VERSION,</div>
+<div class="line">    classId: &#x27;sword&#x27;,</div>
+<div class="line">    heroName: &#x27;无名散修&#x27;,</div>
+<div class="line">    level: 1,</div>
+<div class="line">    exp: 0,</div>
+<div class="line">    gold: 0,</div>
+<div class="line">    potions: 3,</div>
+<div class="line">    consumables: {},</div>
+<div class="line">    insight: 0,</div>
+<div class="line">    hp: -1,</div>
+<div class="line">    realm: 0,</div>
+<div class="line">    materials: { tupo: 0 },</div>
+<div class="line">    companion: false,</div>
+<div class="line">    progress: { qmCleared: false, ymCleared: false },</div>
+<div class="line">    favor: {},</div>
+<div class="line">    quests: {},</div>
+<div class="line">    totalKills: 0,</div>
+<div class="line">    equipment: { weapon: null, head: null, armor: null, boots: null, charm1: null, charm2: null },</div>
+<div class="line">    inventory: [],</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 9 页</span></div>
+<div class="line">    skills: { sk_sanlian: 1 },</div>
+<div class="line">    skillSlots: { style: &#x27;sk_sanlian&#x27;, minds: [null, null], art: null },</div>
+<div class="line">    talents: {},</div>
+<div class="line">    presets: [null, null, null, null, null, null],</div>
+<div class="line">    activePreset: -1,</div>
+<div class="line">    syCheckpoint: 7,</div>
+<div class="line">    syMaxDepth: 0,</div>
+<div class="line">    xianMaxDepth: 0,</div>
+<div class="line">    dynamicSets: [],</div>
+<div class="line">    dynamicSkills: [],</div>
+<div class="line">    codex: { items: [], skills: [], sets: [] },</div>
+<div class="line">    honor: 0,</div>
+<div class="line">    arenaRank: 0,</div>
+<div class="line">    arenaWins: 0,</div>
+<div class="line">    arena1v1Wins: 0,</div>
+<div class="line">    arena1vNWins: 0,</div>
+<div class="line">    cityUnlocked: false,</div>
+<div class="line">    worldUnlocked: false,</div>
+<div class="line">    worldTime: newWorldTime(),</div>
+<div class="line">    worldPlayerX: 600,</div>
+<div class="line">    worldPlayerY: 1350,</div>
+<div class="line">    homeX: 600,</div>
+<div class="line">    homeY: 1350,</div>
+<div class="line">    worldDomain: &#x27;south&#x27;,</div>
+<div class="line">    discoveredPoints: [&#x27;home&#x27;, &#x27;sect_entrance&#x27;],</div>
+<div class="line">    worldEventCooldown: 0,</div>
+<div class="line">    sectUnlocked: false,</div>
+<div class="line">    sect: null,</div>
+<div class="line">    npcStates: {},</div>
+<div class="line">    aiSects: [],</div>
+<div class="line">    resourceNodes: [],</div>
+<div class="line">    diplomacyTickTimer: 0,</div>
+<div class="line">    mainQuestId: &#x27;mq_1_1&#x27;,</div>
+<div class="line">    mainQuestProgress: 0,</div>
+<div class="line">    mainQuestCompleted: [],</div>
+<div class="line">    achievementsUnlocked: [],</div>
+<div class="line">    totalGoldEarned: 0,</div>
+<div class="line">    totalDungeonClears: 0,</div>
+<div class="line">    totalSectWarsWon: 0,</div>
+<div class="line">    skillPoints: 0,</div>
+<div class="line">    dailyQuests: [],</div>
+<div class="line">    dailyQuestDate: &#x27;&#x27;,</div>
+<div class="line">    beasts: [],</div>
+<div class="line">    activePetUid: null,</div>
+<div class="line">    activeMountUid: null,</div>
+<div class="line">    formations: [],</div>
+<div class="line">    formationLastUse: 0,</div>
+<div class="line">    activeFormation: null,</div>
+<div class="line">    merchants: [],</div>
+<div class="line">    sectTradeCooldown: 0,</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 10 页</span></div>
+<div class="line">    tribulationRecords: {},</div>
+<div class="line">    ascensionCount: 0,</div>
+<div class="line">    ladderFloor: 0,</div>
+<div class="line">    ladderMaxFloor: 0,</div>
+<div class="line">    // Phase 1</div>
+<div class="line">    morality: 0,</div>
+<div class="line">    reputation: 0,</div>
+<div class="line">    stamina: 100,</div>
+<div class="line">    lastStaminaTick: 0,</div>
+<div class="line">    worldFogData: {},</div>
+<div class="line">    // Phase 2</div>
+<div class="line">    proceduralNpcs: [],</div>
+<div class="line">    npcRelationNet: [],</div>
+<div class="line">    playerNpcRelations: {},</div>
+<div class="line">    divineSenseLevel: 0,</div>
+<div class="line">    // Phase 3</div>
+<div class="line">    karma: 0,</div>
+<div class="line">    karmaLog: [],</div>
+<div class="line">    disciples: [],</div>
+<div class="line">    activeCompanionNpcId: null,</div>
+<div class="line">    // Phase 4</div>
+<div class="line">    discoveredRealms: [],</div>
+<div class="line">    realmExplorationRecord: {},</div>
+<div class="line">    activeRelationQuests: [],</div>
+<div class="line">    lastSocialSimDay: 0,</div>
+<div class="line">    innerDemons: [],</div>
+<div class="line">    // Phase 7</div>
+<div class="line">    annualEventLog: [],</div>
+<div class="line">    lastAnnualEventYear: 0,</div>
+<div class="line">    worldEvolutionScore: 0,</div>
+<div class="line">    npcLifeEventsLog: [],</div>
+<div class="line">    playerLog: [],</div>
+<div class="line">    renderMode: &#x27;3d&#x27;,</div>
+<div class="line">    spiritOrifices: 0,</div>
+<div class="line">    lastScene: &#x27;&#x27;,</div>
+<div class="line">    lastSceneData: {},</div>
+<div class="line">    artifacts: [],</div>
+<div class="line">  }</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">/** 是否存在旧存档 */</div>
+<div class="line">export function hasSave(): boolean {</div>
+<div class="line">  try {</div>
+<div class="line">    if (localStorage.getItem(SAVE_SLOTS_META_KEY)) {</div>
+<div class="line">      const slots = listSaveSlots()</div>
+<div class="line">      if (slots.length &gt; 0) return true</div>
+<div class="line">    }</div>
+<div class="line">    return !!localStorage.getItem(SAVE_KEY)</div>
+<div class="line">  } catch { return false }</div>
+<div class="line">}</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 11 页</span></div>
+<div class="line"></div>
+<div class="line">/** 快照当前配装（装备+功法装配+天赋） */</div>
+<div class="line">export function snapshotPreset(s: GameState): BuildPreset {</div>
+<div class="line">  const snapshot = JSON.parse(JSON.stringify({</div>
+<div class="line">    equipment: s.equipment,</div>
+<div class="line">    skillSlots: s.skillSlots,</div>
+<div class="line">    talents: s.talents,</div>
+<div class="line">  })) as BuildPreset</div>
+<div class="line">  // Snapshots are a persistence boundary too: retain only declared slots even</div>
+<div class="line">  // if hostile runtime code added arbitrary object keys to equipment.</div>
+<div class="line">  snapshot.equipment = Object.fromEntries(SLOT_KEYS.map((key) =&gt; [</div>
+<div class="line">    key,</div>
+<div class="line">    snapshot.equipment[key] ?? null,</div>
+<div class="line">  ])) as Record&lt;SlotKey, EquipItem | null&gt;</div>
+<div class="line">  return snapshot</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">/** 应用配装方案 */</div>
+<div class="line">export function applyPreset(s: GameState, p: BuildPreset) {</div>
+<div class="line">  const rawEquipment = JSON.parse(JSON.stringify(p.equipment)) as Partial&lt;Record&lt;SlotKey, EquipItem | null&gt;&gt;</div>
+<div class="line">  const equipment = Object.fromEntries(SLOT_KEYS.map((key) =&gt; [</div>
+<div class="line">    key,</div>
+<div class="line">    rawEquipment[key] ? normalizeItem(rawEquipment[key]!) : null,</div>
+<div class="line">  ])) as Record&lt;SlotKey, EquipItem | null&gt;</div>
+<div class="line">  s.equipment = equipment</div>
+<div class="line">  s.skillSlots = { ...p.skillSlots, minds: [...p.skillSlots.minds] }</div>
+<div class="line">  s.talents = { ...p.talents }</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">/** 旧版本迁移至当前存档格式（包含 v2/v3 程序随机套装规范化，不重掷已落盘结果）。 */</div>
+<div class="line">function migrate(raw: Record&lt;string, unknown&gt;): GameState {</div>
+<div class="line">  const s = newGame()</div>
+<div class="line">  s.level = Number(raw.level) || 1</div>
+<div class="line">  s.exp = Number(raw.exp) || 0</div>
+<div class="line">  s.gold = Number(raw.gold) || 0</div>
+<div class="line">  s.potions = Number(raw.potions ?? 3)</div>
+<div class="line">  s.consumables = typeof raw.consumables === &#x27;object&#x27; &amp;&amp; raw.consumables ? { ...raw.consumables } : {}</div>
+<div class="line">  // 迁移旧 potions 到 consumables.hp_pill</div>
+<div class="line">  if (s.potions &gt; 0 &amp;&amp; !(s.consumables.hp_pill &gt; 0)) {</div>
+<div class="line">    s.consumables.hp_pill = s.potions</div>
+<div class="line">  }</div>
+<div class="line">  s.insight = Number(raw.insight ?? (s.level - 1) * 3)</div>
+<div class="line">  s.hp = typeof raw.hp === &#x27;number&#x27; ? raw.hp : -1</div>
+<div class="line">  s.classId = String(raw.classId ?? &#x27;sword&#x27;)</div>
+<div class="line">  s.heroName = String(raw.heroName ?? s.heroName)</div>
+<div class="line">  s.realm = Number(raw.realm ?? 0) || 0</div>
+<div class="line">  s.companion = Boolean(raw.companion)</div>
+<div class="line">  const eq = (raw.equipment ?? {}) as Record&lt;string, EquipItem | null&gt;</div>
+<div class="line">  // Only declared slot keys may enter the runtime equipment record. Preserve the</div>
+<div class="line">  // historical singular charm migration for charm1, but discard all other unknown keys.</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 12 页</span></div>
+<div class="line">  s.equipment.weapon = eq.weapon ? normalizeItem(eq.weapon) : null</div>
+<div class="line">  s.equipment.head = eq.head ? normalizeItem(eq.head) : null</div>
+<div class="line">  s.equipment.armor = eq.armor ? normalizeItem(eq.armor) : null</div>
+<div class="line">  s.equipment.boots = eq.boots ? normalizeItem(eq.boots) : null</div>
+<div class="line">  s.equipment.charm1 = (eq.charm1 ?? eq.charm) ? normalizeItem((eq.charm1 ?? eq.charm)!) : null</div>
+<div class="line">  s.equipment.charm2 = eq.charm2 ? normalizeItem(eq.charm2) : null</div>
+<div class="line">  if (Array.isArray(raw.inventory)) s.inventory = (raw.inventory as EquipItem[]).map(normalizeItem)</div>
+<div class="line">  const sk = (raw.skills ?? {}) as Record&lt;string, number&gt;</div>
+<div class="line">  if (Object.keys(sk).length &gt; 0) s.skills = { ...sk }</div>
+<div class="line">  const slots = raw.skillSlots as SkillSlots | undefined</div>
+<div class="line">  if (slots) s.skillSlots = { style: slots.style ?? null, minds: slots.minds ?? [null, null], art: slots.art ?? null }</div>
+<div class="line">  s.talents = { ...((raw.talents ?? {}) as Record&lt;string, number&gt;) }</div>
+<div class="line">  s.progress = {</div>
+<div class="line">    qmCleared: Boolean((raw.progress as { qmCleared?: boolean } | undefined)?.qmCleared),</div>
+<div class="line">    ymCleared: Boolean((raw.progress as { ymCleared?: boolean } | undefined)?.ymCleared),</div>
+<div class="line">  }</div>
+<div class="line">  s.favor = { ...((raw.favor ?? {}) as Record&lt;string, number&gt;) }</div>
+<div class="line">  s.quests = { ...((raw.quests ?? {}) as Record&lt;string, &#x27;active&#x27; | &#x27;done&#x27;&gt;) }</div>
+<div class="line">  s.totalKills = Number(raw.totalKills ?? 0) || 0</div>
+<div class="line">  if (Array.isArray(raw.presets)) {</div>
+<div class="line">    s.presets = (raw.presets as Array&lt;BuildPreset | null&gt;).slice(0, PRESET_COUNT)</div>
+<div class="line">    while (s.presets.length &lt; PRESET_COUNT) s.presets.push(null)</div>
+<div class="line">  }</div>
+<div class="line">  s.activePreset = typeof raw.activePreset === &#x27;number&#x27; ? raw.activePreset : -1</div>
+<div class="line">  s.syCheckpoint = Number(raw.syCheckpoint ?? 7) || 7</div>
+<div class="line">  s.syMaxDepth = Number(raw.syMaxDepth ?? 0) || 0</div>
+<div class="line">  s.xianMaxDepth = Number(raw.xianMaxDepth ?? 0) || 0</div>
+<div class="line">  s.dynamicSets = normalizeDynamicSetRecords(raw.dynamicSets)</div>
+<div class="line">  s.dynamicSkills = Array.isArray(raw.dynamicSkills) ? raw.dynamicSkills as SkillDef[] : []</div>
+<div class="line">  s.codex = isCodex(raw.codex) ? raw.codex : { items: [], skills: [], sets: [] }</div>
+<div class="line">  s.honor = Number(raw.honor ?? 0) || 0</div>
+<div class="line">  s.arenaRank = Number(raw.arenaRank ?? 0) || 0</div>
+<div class="line">  s.arenaWins = Number(raw.arenaWins ?? 0) || 0</div>
+<div class="line">  s.arena1v1Wins = Number(raw.arena1v1Wins ?? 0) || 0</div>
+<div class="line">  s.arena1vNWins = Number(raw.arena1vNWins ?? 0) || 0</div>
+<div class="line">  s.cityUnlocked = Boolean(raw.cityUnlocked)</div>
+<div class="line">  s.worldUnlocked = Boolean(raw.worldUnlocked ?? false)</div>
+<div class="line">  s.worldTime = (raw.worldTime as WorldTime | undefined) ?? newWorldTime()</div>
+<div class="line">  s.worldPlayerX = Number(raw.worldPlayerX ?? 600) || 600</div>
+<div class="line">  s.worldPlayerY = Number(raw.worldPlayerY ?? 1350) || 1350</div>
+<div class="line">  s.homeX = Number(raw.homeX ?? 600) || 600</div>
+<div class="line">  s.homeY = Number(raw.homeY ?? 1350) || 1350</div>
+<div class="line">  s.worldDomain = typeof raw.worldDomain === &#x27;string&#x27; ? raw.worldDomain : &#x27;south&#x27;</div>
+<div class="line">  s.discoveredPoints = Array.isArray(raw.discoveredPoints) ? raw.discoveredPoints as string[] : [&#x27;home&#x27;, &#x27;sect_entrance&#x27;]</div>
+<div class="line">  s.worldEventCooldown = Number(raw.worldEventCooldown ?? 0) || 0</div>
+<div class="line">  s.sectUnlocked = Boolean(raw.sectUnlocked ?? false)</div>
+<div class="line">  s.sect = (raw.sect as SectData | undefined) ?? null</div>
+<div class="line">  if (s.sect &amp;&amp; !Array.isArray(s.sect.relics)) s.sect.relics = [null, null, null]</div>
+<div class="line">  s.customBuildingPos = (raw.customBuildingPos as Record&lt;string, { x: number; y: number }&gt; | undefined) ?? undefined</div>
+<div class="line">  s.customNpcPos = (raw.customNpcPos as Record&lt;string, { x: number; y: number }&gt; | undefined) ?? undefined</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 13 页</span></div>
+<div class="line">  s.npcStates = (raw.npcStates as Record&lt;string, NpcState&gt;) ?? {}</div>
+<div class="line">  s.aiSects = Array.isArray(raw.aiSects) ? raw.aiSects as AiSect[] : []</div>
+<div class="line">  s.resourceNodes = Array.isArray(raw.resourceNodes) ? raw.resourceNodes as ResourceNode[] : []</div>
+<div class="line">  s.diplomacyTickTimer = Number(raw.diplomacyTickTimer ?? 0) || 0</div>
+<div class="line">  s.mainQuestId = typeof raw.mainQuestId === &#x27;string&#x27; ? raw.mainQuestId : &#x27;mq_1_1&#x27;</div>
+<div class="line">  s.mainQuestProgress = Number(raw.mainQuestProgress ?? 0) || 0</div>
+<div class="line">  s.mainQuestCompleted = Array.isArray(raw.mainQuestCompleted) ? raw.mainQuestCompleted as string[] : []</div>
+<div class="line">  s.achievementsUnlocked = Array.isArray(raw.achievementsUnlocked) ? raw.achievementsUnlocked as string[] : []</div>
+<div class="line">  s.totalGoldEarned = Number(raw.totalGoldEarned ?? 0) || 0</div>
+<div class="line">  s.totalDungeonClears = Number(raw.totalDungeonClears ?? 0) || 0</div>
+<div class="line">  s.totalSectWarsWon = Number(raw.totalSectWarsWon ?? 0) || 0</div>
+<div class="line">  s.skillPoints = Number(raw.skillPoints ?? 0) || 0</div>
+<div class="line">  s.dailyQuests = Array.isArray(raw.dailyQuests) ? raw.dailyQuests as DailyQuest[] : []</div>
+<div class="line">  s.dailyQuestDate = typeof raw.dailyQuestDate === &#x27;string&#x27; ? raw.dailyQuestDate : &#x27;&#x27;</div>
+<div class="line">  s.beasts = Array.isArray(raw.beasts) ? raw.beasts as Beast[] : []</div>
+<div class="line">  s.activePetUid = typeof raw.activePetUid === &#x27;string&#x27; ? raw.activePetUid : null</div>
+<div class="line">  s.activeMountUid = typeof raw.activeMountUid === &#x27;string&#x27; ? raw.activeMountUid : null</div>
+<div class="line">  s.formations = Array.isArray(raw.formations) ? raw.formations as string[] : []</div>
+<div class="line">  s.formationLastUse = Number(raw.formationLastUse ?? 0) || 0</div>
+<div class="line">  s.activeFormation = typeof raw.activeFormation === &#x27;string&#x27; ? raw.activeFormation : null</div>
+<div class="line">  s.merchants = Array.isArray(raw.merchants) ? raw.merchants as MerchantData[] : []</div>
+<div class="line">  s.sectTradeCooldown = Number(raw.sectTradeCooldown ?? 0) || 0</div>
+<div class="line">  s.tribulationRecords = (raw.tribulationRecords as Record&lt;number, TribulationRecord&gt;) ?? {}</div>
+<div class="line">  s.ascensionCount = Number(raw.ascensionCount ?? 0) || 0</div>
+<div class="line">  s.ladderFloor = Number(raw.ladderFloor ?? 0) || 0</div>
+<div class="line">  s.ladderMaxFloor = Number(raw.ladderMaxFloor ?? 0) || 0</div>
+<div class="line">  // Phase 1</div>
+<div class="line">  s.morality = Number(raw.morality ?? 0) || 0</div>
+<div class="line">  s.reputation = Number(raw.reputation ?? 0) || 0</div>
+<div class="line">  s.stamina = Number(raw.stamina ?? 100) || 100</div>
+<div class="line">  s.lastStaminaTick = Number(raw.lastStaminaTick ?? 0) || 0</div>
+<div class="line">  s.worldFogData = (raw.worldFogData as Record&lt;string, boolean&gt;) ?? {}</div>
+<div class="line">  // Phase 2</div>
+<div class="line">  s.proceduralNpcs = Array.isArray(raw.proceduralNpcs) ? raw.proceduralNpcs as ProceduralNpc[] : []</div>
+<div class="line">  s.npcRelationNet = Array.isArray(raw.npcRelationNet) ? raw.npcRelationNet as NpcRelationEntry[] : []</div>
+<div class="line">  s.playerNpcRelations = (raw.playerNpcRelations as Record&lt;string, PlayerNpcRelation&gt;) ?? {}</div>
+<div class="line">  s.divineSenseLevel = Number(raw.divineSenseLevel ?? 0) || 0</div>
+<div class="line">  // Phase 3</div>
+<div class="line">  s.karma = Number(raw.karma ?? 0) || 0</div>
+<div class="line">  s.karmaLog = Array.isArray(raw.karmaLog) ? raw.karmaLog as KarmaEntry[] : []</div>
+<div class="line">  s.disciples = Array.isArray(raw.disciples) ? raw.disciples as DiscipleData[] : []</div>
+<div class="line">  s.activeCompanionNpcId = typeof raw.activeCompanionNpcId === &#x27;string&#x27; ? raw.activeCompanionNpcId : null</div>
+<div class="line">  // Phase 4</div>
+<div class="line">  s.discoveredRealms = Array.isArray(raw.discoveredRealms) ? raw.discoveredRealms as string[] : []</div>
+<div class="line">  s.realmExplorationRecord = (raw.realmExplorationRecord as Record&lt;string, number&gt;) ?? {}</div>
+<div class="line">  s.activeRelationQuests = Array.isArray(raw.activeRelationQuests) ? raw.activeRelationQuests : []</div>
+<div class="line">  s.lastSocialSimDay = typeof raw.lastSocialSimDay === &#x27;number&#x27; ? raw.lastSocialSimDay : 0</div>
+<div class="line">  s.innerDemons = Array.isArray(raw.innerDemons) ? raw.innerDemons : []</div>
+<div class="line">  s.annualEventLog = Array.isArray(raw.annualEventLog) ? raw.annualEventLog : []</div>
+<div class="line">  s.lastAnnualEventYear = typeof raw.lastAnnualEventYear === &#x27;number&#x27; ? raw.lastAnnualEventYear : 0</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 14 页</span></div>
+<div class="line">  s.worldEvolutionScore = typeof raw.worldEvolutionScore === &#x27;number&#x27; ? raw.worldEvolutionScore : 0</div>
+<div class="line">  s.npcLifeEventsLog = Array.isArray(raw.npcLifeEventsLog) ? raw.npcLifeEventsLog : []</div>
+<div class="line">  s.playerLog = Array.isArray(raw.playerLog) ? raw.playerLog as PlayerLogEntry[] : []</div>
+<div class="line">  s.renderMode = (raw.renderMode === &#x27;2d&#x27; || raw.renderMode === &#x27;3d&#x27;) ? raw.renderMode : &#x27;3d&#x27;</div>
+<div class="line">  s.spiritOrifices = Math.min(9, Math.max(0, Number(raw.spiritOrifices ?? 0) || 0))</div>
+<div class="line">  s.lastScene = typeof raw.lastScene === &#x27;string&#x27; ? raw.lastScene : &#x27;&#x27;</div>
+<div class="line">  s.lastSceneData = (raw.lastSceneData as Record&lt;string, unknown&gt;) ?? {}</div>
+<div class="line">  s.artifacts = Array.isArray(raw.artifacts) ? raw.artifacts as ArtifactInstance[] : []</div>
+<div class="line">  registerDynamicContent(s.dynamicSets, s.dynamicSkills)</div>
+<div class="line">  return s</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">/** 从解析后的 JSON 对象规范化为 GameState（loadGame 和 loadSaveSlot 共用） */</div>
+<div class="line">function normalizeGameState(parsed: Record&lt;string, unknown&gt;): GameState {</div>
+<div class="line">  if (parsed.version === SAVE_VERSION) {</div>
+<div class="line">    const s = parsed as unknown as GameState</div>
+<div class="line">    s.equipment = s.equipment ?? { weapon: null, head: null, armor: null, boots: null, charm1: null, charm2: null }</div>
+<div class="line">    const loadedEquipment = s.equipment as Partial&lt;Record&lt;SlotKey, EquipItem | null&gt;&gt;</div>
+<div class="line">    s.equipment = Object.fromEntries(SLOT_KEYS.map((key) =&gt; [</div>
+<div class="line">      key,</div>
+<div class="line">      loadedEquipment[key] ? normalizeItem(loadedEquipment[key]!) : null,</div>
+<div class="line">    ])) as Record&lt;SlotKey, EquipItem | null&gt;</div>
+<div class="line">    s.inventory = (s.inventory ?? []).map(normalizeItem)</div>
+<div class="line">    s.progress = { qmCleared: s.progress?.qmCleared ?? false, ymCleared: s.progress?.ymCleared ?? false }</div>
+<div class="line">    s.materials = s.materials ?? { tupo: 0 }</div>
+<div class="line">    s.consumables = s.consumables ?? {}</div>
+<div class="line">    if (s.potions &gt; 0 &amp;&amp; !(s.consumables.hp_pill &gt; 0)) {</div>
+<div class="line">      s.consumables.hp_pill = s.potions</div>
+<div class="line">    }</div>
+<div class="line">    s.favor = s.favor ?? {}</div>
+<div class="line">    s.quests = s.quests ?? {}</div>
+<div class="line">    s.totalKills = s.totalKills ?? 0</div>
+<div class="line">    if (!Array.isArray(s.presets)) s.presets = [null, null, null, null, null]</div>
+<div class="line">    while (s.presets.length &lt; PRESET_COUNT) s.presets.push(null)</div>
+<div class="line">    s.activePreset = s.activePreset ?? -1</div>
+<div class="line">    s.skills = s.skills ?? { sk_sanlian: 1 }</div>
+<div class="line">    s.skillSlots = s.skillSlots ?? { style: null, minds: [null, null], art: null }</div>
+<div class="line">    s.skillSlots.minds = s.skillSlots.minds ?? [null, null]</div>
+<div class="line">    s.talents = s.talents ?? {}</div>
+<div class="line">    s.syCheckpoint = s.syCheckpoint ?? 7</div>
+<div class="line">    s.syMaxDepth = s.syMaxDepth ?? 0</div>
+<div class="line">    s.xianMaxDepth = s.xianMaxDepth ?? 0</div>
+<div class="line">    s.dynamicSets = normalizeDynamicSetRecords(s.dynamicSets)</div>
+<div class="line">    s.dynamicSkills = Array.isArray(s.dynamicSkills) ? s.dynamicSkills : []</div>
+<div class="line">    s.codex = isCodex(s.codex) ? s.codex : { items: [], skills: [], sets: [] }</div>
+<div class="line">    s.codex.items = s.codex.items ?? []</div>
+<div class="line">    s.codex.skills = s.codex.skills ?? []</div>
+<div class="line">    s.codex.sets = s.codex.sets ?? []</div>
+<div class="line">    s.honor = s.honor ?? 0</div>
+<div class="line">    s.arenaRank = s.arenaRank ?? 0</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 15 页</span></div>
+<div class="line">    s.arenaWins = s.arenaWins ?? 0</div>
+<div class="line">    s.arena1v1Wins = s.arena1v1Wins ?? 0</div>
+<div class="line">    s.arena1vNWins = s.arena1vNWins ?? 0</div>
+<div class="line">    s.cityUnlocked = s.cityUnlocked ?? false</div>
+<div class="line">    s.worldUnlocked = s.worldUnlocked ?? false</div>
+<div class="line">    s.worldTime = s.worldTime ?? newWorldTime()</div>
+<div class="line">    s.worldPlayerX = s.worldPlayerX ?? 600</div>
+<div class="line">    s.worldPlayerY = s.worldPlayerY ?? 1350</div>
+<div class="line">    s.homeX = s.homeX ?? 600</div>
+<div class="line">    s.homeY = s.homeY ?? 1350</div>
+<div class="line">    s.worldDomain = typeof s.worldDomain === &#x27;string&#x27; ? s.worldDomain : &#x27;south&#x27;</div>
+<div class="line">    s.discoveredPoints = Array.isArray(s.discoveredPoints) ? s.discoveredPoints : [&#x27;home&#x27;, &#x27;sect_entrance&#x27;]</div>
+<div class="line">    s.worldEventCooldown = s.worldEventCooldown ?? 0</div>
+<div class="line">    s.sectUnlocked = s.sectUnlocked ?? false</div>
+<div class="line">    s.sect = s.sect ?? null</div>
+<div class="line">    s.customBuildingPos = s.customBuildingPos ?? undefined</div>
+<div class="line">    s.customNpcPos = s.customNpcPos ?? undefined</div>
+<div class="line">    if (s.sect &amp;&amp; Array.isArray(s.sect.disciples)) {</div>
+<div class="line">      for (const d of s.sect.disciples) {</div>
+<div class="line">        if (!d.equipment) {</div>
+<div class="line">          d.equipment = { weapon: null, head: null, armor: null, boots: null, charm: null }</div>
+<div class="line">        }</div>
+<div class="line">        if (d.sparCooldown === undefined) d.sparCooldown = 0</div>
+<div class="line">        if (d.rank === undefined) d.rank = 0</div>
+<div class="line">        if (d.role === undefined) d.role = null</div>
+<div class="line">      }</div>
+<div class="line">    }</div>
+<div class="line">    if (s.sect &amp;&amp; !Array.isArray(s.sect.relics)) s.sect.relics = [null, null, null]</div>
+<div class="line">    s.npcStates = s.npcStates ?? {}</div>
+<div class="line">    s.aiSects = Array.isArray(s.aiSects) ? s.aiSects : []</div>
+<div class="line">    for (const ai of s.aiSects) {</div>
+<div class="line">      if (ai.attackTimer === undefined) ai.attackTimer = 0</div>
+<div class="line">      if (ai.vassalOf === undefined) ai.vassalOf = null</div>
+<div class="line">      if (ai.tributeRate === undefined) ai.tributeRate = 0</div>
+<div class="line">      if (ai.rebellionChance === undefined) ai.rebellionChance = 0</div>
+<div class="line">      if (ai.originalPower === undefined) ai.originalPower = ai.power</div>
+<div class="line">    }</div>
+<div class="line">    s.resourceNodes = Array.isArray(s.resourceNodes) ? s.resourceNodes : []</div>
+<div class="line">    s.diplomacyTickTimer = s.diplomacyTickTimer ?? 0</div>
+<div class="line">    s.mainQuestId = typeof s.mainQuestId === &#x27;string&#x27; ? s.mainQuestId : &#x27;mq_1_1&#x27;</div>
+<div class="line">    s.mainQuestProgress = s.mainQuestProgress ?? 0</div>
+<div class="line">    s.mainQuestCompleted = Array.isArray(s.mainQuestCompleted) ? s.mainQuestCompleted : []</div>
+<div class="line">    s.achievementsUnlocked = Array.isArray(s.achievementsUnlocked) ? s.achievementsUnlocked : []</div>
+<div class="line">    s.totalGoldEarned = s.totalGoldEarned ?? 0</div>
+<div class="line">    s.totalDungeonClears = s.totalDungeonClears ?? 0</div>
+<div class="line">    s.totalSectWarsWon = s.totalSectWarsWon ?? 0</div>
+<div class="line">    s.skillPoints = s.skillPoints ?? 0</div>
+<div class="line">    s.dailyQuests = Array.isArray(s.dailyQuests) ? s.dailyQuests : []</div>
+<div class="line">    s.dailyQuestDate = typeof s.dailyQuestDate === &#x27;string&#x27; ? s.dailyQuestDate : &#x27;&#x27;</div>
+<div class="line">    s.beasts = Array.isArray(s.beasts) ? s.beasts : []</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 16 页</span></div>
+<div class="line">    s.activePetUid = typeof s.activePetUid === &#x27;string&#x27; ? s.activePetUid : null</div>
+<div class="line">    s.activeMountUid = typeof s.activeMountUid === &#x27;string&#x27; ? s.activeMountUid : null</div>
+<div class="line">    s.formations = Array.isArray(s.formations) ? s.formations : []</div>
+<div class="line">    s.formationLastUse = s.formationLastUse ?? 0</div>
+<div class="line">    s.activeFormation = typeof s.activeFormation === &#x27;string&#x27; ? s.activeFormation : null</div>
+<div class="line">    s.merchants = Array.isArray(s.merchants) ? s.merchants : []</div>
+<div class="line">    s.sectTradeCooldown = s.sectTradeCooldown ?? 0</div>
+<div class="line">    s.tribulationRecords = s.tribulationRecords ?? {}</div>
+<div class="line">    s.ascensionCount = s.ascensionCount ?? 0</div>
+<div class="line">    s.ladderFloor = s.ladderFloor ?? 0</div>
+<div class="line">    s.ladderMaxFloor = s.ladderMaxFloor ?? 0</div>
+<div class="line">    // Phase 1</div>
+<div class="line">    s.morality = s.morality ?? 0</div>
+<div class="line">    s.reputation = s.reputation ?? 0</div>
+<div class="line">    s.stamina = s.stamina ?? 100</div>
+<div class="line">    s.lastStaminaTick = s.lastStaminaTick ?? 0</div>
+<div class="line">    s.worldFogData = s.worldFogData ?? {}</div>
+<div class="line">    // Phase 2</div>
+<div class="line">    s.proceduralNpcs = Array.isArray(s.proceduralNpcs) ? s.proceduralNpcs : []</div>
+<div class="line">    s.npcRelationNet = Array.isArray(s.npcRelationNet) ? s.npcRelationNet : []</div>
+<div class="line">    s.playerNpcRelations = s.playerNpcRelations ?? {}</div>
+<div class="line">    s.divineSenseLevel = s.divineSenseLevel ?? 0</div>
+<div class="line">    // Phase 3</div>
+<div class="line">    s.karma = s.karma ?? 0</div>
+<div class="line">    s.karmaLog = Array.isArray(s.karmaLog) ? s.karmaLog : []</div>
+<div class="line">    s.disciples = Array.isArray(s.disciples) ? s.disciples : []</div>
+<div class="line">    s.activeCompanionNpcId = typeof s.activeCompanionNpcId === &#x27;string&#x27; ? s.activeCompanionNpcId : null</div>
+<div class="line">    // Phase 4</div>
+<div class="line">    s.discoveredRealms = Array.isArray(s.discoveredRealms) ? s.discoveredRealms : []</div>
+<div class="line">    s.realmExplorationRecord = s.realmExplorationRecord ?? {}</div>
+<div class="line">    s.activeRelationQuests = Array.isArray(s.activeRelationQuests) ? s.activeRelationQuests : []</div>
+<div class="line">    s.lastSocialSimDay = typeof s.lastSocialSimDay === &#x27;number&#x27; ? s.lastSocialSimDay : 0</div>
+<div class="line">    s.innerDemons = Array.isArray(s.innerDemons) ? s.innerDemons : []</div>
+<div class="line">    s.annualEventLog = Array.isArray(s.annualEventLog) ? s.annualEventLog : []</div>
+<div class="line">    s.lastAnnualEventYear = typeof s.lastAnnualEventYear === &#x27;number&#x27; ? s.lastAnnualEventYear : 0</div>
+<div class="line">    s.worldEvolutionScore = typeof s.worldEvolutionScore === &#x27;number&#x27; ? s.worldEvolutionScore : 0</div>
+<div class="line">    s.npcLifeEventsLog = Array.isArray(s.npcLifeEventsLog) ? s.npcLifeEventsLog : []</div>
+<div class="line">    s.playerLog = Array.isArray(s.playerLog) ? s.playerLog : []</div>
+<div class="line">    s.renderMode = (s.renderMode === &#x27;2d&#x27; || s.renderMode === &#x27;3d&#x27;) ? s.renderMode : &#x27;3d&#x27;</div>
+<div class="line">    s.spiritOrifices = Math.min(9, Math.max(0, s.spiritOrifices ?? 0))</div>
+<div class="line">    s.lastScene = typeof s.lastScene === &#x27;string&#x27; ? s.lastScene : &#x27;&#x27;</div>
+<div class="line">    s.lastSceneData = s.lastSceneData ?? {}</div>
+<div class="line">    s.artifacts = Array.isArray(s.artifacts) ? s.artifacts : []</div>
+<div class="line">    registerDynamicContent(s.dynamicSets, s.dynamicSkills)</div>
+<div class="line">    return s</div>
+<div class="line">  }</div>
+<div class="line">  if (typeof parsed.version === &#x27;number&#x27; &amp;&amp; parsed.version &lt; SAVE_VERSION) return migrate(parsed)</div>
+<div class="line">  return newGame()</div>
+<div class="line">}</div>
+<div class="line"></div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 17 页</span></div>
+<div class="line">export function loadGame(): GameState {</div>
+<div class="line">  try {</div>
+<div class="line">    const raw = localStorage.getItem(SAVE_KEY)</div>
+<div class="line">    if (!raw) return newGame()</div>
+<div class="line">    const parsed = JSON.parse(raw) as Record&lt;string, unknown&gt;</div>
+<div class="line">    return normalizeGameState(parsed)</div>
+<div class="line">  } catch {</div>
+<div class="line">    return newGame()</div>
+<div class="line">  }</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">/** 转职：清空装配与旧职业专属技能，习得并装备新职业默认招式 */</div>
+<div class="line">export function switchClass(s: GameState, classId: string, defaultStyle: string) {</div>
+<div class="line">  s.classId = classId</div>
+<div class="line">  s.skillSlots = { style: null, minds: [null, null], art: null }</div>
+<div class="line">  // 清除旧职业专属技能（保留通用技能）</div>
+<div class="line">  for (const id of Object.keys(s.skills)) {</div>
+<div class="line">    const def = SKILLS.get(id)</div>
+<div class="line">    if (def &amp;&amp; def.class !== &#x27;any&#x27; &amp;&amp; def.class !== classId) {</div>
+<div class="line">      delete s.skills[id]</div>
+<div class="line">    }</div>
+<div class="line">  }</div>
+<div class="line">  if (!(defaultStyle in s.skills)) s.skills[defaultStyle] = 1</div>
+<div class="line">  s.skillSlots.style = defaultStyle</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">export function saveGame(s: GameState) {</div>
+<div class="line">  try {</div>
+<div class="line">    // 如果有活跃槽位，保存到槽位；否则保存到旧 key（向后兼容）</div>
+<div class="line">    if (activeSlot &gt;= 0) {</div>
+<div class="line">      saveToSlot(activeSlot, s)</div>
+<div class="line">    } else {</div>
+<div class="line">      localStorage.setItem(SAVE_KEY, JSON.stringify(s))</div>
+<div class="line">      updateRecords(s)</div>
+<div class="line">    }</div>
+<div class="line">  } catch { /* 忽略 */ }</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">const MAX_PLAYER_LOG = 200</div>
+<div class="line">export function pushPlayerLog(s: GameState, text: string): void {</div>
+<div class="line">  if (!Array.isArray(s.playerLog)) s.playerLog = []</div>
+<div class="line">  s.playerLog.push({ time: Date.now(), text })</div>
+<div class="line">  if (s.playerLog.length &gt; MAX_PLAYER_LOG) s.playerLog = s.playerLog.slice(-MAX_PLAYER_LOG)</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">/** 加经验，返回升了几级（悟道点由调用方发放） */</div>
+<div class="line">export function gainExp(s: GameState, amount: number): number {</div>
+<div class="line">  const mult = ascensionBonus(s.ascensionCount).expMult</div>
+<div class="line">  s.exp += Math.round(amount * mult)</div>
+<div class="line">  let ups = 0</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 18 页</span></div>
+<div class="line">  while (s.exp &gt;= expNeed(s.level)) {</div>
+<div class="line">    s.exp -= expNeed(s.level)</div>
+<div class="line">    s.level++</div>
+<div class="line">    ups++</div>
+<div class="line">  }</div>
+<div class="line">  return ups</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">// ---------- 万象图鉴记录 ----------</div>
+<div class="line">function codexPush(arr: string[] | undefined, key: string): string[] {</div>
+<div class="line">  const a = arr ?? []</div>
+<div class="line">  if (!a.includes(key)) a.push(key)</div>
+<div class="line">  return a</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">/** 记录装备入图鉴（名器记名，套装件同时记录套装） */</div>
+<div class="line">export function recordCodexItem(s: GameState, it: EquipItem) {</div>
+<div class="line">  if (!s.codex) s.codex = { items: [], skills: [], sets: [] }</div>
+<div class="line">  s.codex.items = codexPush(s.codex.items, it.name)</div>
+<div class="line">  if (it.setId) s.codex.sets = codexPush(s.codex.sets, it.setId)</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">/** 记录功法入图鉴 */</div>
+<div class="line">export function recordCodexSkill(s: GameState, skillId: string) {</div>
+<div class="line">  if (!s.codex) s.codex = { items: [], skills: [], sets: [] }</div>
+<div class="line">  s.codex.skills = codexPush(s.codex.skills, skillId)</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">export { expNeed }</div>
+<div class="line"></div>
+<div class="line">/* ====== 文件: src/core.ts ====== */</div>
+<div class="line">// ---------- 纯函数核心：随机数、伤害、掉落、经验（不依赖 Phaser，可单测） ----------</div>
+<div class="line"></div>
+<div class="line">import {</div>
+<div class="line">  AFFIXES, ITEM_BASES, QUALITY_AFFIX_COUNT, QUALITY_MULT, QUALITY_WEIGHT, SETS,</div>
+<div class="line">  type AffixDef, type ItemBase, type ModKey, type Quality, type SetDef,</div>
+<div class="line">} from &#x27;./data&#x27;</div>
+<div class="line">import { genNamedName } from &#x27;./lore&#x27;</div>
+<div class="line">import { V4_KIT_SETS } from &#x27;./v4/kit-data&#x27;</div>
+<div class="line"></div>
+<div class="line">/** 仙界起始楼层（与 xian-realm.ts 保持一致） */</div>
+<div class="line">const XIAN_START_FLOOR = 10000</div>
+<div class="line"></div>
+<div class="line">// mulberry32 种子随机</div>
+<div class="line">export function makeRng(seed: number) {</div>
+<div class="line">  let a = seed &gt;&gt;&gt; 0</div>
+<div class="line">  return function () {</div>
+<div class="line">    a |= 0; a = (a + 0x6d2b79f5) | 0</div>
+<div class="line">    let t = Math.imul(a ^ (a &gt;&gt;&gt; 15), 1 | a)</div>
+<div class="line">    t = (t + Math.imul(t ^ (t &gt;&gt;&gt; 7), 61 | t)) ^ t</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 19 页</span></div>
+<div class="line">    return ((t ^ (t &gt;&gt;&gt; 14)) &gt;&gt;&gt; 0) / 4294967296</div>
+<div class="line">  }</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">export function randInt(rng: () =&gt; number, min: number, max: number) {</div>
+<div class="line">  return min + Math.floor(rng() * (max - min + 1))</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">export function pickWeighted&lt;T&gt;(rng: () =&gt; number, entries: Array&lt;[T, number]&gt;): T {</div>
+<div class="line">  const total = entries.reduce((s, e) =&gt; s + e[1], 0)</div>
+<div class="line">  let r = rng() * total</div>
+<div class="line">  for (const [v, w] of entries) { r -= w; if (r &lt;= 0) return v }</div>
+<div class="line">  return entries[entries.length - 1][0]</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">// ---------- 伤害管线 v1 ----------</div>
+<div class="line">export interface DamageResult { dmg: number; crit: boolean }</div>
+<div class="line"></div>
+<div class="line">export function calcDamage(</div>
+<div class="line">  atk: number, mult: number, critRate: number,</div>
+<div class="line">  def: number, rng: () =&gt; number,</div>
+<div class="line">): DamageResult {</div>
+<div class="line">  const crit = rng() &lt; critRate</div>
+<div class="line">  let raw = atk * mult * (crit ? 1.6 : 1)</div>
+<div class="line">  raw *= 0.9 + rng() * 0.2 // ±10% 浮动</div>
+<div class="line">  const dmg = Math.max(1, Math.round(raw - def))</div>
+<div class="line">  return { dmg, crit }</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">// ---------- 经验 / 等级 ----------</div>
+<div class="line">export function expNeed(level: number) {</div>
+<div class="line">  return Math.round(40 * Math.pow(level, 1.45))</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">// ---------- 装备实例 ----------</div>
+<div class="line">let itemSeq = 1</div>
+<div class="line">export interface Affix { id: string; name: string; stat: ModKey; value: number; lucky?: boolean }</div>
+<div class="line"></div>
+<div class="line">export interface EquipItem {</div>
+<div class="line">  uid: string</div>
+<div class="line">  baseId: string</div>
+<div class="line">  name: string</div>
+<div class="line">  slot: &#x27;weapon&#x27; | &#x27;head&#x27; | &#x27;armor&#x27; | &#x27;boots&#x27; | &#x27;charm&#x27;</div>
+<div class="line">  quality: Quality</div>
+<div class="line">  itemLevel: number   // 装备等级：由玩家等级+楼层动态决定，驱动数值与词条数</div>
+<div class="line">  setId?: string</div>
+<div class="line">  atk: number; def: number; speed: number; crit: number; maxHp: number</div>
+<div class="line">  affixes: Affix[]</div>
+<div class="line">  price: number</div>
+<div class="line">  enh?: number   // 强化等级 0~ENH_MAX</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 20 页</span></div>
+<div class="line">  refine?: number // 精炼等级 0~REFINE_MAX</div>
+<div class="line">  star?: number   // 升星等级 0~STAR_MAX</div>
+<div class="line">  named?: boolean // 名器：程序命名的稀有装备</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">export const ENH_MAX = 5</div>
+<div class="line">/** 强化费用（灵石）：高等级装备更贵 */</div>
+<div class="line">export function enhanceCost(it: EquipItem): number {</div>
+<div class="line">  const lv = it.itemLevel ?? 1</div>
+<div class="line">  return Math.round((25 + lv * 3) * ((it.enh ?? 0) + 1) + it.quality * 15)</div>
+<div class="line">}</div>
+<div class="line">/** 强化后基座数值倍率（每级 +10%） */</div>
+<div class="line">export function enhMult(it: EquipItem): number {</div>
+<div class="line">  return 1 + 0.1 * (it.enh ?? 0)</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">// ---------- 精炼 / 升星 ----------</div>
+<div class="line">export const REFINE_MAX = 3  // 精炼上限：每级 +15% 基座数值，解锁 1 条额外词条</div>
+<div class="line"></div>
+<div class="line">/** 精炼费用（灵石） */</div>
+<div class="line">export function refineCost(it: EquipItem): number {</div>
+<div class="line">  const lv = it.itemLevel ?? 1</div>
+<div class="line">  const r = it.refine ?? 0</div>
+<div class="line">  return Math.round((100 + lv * 8) * (r + 1) * (it.quality + 1) * 1.5)</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">export const STAR_MAX = 5  // 升星上限：每级全属性 ×1.05（复利）</div>
+<div class="line"></div>
+<div class="line">/** 升星费用（灵石） */</div>
+<div class="line">export function starUpCost(it: EquipItem): number {</div>
+<div class="line">  const lv = it.itemLevel ?? 1</div>
+<div class="line">  const s = it.star ?? 0</div>
+<div class="line">  return Math.round((200 + lv * 15) * (s + 1) * (it.quality + 1) * 2)</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">/** 升星全属性倍率（每星 +5%，复利） */</div>
+<div class="line">export function starMult(it: EquipItem): number {</div>
+<div class="line">  return Math.pow(1.05, it.star ?? 0)</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">/** 综合倍率：强化 × 精炼 × 升星 */</div>
+<div class="line">export function totalEnhMult(it: EquipItem): number {</div>
+<div class="line">  return enhMult(it) * (1 + 0.15 * (it.refine ?? 0)) * starMult(it)</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">export function normalizeItem(it: EquipItem): EquipItem {</div>
+<div class="line">  it.maxHp = it.maxHp ?? 0</div>
+<div class="line">  it.affixes = it.affixes ?? []</div>
+<div class="line">  it.enh = it.enh ?? 0</div>
+<div class="line">  it.refine = it.refine ?? 0</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 21 页</span></div>
+<div class="line">  it.star = it.star ?? 0</div>
+<div class="line">  it.itemLevel = it.itemLevel ?? 1</div>
+<div class="line">  return it</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">function roundAffixValue(stat: ModKey, v: number): number {</div>
+<div class="line">  const pctStats: ModKey[] = [&#x27;crit&#x27;, &#x27;atkPct&#x27;, &#x27;defPct&#x27;, &#x27;hpPct&#x27;, &#x27;aspd&#x27;, &#x27;lifesteal&#x27;, &#x27;skillPct&#x27;, &#x27;cdPct&#x27;]</div>
+<div class="line">  return pctStats.includes(stat) ? Math.round(v * 1000) / 1000 : Math.round(v)</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">/** 高装备等级解锁的额外词条数 */</div>
+<div class="line">function bonusAffixCount(itemLevel: number): number {</div>
+<div class="line">  if (itemLevel &gt;= 60) return 3</div>
+<div class="line">  if (itemLevel &gt;= 40) return 2</div>
+<div class="line">  if (itemLevel &gt;= 20) return 1</div>
+<div class="line">  return 0</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">function rollAffixes(rng: () =&gt; number, quality: Quality, itemLevel: number): Affix[] {</div>
+<div class="line">  const count = QUALITY_AFFIX_COUNT[quality] + bonusAffixCount(itemLevel)</div>
+<div class="line">  if (count === 0) return []</div>
+<div class="line">  const pool = [...AFFIXES]</div>
+<div class="line">  const out: Affix[] = []</div>
+<div class="line">  // 词缀缩放：对数增长，防止高等级时属性爆炸</div>
+<div class="line">  const scale = (1 + 2 * (1 - 1 / (1 + itemLevel * 0.04))) * (1 + quality * 0.1)</div>
+<div class="line">  for (let i = 0; i &lt; count &amp;&amp; pool.length &gt; 0; i++) {</div>
+<div class="line">    const idx = randInt(rng, 0, pool.length - 1)</div>
+<div class="line">    const def: AffixDef = pool.splice(idx, 1)[0]</div>
+<div class="line">    const raw = def.min + rng() * (def.max - def.min)</div>
+<div class="line">    out.push({ id: def.id, name: def.name, stat: def.stat, value: roundAffixValue(def.stat, raw * scale) })</div>
+<div class="line">  }</div>
+<div class="line">  return out</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">/** 机缘词缀：品质词缀之外按概率额外降临 1~2 条（数值更丰厚，UI 标金） */</div>
+<div class="line">function rollLuckyAffixes(rng: () =&gt; number, quality: Quality, itemLevel: number, luck: number, used: Affix[]): Affix[] {</div>
+<div class="line">  const chance = 0.3 + luck * 0.004</div>
+<div class="line">  const out: Affix[] = []</div>
+<div class="line">  const pool = AFFIXES.filter((a) =&gt; !used.some((u) =&gt; u.id === a.id))</div>
+<div class="line">  const scale = (1 + 2 * (1 - 1 / (1 + itemLevel * 0.04))) * (1 + quality * 0.1) * 1.25</div>
+<div class="line">  const count = rng() &lt; chance ? (quality &gt;= 2 &amp;&amp; rng() &lt; chance * 0.5 ? 2 : 1) : 0</div>
+<div class="line">  for (let i = 0; i &lt; count &amp;&amp; pool.length &gt; 0; i++) {</div>
+<div class="line">    const idx = randInt(rng, 0, pool.length - 1)</div>
+<div class="line">    const def: AffixDef = pool.splice(idx, 1)[0]</div>
+<div class="line">    const raw = def.min + rng() * (def.max - def.min)</div>
+<div class="line">    out.push({ id: def.id, name: def.name, stat: def.stat, value: roundAffixValue(def.stat, raw * scale), lucky: true })</div>
+<div class="line">  }</div>
+<div class="line">  return out</div>
+<div class="line">}</div>
+<div class="line"></div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 22 页</span></div>
+<div class="line">/** 精炼解锁的额外词条：随机一条不重复词缀（与原有词条不重叠） */</div>
+<div class="line">export function rollRefineAffix(it: EquipItem, rng: () =&gt; number): Affix | null {</div>
+<div class="line">  const pool = AFFIXES.filter((a) =&gt; !it.affixes.some((u) =&gt; u.id === a.id))</div>
+<div class="line">  if (pool.length === 0) return null</div>
+<div class="line">  const idx = randInt(rng, 0, pool.length - 1)</div>
+<div class="line">  const def = pool[idx]</div>
+<div class="line">  const scale = (1 + 2 * (1 - 1 / (1 + it.itemLevel * 0.04))) * (1 + it.quality * 0.1)</div>
+<div class="line">  const raw = def.min + rng() * (def.max - def.min)</div>
+<div class="line">  return { id: def.id, name: def.name, stat: def.stat, value: roundAffixValue(def.stat, raw * scale) }</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">function buildItem(base: ItemBase, quality: Quality, floor: number, rng: () =&gt; number, luck = 0, playerLevel = 1): EquipItem {</div>
+<div class="line">  // 仙界楼层压缩：破碎仙宫第 N 重 → 等效为 凡界第 20 + N*0.8 层</div>
+<div class="line">  // 防止 floor=10000+ 直接灌入导致装备等级爆炸</div>
+<div class="line">  const effFloor = floor &gt;= XIAN_START_FLOOR</div>
+<div class="line">    ? 20 + Math.floor((floor - XIAN_START_FLOOR + 1) * 0.8)</div>
+<div class="line">    : floor</div>
+<div class="line">  // 装备等级：玩家等级 ± 波动 + 楼层贡献（对数曲线，高层增长放缓）</div>
+<div class="line">  const floorContrib = Math.floor(8 * Math.log2(1 + effFloor / 5))</div>
+<div class="line">  const itemLevel = Math.max(1, Math.min(100, playerLevel + randInt(rng, -2, 2) + floorContrib))</div>
+<div class="line">  // 等级倍率：对数增长，50级前较快，之后放缓，100级封顶约 4.5x</div>
+<div class="line">  const levelMult = 1 + 3.5 * (1 - 1 / (1 + itemLevel * 0.025))</div>
+<div class="line">  const mult = QUALITY_MULT[quality] * levelMult</div>
+<div class="line">  const affixes = rollAffixes(rng, quality, itemLevel)</div>
+<div class="line">  affixes.push(...rollLuckyAffixes(rng, quality, itemLevel, luck, affixes))</div>
+<div class="line">  return normalizeItem({</div>
+<div class="line">    uid: `${Date.now().toString(36)}-${itemSeq++}`,</div>
+<div class="line">    baseId: base.id,</div>
+<div class="line">    name: base.name,</div>
+<div class="line">    slot: base.slot,</div>
+<div class="line">    quality,</div>
+<div class="line">    itemLevel,</div>
+<div class="line">    setId: base.set,</div>
+<div class="line">    atk: Math.round((base.atk ?? 0) * mult),</div>
+<div class="line">    def: Math.round((base.def ?? 0) * mult),</div>
+<div class="line">    speed: Math.round((base.speed ?? 0) * mult),</div>
+<div class="line">    crit: (base.crit ?? 0) + quality * 0.01,</div>
+<div class="line">    maxHp: Math.round((base.maxHp ?? 0) * mult),</div>
+<div class="line">    affixes,</div>
+<div class="line">    price: Math.round(8 * mult * (quality + 1) * (1 + itemLevel * 0.05)),</div>
+<div class="line">  })</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">/** GM 工具：按基座 id 直接打造一件指定品质装备 */</div>
+<div class="line">export function makeItem(baseId: string, quality: Quality, floor: number, playerLevel?: number): EquipItem | null {</div>
+<div class="line">  const base = ITEM_BASES.find((b) =&gt; b.id === baseId)</div>
+<div class="line">  if (!base) return null</div>
+<div class="line">  return buildItem(base, quality, Math.max(1, floor), Math.random, 0, playerLevel ?? floor)</div>
+<div class="line">}</div>
+<div class="line"></div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 23 页</span></div>
+<div class="line">/** 按槽位锻造装备（用于宗门炼器），走 buildItem 管线获得词缀和品质 */</div>
+<div class="line">export function forgeBySlot(</div>
+<div class="line">  slot: &#x27;weapon&#x27; | &#x27;head&#x27; | &#x27;armor&#x27; | &#x27;boots&#x27; | &#x27;charm&#x27;,</div>
+<div class="line">  forgeLevel: number,</div>
+<div class="line">  playerLevel: number,</div>
+<div class="line">  rng: () =&gt; number,</div>
+<div class="line">): EquipItem {</div>
+<div class="line">  const pool = ITEM_BASES.filter(b =&gt; b.slot === slot &amp;&amp; !b.set)</div>
+<div class="line">  const base = pool.length &gt; 0</div>
+<div class="line">    ? pool[Math.floor(rng() * pool.length)]</div>
+<div class="line">    : ITEM_BASES.find(b =&gt; b.slot === slot) ?? ITEM_BASES[0]</div>
+<div class="line">  const qualityBonus = forgeLevel &gt;= 5 ? 1 : 0</div>
+<div class="line">  const entries: Array&lt;[Quality, number]&gt; = ([0, 1, 2, 3] as Quality[]).map(q =&gt; [</div>
+<div class="line">    q,</div>
+<div class="line">    QUALITY_WEIGHT[q] + (q &gt;= 1 ? qualityBonus * 10 : 0),</div>
+<div class="line">  ])</div>
+<div class="line">  const quality = pickWeighted(rng, entries)</div>
+<div class="line">  const item = buildItem(base, quality, Math.max(1, playerLevel), rng, 0, playerLevel)</div>
+<div class="line">  if (item.quality &gt;= 1 &amp;&amp; rng() &lt; 0.05 + forgeLevel * 0.01) {</div>
+<div class="line">    return makeNamed(item, rng)</div>
+<div class="line">  }</div>
+<div class="line">  return item</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">/** 名器化：程序命名 + 基座数值提升 15%~30%（灵品以上才有缘得遇） */</div>
+<div class="line">function makeNamed(it: EquipItem, rng: () =&gt; number): EquipItem {</div>
+<div class="line">  it.name = genNamedName(rng, it.slot)</div>
+<div class="line">  it.named = true</div>
+<div class="line">  const boost = 1.15 + rng() * 0.15</div>
+<div class="line">  it.atk = Math.round(it.atk * boost)</div>
+<div class="line">  it.def = Math.round(it.def * boost)</div>
+<div class="line">  it.speed = Math.round(it.speed * boost)</div>
+<div class="line">  it.maxHp = Math.round(it.maxHp * boost)</div>
+<div class="line">  it.price = Math.round(it.price * 2)</div>
+<div class="line">  return it</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">/** 普通掉落装备（不含套装件） */</div>
+<div class="line">export function rollEquip(rng: () =&gt; number, floor: number, luckBonus = 0, playerLevel = 1): EquipItem {</div>
+<div class="line">  const pool = ITEM_BASES.filter((b) =&gt; !b.set)</div>
+<div class="line">  const poolSize = Math.min(pool.length, 6 + floor * 2)</div>
+<div class="line">  const base = pool[randInt(rng, 0, poolSize - 1)]</div>
+<div class="line">  const entries: Array&lt;[Quality, number]&gt; = ([0, 1, 2, 3] as Quality[]).map((q) =&gt; [</div>
+<div class="line">    q,</div>
+<div class="line">    QUALITY_WEIGHT[q] + (q &gt;= 2 ? luckBonus : 0),</div>
+<div class="line">  ])</div>
+<div class="line">  const quality = pickWeighted(rng, entries)</div>
+<div class="line">  let item = buildItem(base, quality, floor, rng, luckBonus, playerLevel)</div>
+<div class="line">  if (item.quality &gt;= 1 &amp;&amp; rng() &lt; 0.08 + luckBonus * 0.002) item = makeNamed(item, rng)</div>
+<div class="line">  return item</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 24 页</span></div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">/** 套装部件（Boss 掉落），quality 灵品~玄品；luck 提高高品质权重 */</div>
+<div class="line">export function rollSetPiece(rng: () =&gt; number, setId: string, floor: number, luck = 0, playerLevel = 1): EquipItem | null {</div>
+<div class="line">  const set = SETS[setId] ?? V4_KIT_SETS.get(setId)</div>
+<div class="line">  if (!set) return null</div>
+<div class="line">  const baseId = set.pieces[randInt(rng, 0, set.pieces.length - 1)]</div>
+<div class="line">  const base = ITEM_BASES.find((b) =&gt; b.id === baseId)</div>
+<div class="line">  if (!base) return null</div>
+<div class="line">  const quality = pickWeighted(rng, [[1, Math.max(10, 45 - luck)], [2, 40 + Math.floor(luck / 2)], [3, 15 + luck]] as Array&lt;[Quality, number]&gt;)</div>
+<div class="line">  return buildItem(base, quality, floor, rng, luck, playerLevel)</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">export interface DropRoll {</div>
+<div class="line">  gold: number</div>
+<div class="line">  potion: boolean</div>
+<div class="line">  equip: EquipItem | null</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">export function rollDrop(rng: () =&gt; number, goldRange: [number, number], floor: number, isBoss: boolean, luck = 0, goldMult = 1, playerLevel = 1): DropRoll {</div>
+<div class="line">  const gold = Math.round(randInt(rng, goldRange[0], goldRange[1]) * (isBoss ? 2 : 1) * goldMult)</div>
+<div class="line">  const potion = rng() &lt; (isBoss ? 0.9 : 0.14)</div>
+<div class="line">  let equip: EquipItem | null = null</div>
+<div class="line">  const equipChance = isBoss ? 1 : 0.13 + luck * 0.002  // 难度加成微幅提升装备掉率</div>
+<div class="line">  if (rng() &lt; equipChance) equip = rollEquip(rng, floor, (isBoss ? 20 : 0) + luck, playerLevel)</div>
+<div class="line">  return { gold, potion, equip }</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">/* ====== 文件: src/data.ts ====== */</div>
+<div class="line">// ---------- 配置数据加载层（JSON 配置表 + 类型定义，构建期经 validate-data.mjs 校验） ----------</div>
+<div class="line"></div>
+<div class="line">import classesJson from &#x27;./data/classes.json&#x27;</div>
+<div class="line">import monstersJson from &#x27;./data/monsters.json&#x27;</div>
+<div class="line">import floorsJson from &#x27;./data/floors.json&#x27;</div>
+<div class="line">import itemsJson from &#x27;./data/items.json&#x27;</div>
+<div class="line">import affixesJson from &#x27;./data/affixes.json&#x27;</div>
+<div class="line">import setsJson from &#x27;./data/sets.json&#x27;</div>
+<div class="line">import skillsJson from &#x27;./data/skills.json&#x27;</div>
+<div class="line">import talentsJson from &#x27;./data/talents.json&#x27;</div>
+<div class="line">import v4KitsJson from &#x27;./data/v4-kits.json&#x27;</div>
+<div class="line"></div>
+<div class="line">export type Quality = 0 | 1 | 2 | 3 // 凡品/灵品/宝品/玄品</div>
+<div class="line">export type ItemSlot = &#x27;weapon&#x27; | &#x27;head&#x27; | &#x27;armor&#x27; | &#x27;boots&#x27; | &#x27;charm&#x27;</div>
+<div class="line">/** 装备槽位 key（charm 有两个佩戴位） */</div>
+<div class="line">export type SlotKey = &#x27;weapon&#x27; | &#x27;head&#x27; | &#x27;armor&#x27; | &#x27;boots&#x27; | &#x27;charm1&#x27; | &#x27;charm2&#x27;</div>
+<div class="line"></div>
+<div class="line">export const QUALITY_NAMES = [&#x27;凡品&#x27;, &#x27;灵品&#x27;, &#x27;宝品&#x27;, &#x27;玄品&#x27;]</div>
+<div class="line">export const QUALITY_COLORS = [0xcfd3da, 0x58d68d, 0x5dade2, 0xaf7ac5]</div>
+<div class="line">export const SLOT_NAMES: Record&lt;SlotKey, string&gt; = {</div>
+<div class="line">  weapon: &#x27;武器&#x27;, head: &#x27;头部&#x27;, armor: &#x27;衣甲&#x27;, boots: &#x27;靴子&#x27;, charm1: &#x27;饰品一&#x27;, charm2: &#x27;饰品二&#x27;,</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 25 页</span></div>
+<div class="line">}</div>
+<div class="line">export const SLOT_KEYS: SlotKey[] = [&#x27;weapon&#x27;, &#x27;head&#x27;, &#x27;armor&#x27;, &#x27;boots&#x27;, &#x27;charm1&#x27;, &#x27;charm2&#x27;]</div>
+<div class="line"></div>
+<div class="line">// ---------- 统一修饰（Effect DSL v1：所有来源共用） ----------</div>
+<div class="line">export interface Mods {</div>
+<div class="line">  atk: number; def: number; speed: number; crit: number; maxHp: number</div>
+<div class="line">  atkPct: number; defPct: number; hpPct: number</div>
+<div class="line">  aspd: number; lifesteal: number; skillPct: number; cdPct: number</div>
+<div class="line">}</div>
+<div class="line">export type ModKey = keyof Mods</div>
+<div class="line"></div>
+<div class="line">export const MOD_LABELS: Record&lt;ModKey, (v: number) =&gt; string&gt; = {</div>
+<div class="line">  atk: (v) =&gt; `攻击+${v}`,</div>
+<div class="line">  def: (v) =&gt; `防御+${v}`,</div>
+<div class="line">  speed: (v) =&gt; `速度+${v}`,</div>
+<div class="line">  crit: (v) =&gt; `会心+${(v * 100).toFixed(0)}%`,</div>
+<div class="line">  maxHp: (v) =&gt; `气血+${v}`,</div>
+<div class="line">  atkPct: (v) =&gt; `攻击+${(v * 100).toFixed(0)}%`,</div>
+<div class="line">  defPct: (v) =&gt; `防御+${(v * 100).toFixed(0)}%`,</div>
+<div class="line">  hpPct: (v) =&gt; `气血+${(v * 100).toFixed(0)}%`,</div>
+<div class="line">  aspd: (v) =&gt; `攻速+${(v * 100).toFixed(0)}%`,</div>
+<div class="line">  lifesteal: (v) =&gt; `吸血+${(v * 100).toFixed(0)}%`,</div>
+<div class="line">  skillPct: (v) =&gt; `技伤+${(v * 100).toFixed(0)}%`,</div>
+<div class="line">  cdPct: (v) =&gt; `冷却-${(v * 100).toFixed(0)}%`,</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">export function emptyMods(): Mods {</div>
+<div class="line">  return { atk: 0, def: 0, speed: 0, crit: 0, maxHp: 0, atkPct: 0, defPct: 0, hpPct: 0, aspd: 0, lifesteal: 0, skillPct: 0, cdPct: 0 }</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">// ---------- 类型 ----------</div>
+<div class="line">export type Direction = &#x27;down&#x27; | &#x27;left&#x27; | &#x27;right&#x27; | &#x27;up&#x27;</div>
+<div class="line"></div>
+<div class="line">export interface ClassDef {</div>
+<div class="line">  id: string</div>
+<div class="line">  name: string</div>
+<div class="line">  base: { hp: number; atk: number; def: number; speed: number; crit: number }</div>
+<div class="line">  growth: { hp: number; atk: number; def: number }</div>
+<div class="line">  defaultStyle: string</div>
+<div class="line">  tint: number | null</div>
+<div class="line">  /** 素材帧朝向修正（规范素材无需此字段） */</div>
+<div class="line">  dirRemap?: Partial&lt;Record&lt;Direction, Direction&gt;&gt;</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">export type AiKind = &#x27;melee&#x27; | &#x27;ranged&#x27; | &#x27;boss&#x27;</div>
+<div class="line">export interface MonsterDef {</div>
+<div class="line">  id: string; name: string; tex: string</div>
+<div class="line">  hp: number; atk: number; def: number; speed: number</div>
+<div class="line">  exp: number; gold: [number, number]</div>
+<div class="line">  ai: AiKind; range?: number; cd?: number; scale?: number</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 26 页</span></div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">export interface ItemBase {</div>
+<div class="line">  id: string; name: string; slot: ItemSlot</div>
+<div class="line">  atk?: number; def?: number; speed?: number; crit?: number; maxHp?: number</div>
+<div class="line">  set?: string</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">export interface AffixDef { id: string; name: string; stat: ModKey; min: number; max: number }</div>
+<div class="line"></div>
+<div class="line">export type AttackMode = &#x27;melee_arc&#x27; | &#x27;whirlwind&#x27; | &#x27;flying_sword&#x27; | &#x27;flying_sword_burst&#x27; | &#x27;magic_bolt&#x27; | &#x27;frost_nova&#x27; | &#x27;frost_nova_burst&#x27; | &#x27;thunder_chain&#x27; | &#x27;sword_array&#x27; | &#x27;giant_sword&#x27; | &#x27;slash_pierce&#x27; | &#x27;bolt_fire&#x27; | &#x27;slash_heavy&#x27; | &#x27;bolt_needle&#x27; | &#x27;slash_ice&#x27; | &#x27;bolt_dart&#x27; | &#x27;thunder_net&#x27; | &#x27;flying_sword_split&#x27; | &#x27;flame_slash&#x27; | &#x27;shadow_blade&#x27; | &#x27;spirit_chain&#x27; | &#x27;wind_slash&#x27; | &#x27;stone_spike&#x27; | &#x27;blood_scythe&#x27; | &#x27;star_barrage&#x27; | &#x27;venom_claw&#x27; | &#x27;light_beam&#x27; | &#x27;soul_flame&#x27; | &#x27;crystal_shard&#x27;</div>
+<div class="line">export type ArtMode = &#x27;sword_fan&#x27; | &#x27;fire_rain&#x27; | &#x27;thunder_strike&#x27; | &#x27;dageng&#x27; | &#x27;sword_storm&#x27; | &#x27;fire_phoenix&#x27; | &#x27;mountain_seal&#x27; | &#x27;shadow_swarm&#x27; | &#x27;ice_thunder&#x27; | &#x27;thunder_prison&#x27; | &#x27;meteor_storm&#x27; | &#x27;void_rift&#x27; | &#x27;blood_domain&#x27; | &#x27;light_pillar&#x27; | &#x27;frozen_domain&#x27; | &#x27;spirit_vortex&#x27; | &#x27;blade_orbit&#x27; | &#x27;poison_cloud&#x27; | &#x27;gravity_crush&#x27; | &#x27;phoenix_rebirth&#x27;</div>
+<div class="line"></div>
+<div class="line">/**</div>
+<div class="line"> * 程序随机套装可使用的正式模块化视觉处方。</div>
+<div class="line"> * 这是白名单 id，不是资源路径；运行时只映射到已有 modularFx 动画。</div>
+<div class="line"> */</div>
+<div class="line">export type ProceduralVfxRecipe = &#x27;sword-comet&#x27; | &#x27;frost-bloom&#x27; | &#x27;thunder-sigil&#x27; | &#x27;giant-crest&#x27;</div>
+<div class="line"></div>
+<div class="line">/** 神通模式的统一展示名；套装覆写不得回退显示玩家已装配的神通名称。 */</div>
+<div class="line">export const ART_MODE_NAMES: Record&lt;ArtMode, string&gt; = {</div>
+<div class="line">  sword_fan: &#x27;剑气纵横&#x27;,</div>
+<div class="line">  fire_rain: &#x27;流星火雨&#x27;,</div>
+<div class="line">  thunder_strike: &#x27;九天神雷&#x27;,</div>
+<div class="line">  dageng: &#x27;大庚剑阵&#x27;,</div>
+<div class="line">  sword_storm: &#x27;千剑归宗&#x27;,</div>
+<div class="line">  fire_phoenix: &#x27;浴火重生&#x27;,</div>
+<div class="line">  mountain_seal: &#x27;五岳镇域&#x27;,</div>
+<div class="line">  shadow_swarm: &#x27;百魅夜行&#x27;,</div>
+<div class="line">  ice_thunder: &#x27;冰雷双生&#x27;,</div>
+<div class="line">  thunder_prison: &#x27;万雷天牢&#x27;,</div>
+<div class="line">  meteor_storm: &#x27;陨石天降&#x27;,</div>
+<div class="line">  void_rift: &#x27;虚空裂隙&#x27;,</div>
+<div class="line">  blood_domain: &#x27;血域降临&#x27;,</div>
+<div class="line">  light_pillar: &#x27;圣光审判&#x27;,</div>
+<div class="line">  frozen_domain: &#x27;冰封领域&#x27;,</div>
+<div class="line">  spirit_vortex: &#x27;元神风暴&#x27;,</div>
+<div class="line">  blade_orbit: &#x27;剑环万象&#x27;,</div>
+<div class="line">  poison_cloud: &#x27;万毒瘴气&#x27;,</div>
+<div class="line">  gravity_crush: &#x27;重力深渊&#x27;,</div>
+<div class="line">  phoenix_rebirth: &#x27;凤凰涅槃&#x27;,</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">export type SetEffectTag = &#x27;sword_split&#x27; | &#x27;fire_burst&#x27; | &#x27;delayed_burst&#x27; | &#x27;array_mine&#x27; | &#x27;procedural_vfx&#x27; | &#x27;test_sword_visual&#x27; | &#x27;test_frost_visual&#x27; | &#x27;test_thunder_visual&#x27; | &#x27;test_giant_visual&#x27;</div>
+<div class="line"></div>
+<div class="line">/**</div>
+<div class="line"> * Explicit, data-only first-hit mechanics. These are a closed whitelist rather</div>
+<div class="line"> * than a save-driven effect DSL: an untrusted record can only name one of the</div>
+<div class="line"> * two implemented runtime behaviours below.</div>
+<div class="line"> */</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 27 页</span></div>
+<div class="line">export type ControlledHitLinkageRecipeId = &#x27;flying_sword_first_hit_split&#x27; | &#x27;giant_sword_first_hit_fire_bolt&#x27;</div>
+<div class="line">export interface FlyingSwordFirstHitLinkage {</div>
+<div class="line">  recipeId: &#x27;flying_sword_first_hit_split&#x27;</div>
+<div class="line">  parameters: { childCount: 2; damageMultiplier: 0.4; cooldownMs: 800; nonRecursive: true }</div>
+<div class="line">}</div>
+<div class="line">export interface GiantSwordFirstHitLinkage {</div>
+<div class="line">  recipeId: &#x27;giant_sword_first_hit_fire_bolt&#x27;</div>
+<div class="line">  parameters: { projectileCount: 1; damageMultiplier: 0.4; cooldownMs: 1200; nonRecursive: true }</div>
+<div class="line">}</div>
+<div class="line">export type ControlledHitLinkage = FlyingSwordFirstHitLinkage | GiantSwordFirstHitLinkage</div>
+<div class="line"></div>
+<div class="line">export const CONTROLLED_HIT_LINKAGE_RECIPES: Record&lt;ControlledHitLinkageRecipeId, ControlledHitLinkage&gt; = {</div>
+<div class="line">  flying_sword_first_hit_split: {</div>
+<div class="line">    recipeId: &#x27;flying_sword_first_hit_split&#x27;,</div>
+<div class="line">    parameters: { childCount: 2, damageMultiplier: 0.4, cooldownMs: 800, nonRecursive: true },</div>
+<div class="line">  },</div>
+<div class="line">  giant_sword_first_hit_fire_bolt: {</div>
+<div class="line">    recipeId: &#x27;giant_sword_first_hit_fire_bolt&#x27;,</div>
+<div class="line">    parameters: { projectileCount: 1, damageMultiplier: 0.4, cooldownMs: 1200, nonRecursive: true },</div>
+<div class="line">  },</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">/** Return a fresh snapshot so generated/save records never share mutable recipe data. */</div>
+<div class="line">export function controlledHitLinkageById(recipeId: ControlledHitLinkageRecipeId): ControlledHitLinkage {</div>
+<div class="line">  if (recipeId === &#x27;flying_sword_first_hit_split&#x27;) {</div>
+<div class="line">    return {</div>
+<div class="line">      recipeId,</div>
+<div class="line">      parameters: { childCount: 2, damageMultiplier: 0.4, cooldownMs: 800, nonRecursive: true },</div>
+<div class="line">    }</div>
+<div class="line">  }</div>
+<div class="line">  return {</div>
+<div class="line">    recipeId,</div>
+<div class="line">    parameters: { projectileCount: 1, damageMultiplier: 0.4, cooldownMs: 1200, nonRecursive: true },</div>
+<div class="line">  }</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">function hasExactKeys(value: Record&lt;string, unknown&gt;, keys: readonly string[]) {</div>
+<div class="line">  const actual = Object.keys(value)</div>
+<div class="line">  return actual.length === keys.length &amp;&amp; actual.every((key) =&gt; keys.includes(key))</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">/** Strict structural guard used at the dynamic-save boundary. */</div>
+<div class="line">export function isControlledHitLinkage(value: unknown): value is ControlledHitLinkage {</div>
+<div class="line">  if (!value || typeof value !== &#x27;object&#x27; || Array.isArray(value)) return false</div>
+<div class="line">  const raw = value as Record&lt;string, unknown&gt;</div>
+<div class="line">  if (!hasExactKeys(raw, [&#x27;recipeId&#x27;, &#x27;parameters&#x27;]) || !raw.parameters || typeof raw.parameters !== &#x27;object&#x27; || Array.isArray(raw.parameters)) return false</div>
+<div class="line">  const parameters = raw.parameters as Record&lt;string, unknown&gt;</div>
+<div class="line">  if (raw.recipeId === &#x27;flying_sword_first_hit_split&#x27;) {</div>
+<div class="line">    return hasExactKeys(parameters, [&#x27;childCount&#x27;, &#x27;damageMultiplier&#x27;, &#x27;cooldownMs&#x27;, &#x27;nonRecursive&#x27;])</div>
+<div class="line">      &amp;&amp; parameters.childCount === 2</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 28 页</span></div>
+<div class="line">      &amp;&amp; parameters.damageMultiplier === 0.4</div>
+<div class="line">      &amp;&amp; parameters.cooldownMs === 800</div>
+<div class="line">      &amp;&amp; parameters.nonRecursive === true</div>
+<div class="line">  }</div>
+<div class="line">  if (raw.recipeId === &#x27;giant_sword_first_hit_fire_bolt&#x27;) {</div>
+<div class="line">    return hasExactKeys(parameters, [&#x27;projectileCount&#x27;, &#x27;damageMultiplier&#x27;, &#x27;cooldownMs&#x27;, &#x27;nonRecursive&#x27;])</div>
+<div class="line">      &amp;&amp; parameters.projectileCount === 1</div>
+<div class="line">      &amp;&amp; parameters.damageMultiplier === 0.4</div>
+<div class="line">      &amp;&amp; parameters.cooldownMs === 1200</div>
+<div class="line">      &amp;&amp; parameters.nonRecursive === true</div>
+<div class="line">  }</div>
+<div class="line">  return false</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">/** A linkage can be structurally owned by an attack source before art is resolved. */</div>
+<div class="line">export function isControlledHitLinkageAttackCompatible(</div>
+<div class="line">  linkage: unknown,</div>
+<div class="line">  attackMode: unknown,</div>
+<div class="line">): linkage is ControlledHitLinkage {</div>
+<div class="line">  if (!isControlledHitLinkage(linkage)) return false</div>
+<div class="line">  return (linkage.recipeId === &#x27;flying_sword_first_hit_split&#x27; &amp;&amp; attackMode === &#x27;flying_sword_burst&#x27;)</div>
+<div class="line">    || (linkage.recipeId === &#x27;giant_sword_first_hit_fire_bolt&#x27; &amp;&amp; attackMode === &#x27;giant_sword&#x27;)</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">/** A controlled linkage belongs to its attack source and never applies to 大庚剑阵. */</div>
+<div class="line">export function isControlledHitLinkageCompatible(</div>
+<div class="line">  linkage: unknown,</div>
+<div class="line">  attackMode: unknown,</div>
+<div class="line">  artMode: unknown,</div>
+<div class="line">): linkage is ControlledHitLinkage {</div>
+<div class="line">  return artMode !== &#x27;dageng&#x27; &amp;&amp; isControlledHitLinkageAttackCompatible(linkage, attackMode)</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">export interface SetBonus {</div>
+<div class="line">  count: number</div>
+<div class="line">  mods?: Partial&lt;Mods&gt;</div>
+<div class="line">  attackMode?: AttackMode</div>
+<div class="line">  artMode?: ArtMode</div>
+<div class="line">  /** 稳定的动态套装变身档案 id；静态套装可省略。 */</div>
+<div class="line">  transformId?: string</div>
+<div class="line">  /** 套装神通的直接伤害倍率；缺失时由现有静态套装兼容默认值补齐。 */</div>
+<div class="line">  artPower?: number</div>
+<div class="line">  /** 套装神通的基础冷却（毫秒）；最终仍受 cdPct 影响。 */</div>
+<div class="line">  artCooldownMs?: number</div>
+<div class="line">  /** 程序生成的招式显示名；缺失时沿用攻击模式的既有表现。 */</div>
+<div class="line">  attackName?: string</div>
+<div class="line">  /** 程序生成的神通显示名；缺失时回退 ART_MODE_NAMES。 */</div>
+<div class="line">  artName?: string</div>
+<div class="line">  /** v4 原语作为普攻表现（动态套装可选招式路线）；与 attackMode 互斥。 */</div>
+<div class="line">  normalPrimitive?: KitPrimitive</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 29 页</span></div>
+<div class="line">  /** v4 原语作为神通表现（动态套装可选神通路线）；与 artMode 互斥。 */</div>
+<div class="line">  artPrimitive?: KitPrimitive</div>
+<div class="line">  /** 程序随机套装的正式模块化 VFX 处方；不接受任意纹理或动画 key。 */</div>
+<div class="line">  vfxRecipe?: ProceduralVfxRecipe</div>
+<div class="line">  /** v3 受控首中联动；只能使用固定白名单参数，且仅可出现在完整 4/6 件能力条目。 */</div>
+<div class="line">  hitLinkage?: ControlledHitLinkage</div>
+<div class="line">  fxTags?: SetEffectTag[]</div>
+<div class="line">  desc: string</div>
+<div class="line">}</div>
+<div class="line">export interface SetDef { id: string; name: string; pieces: string[]; bonuses: SetBonus[] }</div>
+<div class="line"></div>
+<div class="line">export type SkillType = &#x27;style&#x27; | &#x27;mind&#x27; | &#x27;art&#x27;</div>
+<div class="line">export type SkillClass = &#x27;sword&#x27; | &#x27;fairy&#x27; | &#x27;sword_new&#x27; | &#x27;fairy_new&#x27; | &#x27;mage&#x27; | &#x27;any&#x27;</div>
+<div class="line">export const SKILL_TYPE_NAMES: Record&lt;SkillType, string&gt; = { style: &#x27;招式&#x27;, mind: &#x27;心法&#x27;, art: &#x27;神通&#x27; }</div>
+<div class="line">export interface SkillDef {</div>
+<div class="line">  id: string; name: string; type: SkillType; class: SkillClass</div>
+<div class="line">  attackMode?: AttackMode; power?: number; cd?: number; artMode?: ArtMode</div>
+<div class="line">  mods?: Partial&lt;Mods&gt;; desc: string</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">export interface TalentNode { id: string; name: string; max: number; per: Partial&lt;Mods&gt;; desc: string }</div>
+<div class="line">export interface TalentBranch { id: string; name: string; nodes: TalentNode[] }</div>
+<div class="line"></div>
+<div class="line">// ---------- v4 三十套独立 Kit 类型（不并入 AttackMode/ArtMode 联合，ADR D8） ----------</div>
+<div class="line">export type KitPrimitive =</div>
+<div class="line">  | &#x27;roundtrip&#x27; | &#x27;refract&#x27; | &#x27;mark&#x27; | &#x27;fixedpoint&#x27;</div>
+<div class="line">  | &#x27;thundernet&#x27; | &#x27;thunderstake&#x27; | &#x27;charge&#x27; | &#x27;boomerang&#x27;</div>
+<div class="line"></div>
+<div class="line">export type KitId = `k${string}`</div>
+<div class="line"></div>
+<div class="line">/** v4 Kit 能力档案（固定，非随机）。数值参数由 typed executor 读取。 */</div>
+<div class="line">export interface KitAbility {</div>
+<div class="line">  readonly kitId: KitId</div>
+<div class="line">  readonly name: string</div>
+<div class="line">  readonly normalPrimitive: KitPrimitive</div>
+<div class="line">  readonly artPrimitive: KitPrimitive</div>
+<div class="line">  readonly element: string</div>
+<div class="line">  readonly theme: string</div>
+<div class="line">  readonly artPower: number</div>
+<div class="line">  readonly artCooldownMs: number</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">/** v4 资源 Manifest（每 Kit 独占帧，no-tint，不跨 Kit 借用） */</div>
+<div class="line">export interface KitResourceManifest {</div>
+<div class="line">  readonly kitId: KitId</div>
+<div class="line">  readonly icons: readonly string[]</div>
+<div class="line">  readonly normalFrames: { readonly start: readonly string[]; readonly main: readonly string[]; readonly mid: readonly string[] }</div>
+<div class="line">  readonly artFrames: { readonly start: readonly string[]; readonly main: readonly string[]; readonly mid: readonly string[] }</div>
+<div class="line">  readonly tintPolicy: &#x27;no-tint&#x27;</div>
+<div class="line">}</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 30 页</span></div>
+<div class="line"></div>
+<div class="line">/** v4 Kit setId 前缀，用于运行时识别 v4 装备 */</div>
+<div class="line">export const V4_KIT_SET_ID_PREFIX = &#x27;set_v4_&#x27;</div>
+<div class="line"></div>
+<div class="line">/** 30 Kit 白名单；非白名单 id 一律拒绝进 v4 路由 */</div>
+<div class="line">export const V4_KIT_WHITELIST: readonly KitId[] = Array.from({ length: 30 }, (_, i) =&gt;</div>
+<div class="line">  `k${String(i + 1).padStart(2, &#x27;0&#x27;)}`,</div>
+<div class="line">) as KitId[]</div>
+<div class="line"></div>
+<div class="line">/** v4 Kit 原语参数（art 侧默认值，可由 generator3 覆写） */</div>
+<div class="line">export const V4_KIT_PRIMITIVE_PARAMS: Readonly&lt;Record&lt;KitPrimitive, { artPower: number; artCooldownMs: number }&gt;&gt; = {</div>
+<div class="line">  roundtrip: { artPower: 1.5, artCooldownMs: 7000 },</div>
+<div class="line">  refract: { artPower: 1.0, artCooldownMs: 8000 },</div>
+<div class="line">  mark: { artPower: 0.8, artCooldownMs: 6000 },</div>
+<div class="line">  fixedpoint: { artPower: 1.4, artCooldownMs: 9000 },</div>
+<div class="line">  thundernet: { artPower: 0.6, artCooldownMs: 12000 },</div>
+<div class="line">  thunderstake: { artPower: 0.7, artCooldownMs: 10000 },</div>
+<div class="line">  charge: { artPower: 2.0, artCooldownMs: 10000 },</div>
+<div class="line">  boomerang: { artPower: 1.2, artCooldownMs: 6000 },</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">/** v4 Kit 静态定义行（v4-kits.json 原始结构） */</div>
+<div class="line">interface V4KitJsonRow {</div>
+<div class="line">  kitId: string</div>
+<div class="line">  name: string</div>
+<div class="line">  normalPrimitive: string</div>
+<div class="line">  artPrimitive: string</div>
+<div class="line">  element: string</div>
+<div class="line">  theme: string</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">/** 从 v4-kits.json 构建 KitAbility[]，注入 artPower/artCooldownMs */</div>
+<div class="line">export const V4_KIT_ABILITIES: readonly KitAbility[] = (v4KitsJson as V4KitJsonRow[]).map((row) =&gt; {</div>
+<div class="line">  const params = V4_KIT_PRIMITIVE_PARAMS[row.artPrimitive as KitPrimitive]</div>
+<div class="line">  return {</div>
+<div class="line">    kitId: row.kitId as KitId,</div>
+<div class="line">    name: row.name,</div>
+<div class="line">    normalPrimitive: row.normalPrimitive as KitPrimitive,</div>
+<div class="line">    artPrimitive: row.artPrimitive as KitPrimitive,</div>
+<div class="line">    element: row.element,</div>
+<div class="line">    theme: row.theme,</div>
+<div class="line">    artPower: params?.artPower ?? 1.0,</div>
+<div class="line">    artCooldownMs: params?.artCooldownMs ?? 8000,</div>
+<div class="line">  }</div>
+<div class="line">})</div>
+<div class="line"></div>
+<div class="line">/** kitId → KitAbility 查找表 */</div>
+<div class="line">export const V4_KIT_ABILITY_MAP: ReadonlyMap&lt;KitId, KitAbility&gt; = new Map(</div>
+<div class="line">  V4_KIT_ABILITIES.map((a) =&gt; [a.kitId, a]),</div>
+<div class="line">)</div>
+</div>
+<div class="page"><div class="page-header"><span>修仙与地下城 V0.5</span><span>第 31 页</span></div><div style="text-align:center;margin-top:100px;font-size:14px;color:#666;">（以下为源代码末尾部分）</div></div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 32 页</span></div>
+<div class="line">    // 顶尖</div>
+<div class="line">    rect(ctx, 23, 0, 2, 4, roofC)</div>
+<div class="line">    px(ctx, 23, 0, &#x27;#fbbf24&#x27;)</div>
+<div class="line">    // 中层</div>
+<div class="line">    rect(ctx, 16, 13, 16, 8, wallC)</div>
+<div class="line">    rect(ctx, 16, 13, 16, 1, wallL)</div>
+<div class="line">    rect(ctx, 16, 20, 16, 1, wallD)</div>
+<div class="line">    rect(ctx, 12, 21, 24, 3, roofC)</div>
+<div class="line">    rect(ctx, 12, 21, 24, 1, roofL)</div>
+<div class="line">    rect(ctx, 10, 21, 2, 3, roofC)</div>
+<div class="line">    rect(ctx, 36, 21, 2, 3, roofC)</div>
+<div class="line">    // 窗</div>
+<div class="line">    rect(ctx, 20, 15, 2, 4, &#x27;#2a1a0a&#x27;)</div>
+<div class="line">    rect(ctx, 26, 15, 2, 4, &#x27;#2a1a0a&#x27;)</div>
+<div class="line">    // 底层</div>
+<div class="line">    rect(ctx, 14, 24, 20, 10, wallC)</div>
+<div class="line">    rect(ctx, 14, 24, 20, 1, wallL)</div>
+<div class="line">    rect(ctx, 14, 33, 20, 1, wallD)</div>
+<div class="line">    rect(ctx, 10, 34, 28, 3, roofC)</div>
+<div class="line">    rect(ctx, 10, 34, 28, 1, roofL)</div>
+<div class="line">    // 门</div>
+<div class="line">    rect(ctx, 22, 27, 4, 7, &#x27;#2a1a0a&#x27;)</div>
+<div class="line">    rect(ctx, 22, 27, 4, 1, wallD)</div>
+<div class="line">    // 灯笼</div>
+<div class="line">    rect(ctx, 14, 28, 2, 4, &#x27;#ef4444&#x27;)</div>
+<div class="line">    rect(ctx, 32, 28, 2, 4, &#x27;#ef4444&#x27;)</div>
+<div class="line">    // 台阶</div>
+<div class="line">    rect(ctx, 8, 37, 32, 2, wallD)</div>
+<div class="line">    rect(ctx, 10, 39, 28, 2, wallC)</div>
+<div class="line">  })</div>
+<div class="line"></div>
+<div class="line">  // === 灵气门 ===</div>
+<div class="line">  makeTexture(&#x27;spirit_gate&#x27;, ctx =&gt; {</div>
+<div class="line">    const stoneC = toHex(0x6a6560)</div>
+<div class="line">    const stoneD = toHex(darken(0x6a6560, 0.6))</div>
+<div class="line">    const stoneL = toHex(lighten(0x6a6560, 1.3))</div>
+<div class="line">    // 左柱</div>
+<div class="line">    rect(ctx, 8, 14, 6, 30, stoneC)</div>
+<div class="line">    rect(ctx, 8, 14, 2, 30, stoneD)</div>
+<div class="line">    rect(ctx, 12, 14, 2, 30, stoneL)</div>
+<div class="line">    rect(ctx, 6, 42, 10, 4, stoneD)</div>
+<div class="line">    // 右柱</div>
+<div class="line">    rect(ctx, 34, 14, 6, 30, stoneC)</div>
+<div class="line">    rect(ctx, 34, 14, 2, 30, stoneD)</div>
+<div class="line">    rect(ctx, 38, 14, 2, 30, stoneL)</div>
+<div class="line">    rect(ctx, 32, 42, 10, 4, stoneD)</div>
+<div class="line">    // 横梁</div>
+<div class="line">    rect(ctx, 4, 8, 40, 6, stoneC)</div>
+<div class="line">    rect(ctx, 4, 8, 40, 2, stoneL)</div>
+<div class="line">    rect(ctx, 4, 12, 40, 2, stoneD)</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 33 页</span></div>
+<div class="line">    // 符文</div>
+<div class="line">    const rune = &#x27;#38bdf8&#x27;</div>
+<div class="line">    px(ctx, 14, 10, rune)</div>
+<div class="line">    px(ctx, 18, 10, rune)</div>
+<div class="line">    px(ctx, 24, 10, rune)</div>
+<div class="line">    px(ctx, 28, 10, rune)</div>
+<div class="line">    px(ctx, 20, 9, rune)</div>
+<div class="line">    // 门内光幕</div>
+<div class="line">    rect(ctx, 14, 14, 20, 28, &#x27;#38bdf8&#x27;, 0.1)</div>
+<div class="line">    rect(ctx, 14, 14, 20, 1, &#x27;#7dd3fc&#x27;, 0.3)</div>
+<div class="line">    // 符文光点</div>
+<div class="line">    px(ctx, 16, 20, &#x27;#7dd3fc&#x27;, 0.5)</div>
+<div class="line">    px(ctx, 22, 25, &#x27;#7dd3fc&#x27;, 0.4)</div>
+<div class="line">    px(ctx, 28, 30, &#x27;#7dd3fc&#x27;, 0.5)</div>
+<div class="line">    px(ctx, 20, 35, &#x27;#7dd3fc&#x27;, 0.3)</div>
+<div class="line">    // 顶角装饰</div>
+<div class="line">    px(ctx, 4, 8, &#x27;#fbbf24&#x27;)</div>
+<div class="line">    px(ctx, 43, 8, &#x27;#fbbf24&#x27;)</div>
+<div class="line">    // 底座</div>
+<div class="line">    rect(ctx, 2, 44, 12, 2, stoneD)</div>
+<div class="line">    rect(ctx, 34, 44, 12, 2, stoneD)</div>
+<div class="line">  })</div>
+<div class="line"></div>
+<div class="line">  // === 石板路 ===</div>
+<div class="line">  makeTexture(&#x27;cobblestone&#x27;, ctx =&gt; {</div>
+<div class="line">    const stoneC = toHex(0x8a7a6a)</div>
+<div class="line">    const stoneD = toHex(darken(0x8a7a6a, 0.65))</div>
+<div class="line">    const stoneL = toHex(lighten(0x8a7a6a, 1.25))</div>
+<div class="line">    const gapC = toHex(0x3a3530)</div>
+<div class="line">    // 背景</div>
+<div class="line">    rect(ctx, 0, 0, 48, 48, stoneD)</div>
+<div class="line">    // 石块（不规则铺设）</div>
+<div class="line">    const stones = [</div>
+<div class="line">      [2, 2, 10, 8], [14, 2, 8, 6], [24, 2, 10, 8], [36, 2, 8, 10],</div>
+<div class="line">      [2, 12, 8, 10], [12, 10, 10, 8], [24, 12, 8, 10], [34, 14, 10, 8],</div>
+<div class="line">      [2, 24, 10, 8], [14, 20, 8, 10], [24, 24, 10, 8], [36, 24, 8, 10],</div>
+<div class="line">      [2, 34, 10, 10], [14, 32, 10, 8], [26, 34, 8, 10], [36, 36, 8, 8],</div>
+<div class="line">    ]</div>
+<div class="line">    for (const [sx, sy, sw, sh] of stones) {</div>
+<div class="line">      rect(ctx, sx, sy, sw, sh, stoneC)</div>
+<div class="line">      rect(ctx, sx, sy, sw, 1, stoneL)</div>
+<div class="line">      rect(ctx, sx, sy + sh - 1, sw, 1, stoneD)</div>
+<div class="line">      rect(ctx, sx, sy, 1, sh, stoneL)</div>
+<div class="line">      rect(ctx, sx + sw - 1, sy, 1, sh, stoneD)</div>
+<div class="line">      // 高光点</div>
+<div class="line">      px(ctx, sx + 1, sy + 1, stoneL)</div>
+<div class="line">      // 暗纹</div>
+<div class="line">      px(ctx, sx + Math.floor(sw / 2), sy + Math.floor(sh / 2), stoneD)</div>
+<div class="line">    }</div>
+<div class="line">    // 缝隙</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 34 页</span></div>
+<div class="line">    for (let i = 0; i &lt; 10; i++) {</div>
+<div class="line">      const x = Math.floor(Math.random() * 48)</div>
+<div class="line">      const y = Math.floor(Math.random() * 48)</div>
+<div class="line">      px(ctx, x, y, gapC)</div>
+<div class="line">    }</div>
+<div class="line">  })</div>
+<div class="line"></div>
+<div class="line">  // === 火把柱 ===</div>
+<div class="line">  makeTexture(&#x27;torch_post&#x27;, ctx =&gt; {</div>
+<div class="line">    const postC = toHex(0x4a3520)</div>
+<div class="line">    const postD = toHex(darken(0x4a3520, 0.6))</div>
+<div class="line">    const fireC = toHex(0xfbbf24)</div>
+<div class="line">    const fireL = toHex(lighten(0xfbbf24, 1.3))</div>
+<div class="line">    const fireR = toHex(0xef4444)</div>
+<div class="line">    // 柱</div>
+<div class="line">    rect(ctx, 22, 16, 4, 30, postC)</div>
+<div class="line">    rect(ctx, 22, 16, 1, 30, postD)</div>
+<div class="line">    rect(ctx, 25, 16, 1, 30, postD)</div>
+<div class="line">    // 底座</div>
+<div class="line">    rect(ctx, 18, 44, 12, 2, postD)</div>
+<div class="line">    rect(ctx, 20, 42, 8, 2, postC)</div>
+<div class="line">    // 火碗</div>
+<div class="line">    rect(ctx, 18, 12, 12, 4, postC)</div>
+<div class="line">    rect(ctx, 18, 12, 12, 1, toHex(lighten(0x4a3520, 1.3)))</div>
+<div class="line">    rect(ctx, 16, 14, 16, 2, postD)</div>
+<div class="line">    // 火焰</div>
+<div class="line">    for (let i = 0; i &lt; 6; i++) {</div>
+<div class="line">      const fx = 20 + i * 2</div>
+<div class="line">      const fh = 4 + Math.floor(Math.random() * 4)</div>
+<div class="line">      rect(ctx, fx, 12 - fh, 2, fh, i &lt; 2 || i &gt; 3 ? fireR : fireC)</div>
+<div class="line">      px(ctx, fx, 12 - fh, fireL)</div>
+<div class="line">    }</div>
+<div class="line">    // 火焰核心</div>
+<div class="line">    rect(ctx, 22, 4, 4, 6, fireC)</div>
+<div class="line">    rect(ctx, 23, 2, 2, 4, fireL)</div>
+<div class="line">    px(ctx, 23, 0, toHex(0xffffff))</div>
+<div class="line">    // 光晕</div>
+<div class="line">    px(ctx, 14, 10, fireC, 0.2)</div>
+<div class="line">    px(ctx, 34, 10, fireC, 0.2)</div>
+<div class="line">    px(ctx, 16, 6, fireC, 0.15)</div>
+<div class="line">    px(ctx, 32, 6, fireC, 0.15)</div>
+<div class="line">    px(ctx, 24, 8, fireL, 0.3)</div>
+<div class="line">  })</div>
+<div class="line"></div>
+<div class="line">  // === 雪松（高山专用：深蓝绿针叶 + 白雪覆盖） ===</div>
+<div class="line">  makeTexture(&#x27;snow_pine&#x27;, ctx =&gt; {</div>
+<div class="line">    const trunkC = toHex(trunkColor)</div>
+<div class="line">    const trunkD = toHex(trunkDark)</div>
+<div class="line">    // 树干</div>
+<div class="line">    rect(ctx, 22, 38, 4, 8, trunkC)</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 35 页</span></div>
+<div class="line">    rect(ctx, 22, 38, 1, 8, trunkD)</div>
+<div class="line">    rect(ctx, 21, 44, 6, 2, trunkD)</div>
+<div class="line">    // 冷色调针叶</div>
+<div class="line">    const coldTree = darken(pal.tree, 0.7) &amp; 0xff || 0x1a3a3a</div>
+<div class="line">    const foliage = toHex(0x1a4a3a)</div>
+<div class="line">    const foliageD = toHex(darken(0x1a4a3a, 0.55))</div>
+<div class="line">    const foliageL = toHex(lighten(0x1a4a3a, 1.35))</div>
+<div class="line">    const snowC = &#x27;#e8f0f8&#x27;</div>
+<div class="line">    const snowL = &#x27;#ffffff&#x27;</div>
+<div class="line">    const tiers = [</div>
+<div class="line">      { y: 32, w: 18, h: 8 },</div>
+<div class="line">      { y: 24, w: 15, h: 8 },</div>
+<div class="line">      { y: 16, w: 12, h: 8 },</div>
+<div class="line">      { y: 8, w: 9, h: 7 },</div>
+<div class="line">      { y: 3, w: 5, h: 4 },</div>
+<div class="line">    ]</div>
+<div class="line">    for (const t of tiers) {</div>
+<div class="line">      for (let dy = 0; dy &lt; t.h; dy++) {</div>
+<div class="line">        const tw = Math.max(1, Math.floor(t.w * (1 - dy / t.h)))</div>
+<div class="line">        const tx = 24 - Math.floor(tw / 2)</div>
+<div class="line">        // 主体针叶</div>
+<div class="line">        rect(ctx, tx, t.y + dy, tw, 1, dy &lt; 2 ? snowC : foliage)</div>
+<div class="line">        if (dy &gt;= 2 &amp;&amp; dy &lt; t.h - 1) {</div>
+<div class="line">          // 底部暗纹</div>
+<div class="line">          if (dy === t.h - 2) rect(ctx, tx, t.y + dy, tw, 1, foliageD)</div>
+<div class="line">          // 侧高光</div>
+<div class="line">          if (tw &gt; 4 &amp;&amp; dy &lt; t.h / 2) {</div>
+<div class="line">            px(ctx, tx, t.y + dy, foliageL)</div>
+<div class="line">            px(ctx, tx + tw - 1, t.y + dy, foliageL)</div>
+<div class="line">          }</div>
+<div class="line">        }</div>
+<div class="line">      }</div>
+<div class="line">      // 雪盖在每层顶部</div>
+<div class="line">      const topW = Math.max(2, Math.floor(t.w * 0.7))</div>
+<div class="line">      const topX = 24 - Math.floor(topW / 2)</div>
+<div class="line">      rect(ctx, topX, t.y, topW, 1, snowC)</div>
+<div class="line">      if (topW &gt; 3) {</div>
+<div class="line">        px(ctx, topX, t.y, snowL)</div>
+<div class="line">        px(ctx, topX + topW - 1, t.y, snowL)</div>
+<div class="line">      }</div>
+<div class="line">    }</div>
+<div class="line">    // 顶端</div>
+<div class="line">    px(ctx, 24, 2, snowL)</div>
+<div class="line">    // 树枝上零星雪点</div>
+<div class="line">    px(ctx, 18, 30, snowC)</div>
+<div class="line">    px(ctx, 30, 26, snowC)</div>
+<div class="line">    px(ctx, 16, 22, snowC)</div>
+<div class="line">    px(ctx, 31, 18, snowC)</div>
+<div class="line">    // 苔藓</div>
+<div class="line">    px(ctx, 22, 38, toHex(pal.bush))</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 36 页</span></div>
+<div class="line">    px(ctx, 25, 40, toHex(pal.bush))</div>
+<div class="line">  })</div>
+<div class="line"></div>
+<div class="line">  // === 高山灌木（紧凑型，耐寒，带岩石底座） ===</div>
+<div class="line">  makeTexture(&#x27;alpine_bush&#x27;, ctx =&gt; {</div>
+<div class="line">    const bushC = toHex(darken(pal.bush, 0.8))</div>
+<div class="line">    const bushD = toHex(darken(pal.bush, 0.5))</div>
+<div class="line">    const bushL = toHex(lighten(pal.bush, 1.3))</div>
+<div class="line">    const rockC = toHex(pal.rock)</div>
+<div class="line">    const rockD = toHex(darken(pal.rock, 0.6))</div>
+<div class="line">    const rockL = toHex(lighten(pal.rock, 1.25))</div>
+<div class="line">    const snowC = &#x27;#d4e4ec&#x27;</div>
+<div class="line">    // 岩石底座</div>
+<div class="line">    for (let y = 38; y &lt; 46; y++) {</div>
+<div class="line">      const hw = Math.max(3, 8 - Math.floor((y - 38) * 0.3))</div>
+<div class="line">      const xs = 24 - hw</div>
+<div class="line">      for (let x = 0; x &lt; hw * 2; x++) {</div>
+<div class="line">        const cx = xs + x, cy = y</div>
+<div class="line">        const lit = x &lt; hw * 0.35</div>
+<div class="line">        const edge = x &lt; 1 || x &gt;= hw * 2 - 1</div>
+<div class="line">        if (lit) px(ctx, cx, cy, rockL)</div>
+<div class="line">        else if (edge) px(ctx, cx, cy, rockD)</div>
+<div class="line">        else px(ctx, cx, cy, rockC)</div>
+<div class="line">      }</div>
+<div class="line">    }</div>
+<div class="line">    // 苔藓覆盖在岩石上</div>
+<div class="line">    rect(ctx, 18, 38, 12, 2, bushC, 0.5)</div>
+<div class="line">    // 灌木主体（紧凑半球形）</div>
+<div class="line">    const cx = 24, cy = 30, r = 9</div>
+<div class="line">    for (let y = -r; y &lt;= r; y++) {</div>
+<div class="line">      for (let x = -r; x &lt;= r; x++) {</div>
+<div class="line">        if (x * x + y * y &lt;= r * r &amp;&amp; y &lt; 6) {</div>
+<div class="line">          const lx = cx + x, ly = cy + y</div>
+<div class="line">          if (lx &gt;= 0 &amp;&amp; lx &lt; TEX_SIZE &amp;&amp; ly &gt;= 0 &amp;&amp; ly &lt; TEX_SIZE) {</div>
+<div class="line">            const dist = Math.sqrt(x * x + y * y)</div>
+<div class="line">            if (dist &lt; r - 4 &amp;&amp; x &lt; -1 &amp;&amp; y &lt; -2) {</div>
+<div class="line">              px(ctx, lx, ly, bushL)</div>
+<div class="line">            } else if (dist &gt; r - 3) {</div>
+<div class="line">              px(ctx, lx, ly, bushD)</div>
+<div class="line">            } else {</div>
+<div class="line">              px(ctx, lx, ly, bushC)</div>
+<div class="line">            }</div>
+<div class="line">          }</div>
+<div class="line">        }</div>
+<div class="line">      }</div>
+<div class="line">    }</div>
+<div class="line">    // 顶部雪点</div>
+<div class="line">    px(ctx, 22, 22, snowC)</div>
+<div class="line">    px(ctx, 26, 24, snowC)</div>
+<div class="line">    px(ctx, 20, 26, snowC, 0.7)</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 37 页</span></div>
+<div class="line">    // 小浆果</div>
+<div class="line">    px(ctx, 21, 28, &#x27;#4a2a3a&#x27;)</div>
+<div class="line">    px(ctx, 28, 30, &#x27;#4a2a3a&#x27;)</div>
+<div class="line">    px(ctx, 19, 32, &#x27;#4a2a3a&#x27;)</div>
+<div class="line">  })</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">/** 获取装饰物纹理 key */</div>
+<div class="line">export function getDecoKey(type: string, domain: DomainId): string {</div>
+<div class="line">  return `world_deco_${type}_${domain}`</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">/** 在地图上散布装饰物（HD-2D 立体感增强版） */</div>
+<div class="line">export function scatterDecorations(</div>
+<div class="line">  scene: Phaser.Scene, domain: DomainId, mapW: number, mapH: number, sctx?: ScatterContext,</div>
+<div class="line">): Phaser.GameObjects.Container[] {</div>
+<div class="line">  const decos: Phaser.GameObjects.Container[] = []</div>
+<div class="line">  let seed = 13713</div>
+<div class="line">  const rng = () =&gt; { seed = (seed * 9301 + 49297) % 233280; return seed / 233280 }</div>
+<div class="line"></div>
+<div class="line">  const vegWeights = DOMAIN_VEG_WEIGHTS[domain] ?? DOMAIN_VEG_WEIGHTS.south</div>
+<div class="line">  const totalW = vegWeights.reduce((s, d) =&gt; s + d.weight, 0)</div>
+<div class="line">  const pickFrom = (list: { type: string; weight: number }[]): string =&gt; {</div>
+<div class="line">    let r = rng() * list.reduce((s, d) =&gt; s + d.weight, 0)</div>
+<div class="line">    for (const d of list) { r -= d.weight; if (r &lt;= 0) return d.type }</div>
+<div class="line">    return list[0].type</div>
+<div class="line">  }</div>
+<div class="line">  const pickGeneric = (): string =&gt; pickFrom(vegWeights)</div>
+<div class="line"></div>
+<div class="line">  const SHADOW_MAP: Record&lt;string, { w: number; h: number }&gt; = {</div>
+<div class="line">    pine: { w: 28, h: 8 }, round_tree: { w: 32, h: 10 }, willow: { w: 26, h: 8 },</div>
+<div class="line">    bamboo: { w: 24, h: 7 }, dead_tree: { w: 24, h: 7 }, bush_s: { w: 18, h: 6 },</div>
+<div class="line">    bush_l: { w: 26, h: 8 }, rock_s: { w: 16, h: 6 }, rock_m: { w: 22, h: 8 },</div>
+<div class="line">    rock_l: { w: 34, h: 12 }, crystal: { w: 20, h: 6 }, mushroom: { w: 18, h: 5 },</div>
+<div class="line">    flower_r: { w: 10, h: 4 }, flower_y: { w: 10, h: 4 }, flower_b: { w: 10, h: 4 },</div>
+<div class="line">    grass_1: { w: 12, h: 4 }, grass_2: { w: 14, h: 5 }, lotus_pond: { w: 40, h: 10 },</div>
+<div class="line">    lantern_post: { w: 14, h: 5 }, torch_post: { w: 14, h: 5 }, pagoda: { w: 28, h: 8 },</div>
+<div class="line">    spirit_gate: { w: 40, h: 8 }, palm: { w: 26, h: 8 }, coral: { w: 28, h: 6 },</div>
+<div class="line">    cactus: { w: 14, h: 5 }, wreck: { w: 36, h: 6 }, beacon: { w: 24, h: 8 },</div>
+<div class="line">    war_monument: { w: 28, h: 6 }, ice_crystal: { w: 20, h: 5 }, snow_patch: { w: 40, h: 10 },</div>
+<div class="line">    frozen_beast: { w: 40, h: 12 }, sand_dune: { w: 40, h: 10 }, rock_pillar: { w: 20, h: 6 },</div>
+<div class="line">    ice_wall: { w: 40, h: 8 }, mountain_l: { w: 40, h: 12 }, mountain_m: { w: 32, h: 10 },</div>
+<div class="line">    mountain_s: { w: 24, h: 8 },</div>
+<div class="line">  }</div>
+<div class="line">  const VEG_TYPES = new Set([</div>
+<div class="line">    &#x27;pine&#x27;, &#x27;round_tree&#x27;, &#x27;willow&#x27;, &#x27;bamboo&#x27;, &#x27;dead_tree&#x27;, &#x27;bush_s&#x27;, &#x27;bush_l&#x27;,</div>
+<div class="line">    &#x27;flower_r&#x27;, &#x27;flower_y&#x27;, &#x27;flower_b&#x27;, &#x27;grass_1&#x27;, &#x27;grass_2&#x27;, &#x27;mushroom&#x27;,</div>
+<div class="line">    &#x27;palm&#x27;, &#x27;cactus&#x27;, &#x27;coral&#x27;, &#x27;ice_crystal&#x27;,</div>
+<div class="line">  ])</div>
+<div class="line"></div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 38 页</span></div>
+<div class="line">  // --- 区域规划驱动：从区域规划获取植被类型和密度 ---</div>
+<div class="line">  const pickForZone = (x: number, y: number): string =&gt; {</div>
+<div class="line">    // 优先使用区域规划定义的植被</div>
+<div class="line">    const regionVeg = getRegionVegType(x, y, domain)</div>
+<div class="line">    if (regionVeg) return regionVeg</div>
+<div class="line">    // 退回到域权重表</div>
+<div class="line">    return pickGeneric()</div>
+<div class="line">  }</div>
+<div class="line"></div>
+<div class="line">  // 区域密度阈值：决定该位置是否放置装饰物</div>
+<div class="line">  const shouldPlace = (x: number, y: number): boolean =&gt; {</div>
+<div class="line">    const density = getRegionDensity(x, y, domain)</div>
+<div class="line">    return rng() &lt; density</div>
+<div class="line">  }</div>
+<div class="line"></div>
+<div class="line">  // --- 集群放置 ---</div>
+<div class="line">  const placed: { x: number; y: number; type: string }[] = []</div>
+<div class="line">  const tooClose = (x: number, y: number, type: string, minDist: number): boolean =&gt; {</div>
+<div class="line">    for (const p of placed) {</div>
+<div class="line">      if (p.type === type &amp;&amp; Math.hypot(x - p.x, y - p.y) &lt; minDist) return true</div>
+<div class="line">    }</div>
+<div class="line">    return false</div>
+<div class="line">  }</div>
+<div class="line"></div>
+<div class="line">  const createDeco = (x: number, y: number, type: string): Phaser.GameObjects.Container | null =&gt; {</div>
+<div class="line">    const key = getDecoKey(type, domain)</div>
+<div class="line">    if (!scene.textures.exists(key)) return null</div>
+<div class="line"></div>
+<div class="line">    const yRatio = y / mapH</div>
+<div class="line">    const perspScale = 0.6 + yRatio * 0.6</div>
+<div class="line">    const atmAlpha = 0.55 + yRatio * 0.4</div>
+<div class="line">    const baseScale = (0.55 + rng() * 0.8) * perspScale</div>
+<div class="line">    const flipX = rng() &gt; 0.5 ? 1 : -1</div>
+<div class="line"></div>
+<div class="line">    const shDef = SHADOW_MAP[type] ?? { w: 20, h: 6 }</div>
+<div class="line">    const shadow = scene.add.ellipse(0, 2, shDef.w * baseScale, shDef.h * baseScale, 0x000000, 0.3 * atmAlpha)</div>
+<div class="line">    shadow.setDepth(1.0 + yRatio * 0.5)</div>
+<div class="line"></div>
+<div class="line">    const img = scene.add.image(0, -2, key).setOrigin(0.5, 1)</div>
+<div class="line">    img.setScale(baseScale * flipX, baseScale)</div>
+<div class="line">    img.setAlpha(atmAlpha)</div>
+<div class="line">    img.setDepth(1.1 + yRatio * 0.5)</div>
+<div class="line"></div>
+<div class="line">    const container = scene.add.container(x, y, [shadow, img])</div>
+<div class="line">    container.setDepth(1.0 + yRatio * 0.5)</div>
+<div class="line">    container.setData(&#x27;decoType&#x27;, type)</div>
+<div class="line">    container.setData(&#x27;baseScale&#x27;, baseScale)</div>
+<div class="line">    container.setData(&#x27;flipX&#x27;, flipX)</div>
+<div class="line">    if (VEG_TYPES.has(type)) {</div>
+<div class="line">      container.setData(&#x27;isVegetation&#x27;, true)</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 39 页</span></div>
+<div class="line">      container.setData(&#x27;phase&#x27;, rng() * Math.PI * 2)</div>
+<div class="line">    }</div>
+<div class="line">    placed.push({ x, y, type })</div>
+<div class="line">    return container</div>
+<div class="line">  }</div>
+<div class="line"></div>
+<div class="line">  // 生成 55-70 个集群（增加密度，让地图更丰富）</div>
+<div class="line">  const numClusters = 55 + Math.floor(rng() * 15)</div>
+<div class="line">  for (let c = 0; c &lt; numClusters; c++) {</div>
+<div class="line">    const cx = 40 + Math.floor(rng() * (mapW - 80))</div>
+<div class="line">    const cy = 40 + Math.floor(rng() * (mapH - 80))</div>
+<div class="line">    // 避开地图中心（城市区域）</div>
+<div class="line">    if (Math.hypot(cx - mapW / 2, cy - mapH / 2) &lt; 60) continue</div>
+<div class="line">    // 区域密度检查：低密度区域减少集群</div>
+<div class="line">    if (!shouldPlace(cx, cy)) continue</div>
+<div class="line"></div>
+<div class="line">    const clusterSize = 2 + Math.floor(rng() * 5) // 2-6 个</div>
+<div class="line">    const spread = 25 + rng() * 35 // 集群半径</div>
+<div class="line"></div>
+<div class="line">    for (let i = 0; i &lt; clusterSize; i++) {</div>
+<div class="line">      const angle = (i / clusterSize) * Math.PI * 2 + rng() * 0.5</div>
+<div class="line">      const dist = rng() * spread</div>
+<div class="line">      const x = Math.max(20, Math.min(mapW - 20, Math.round(cx + Math.cos(angle) * dist)))</div>
+<div class="line">      const y = Math.max(20, Math.min(mapH - 20, Math.round(cy + Math.sin(angle) * dist)))</div>
+<div class="line"></div>
+<div class="line">      // 区域密度检查</div>
+<div class="line">      if (!shouldPlace(x, y)) continue</div>
+<div class="line"></div>
+<div class="line">      // 每个位置独立选植被类型，让区域内有自然变化</div>
+<div class="line">      const type = pickForZone(x, y)</div>
+<div class="line">      // 避免同类型过近</div>
+<div class="line">      const minDist = [&#x27;grass_1&#x27;, &#x27;grass_2&#x27;, &#x27;flower_r&#x27;, &#x27;flower_y&#x27;, &#x27;flower_b&#x27;, &#x27;bush_s&#x27;, &#x27;rock_s&#x27;].includes(type) ? 12 : 28</div>
+<div class="line">      if (tooClose(x, y, type, minDist)) continue</div>
+<div class="line"></div>
+<div class="line">      const deco = createDeco(x, y, type)</div>
+<div class="line">      if (deco) decos.push(deco)</div>
+<div class="line">    }</div>
+<div class="line">  }</div>
+<div class="line"></div>
+<div class="line">  // 补充散布 35 个独立小型装饰物（填补空隙）</div>
+<div class="line">  for (let i = 0; i &lt; 35; i++) {</div>
+<div class="line">    const x = 40 + Math.floor(rng() * (mapW - 80))</div>
+<div class="line">    const y = 40 + Math.floor(rng() * (mapH - 80))</div>
+<div class="line">    if (Math.hypot(x - mapW / 2, y - mapH / 2) &lt; 50) continue</div>
+<div class="line">    if (!shouldPlace(x, y)) continue</div>
+<div class="line">    const type = pickForZone(x, y)</div>
+<div class="line">    if (tooClose(x, y, type, 20)) continue</div>
+<div class="line">    const deco = createDeco(x, y, type)</div>
+<div class="line">    if (deco) decos.push(deco)</div>
+<div class="line">  }</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 40 页</span></div>
+<div class="line"></div>
+<div class="line">  return decos</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">/* ====== 文件: src/world-evolution.ts ====== */</div>
+<div class="line">// ---------- NPC独立成长与世界宏观演进 ----------</div>
+<div class="line">// NPC自主修炼突破、世界势力消长、时代变迁</div>
+<div class="line"></div>
+<div class="line">import type { GameState } from &#x27;./state&#x27;</div>
+<div class="line">import type { ProceduralNpc } from &#x27;./procedural-npc&#x27;</div>
+<div class="line">import type { WorldTime } from &#x27;./world-time&#x27;</div>
+<div class="line">import type { NpcLifeEventRecord } from &#x27;./state&#x27;</div>
+<div class="line">import { updateNpcGrowth } from &#x27;./npc-system&#x27;</div>
+<div class="line"></div>
+<div class="line">// ===== NPC独立成长 =====</div>
+<div class="line"></div>
+<div class="line">export interface NpcBreakthroughResult {</div>
+<div class="line">  npcId: string</div>
+<div class="line">  npcName: string</div>
+<div class="line">  oldRealm: number</div>
+<div class="line">  newRealm: number</div>
+<div class="line">  description: string</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">export function tickNpcBreakthroughs(state: GameState, time: WorldTime): NpcBreakthroughResult[] {</div>
+<div class="line">  const results: NpcBreakthroughResult[] = []</div>
+<div class="line">  const npcs = state.proceduralNpcs || []</div>
+<div class="line"></div>
+<div class="line">  for (const npc of npcs) {</div>
+<div class="line">    if (!npc.alive) continue</div>
+<div class="line"></div>
+<div class="line">    // 每日检查突破概率</div>
+<div class="line">    const baseChance = 0.005 // 基础0.5%</div>
+<div class="line">    const realmBonus = npc.realm * 0.002 // 境界越高越难</div>
+<div class="line">    const chance = Math.max(0.001, baseChance - realmBonus)</div>
+<div class="line"></div>
+<div class="line">    if (Math.random() &gt; chance) continue</div>
+<div class="line">    if (npc.realm &gt;= 5) continue // 最高化神</div>
+<div class="line"></div>
+<div class="line">    // NPC突破</div>
+<div class="line">    npc.realm++</div>
+<div class="line">    const oldRealm = npc.realm - 1</div>
+<div class="line">    npc.level = Math.max(npc.level, npc.realm * 15)</div>
+<div class="line"></div>
+<div class="line">    const result: NpcBreakthroughResult = {</div>
+<div class="line">      npcId: npc.id,</div>
+<div class="line">      npcName: npc.name,</div>
+<div class="line">      oldRealm,</div>
+<div class="line">      newRealm: npc.realm,</div>
+<div class="line">      description: `${npc.name}突破至${[&#x27;练气&#x27;, &#x27;筑基&#x27;, &#x27;金丹&#x27;, &#x27;元婴&#x27;, &#x27;化神&#x27;][npc.realm] || &#x27;未知&#x27;}境！`,</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 41 页</span></div>
+<div class="line">    }</div>
+<div class="line">    results.push(result)</div>
+<div class="line"></div>
+<div class="line">    // 记录到NPC个人eventLog</div>
+<div class="line">    if (!npc.eventLog) npc.eventLog = []</div>
+<div class="line">    npc.eventLog.push(result.description)</div>
+<div class="line">    if (npc.eventLog.length &gt; 50) npc.eventLog = npc.eventLog.slice(-50)</div>
+<div class="line"></div>
+<div class="line">    // 记录到人生事件日志</div>
+<div class="line">    const event: NpcLifeEventRecord = {</div>
+<div class="line">      npcId: npc.id,</div>
+<div class="line">      npcName: npc.name,</div>
+<div class="line">      eventType: &#x27;breakthrough&#x27;,</div>
+<div class="line">      description: result.description,</div>
+<div class="line">      year: time.year,</div>
+<div class="line">      timestamp: Date.now(),</div>
+<div class="line">    }</div>
+<div class="line">    state.npcLifeEventsLog.push(event)</div>
+<div class="line"></div>
+<div class="line">    // 世界演进分数</div>
+<div class="line">    state.worldEvolutionScore = (state.worldEvolutionScore || 0) + 1</div>
+<div class="line">  }</div>
+<div class="line"></div>
+<div class="line">  return results</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">// ===== NPC人生事件 =====</div>
+<div class="line"></div>
+<div class="line">export function tickNpcLifeEvents(state: GameState, time: WorldTime): string[] {</div>
+<div class="line">  const messages: string[] = []</div>
+<div class="line">  const npcs = state.proceduralNpcs || []</div>
+<div class="line">  if (npcs.length === 0) return messages</div>
+<div class="line"></div>
+<div class="line">  // 随机选取几个NPC产生人生事件</div>
+<div class="line">  const eventCount = Math.min(3, Math.floor(npcs.length * 0.1))</div>
+<div class="line">  const shuffled = [...npcs].sort(() =&gt; Math.random() - 0.5)</div>
+<div class="line"></div>
+<div class="line">  for (let i = 0; i &lt; eventCount; i++) {</div>
+<div class="line">    const npc = shuffled[i]</div>
+<div class="line">    if (!npc.alive) continue</div>
+<div class="line"></div>
+<div class="line">    const events = [</div>
+<div class="line">      &#x27;enlightenment&#x27;,  // 顿悟</div>
+<div class="line">      &#x27;gain_disciple&#x27;,  // 收徒</div>
+<div class="line">      &#x27;find_treasure&#x27;,  // 寻宝</div>
+<div class="line">      &#x27;sect_join&#x27;,      // 加入宗门</div>
+<div class="line">      &#x27;rivalry&#x27;,        // 结怨</div>
+<div class="line">      &#x27;romance&#x27;,        // 道侣</div>
+<div class="line">      &#x27;seclusion&#x27;,      // 闭关</div>
+<div class="line">      &#x27;wandering&#x27;,      // 云游</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 42 页</span></div>
+<div class="line">    ]</div>
+<div class="line"></div>
+<div class="line">    const eventType = events[Math.floor(Math.random() * events.length)]</div>
+<div class="line">    const eventDesc = generateNpcLifeEvent(npc, eventType)</div>
+<div class="line"></div>
+<div class="line">    if (eventDesc) {</div>
+<div class="line">      messages.push(eventDesc)</div>
+<div class="line"></div>
+<div class="line">      // 记录到NPC个人eventLog</div>
+<div class="line">      if (!npc.eventLog) npc.eventLog = []</div>
+<div class="line">      npc.eventLog.push(eventDesc)</div>
+<div class="line">      if (npc.eventLog.length &gt; 50) npc.eventLog = npc.eventLog.slice(-50)</div>
+<div class="line"></div>
+<div class="line">      const record: NpcLifeEventRecord = {</div>
+<div class="line">        npcId: npc.id,</div>
+<div class="line">        npcName: npc.name,</div>
+<div class="line">        eventType,</div>
+<div class="line">        description: eventDesc,</div>
+<div class="line">        year: time.year,</div>
+<div class="line">        timestamp: Date.now(),</div>
+<div class="line">      }</div>
+<div class="line">      state.npcLifeEventsLog.push(record)</div>
+<div class="line"></div>
+<div class="line">      // 限制日志长度</div>
+<div class="line">      if (state.npcLifeEventsLog.length &gt; 200) {</div>
+<div class="line">        state.npcLifeEventsLog = state.npcLifeEventsLog.slice(-200)</div>
+<div class="line">      }</div>
+<div class="line">    }</div>
+<div class="line">  }</div>
+<div class="line"></div>
+<div class="line">  return messages</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">function generateNpcLifeEvent(npc: ProceduralNpc, eventType: string): string | null {</div>
+<div class="line">  const realmNames = [&#x27;练气&#x27;, &#x27;筑基&#x27;, &#x27;金丹&#x27;, &#x27;元婴&#x27;, &#x27;化神&#x27;]</div>
+<div class="line">  const realmName = realmNames[npc.realm] || &#x27;未知&#x27;</div>
+<div class="line"></div>
+<div class="line">  switch (eventType) {</div>
+<div class="line">    case &#x27;enlightenment&#x27;:</div>
+<div class="line">      return `${npc.name}（${realmName}境）在修行中有所顿悟，修为精进`</div>
+<div class="line">    case &#x27;gain_disciple&#x27;:</div>
+<div class="line">      return `${npc.name}（${realmName}境）收了一名新弟子，传承道统`</div>
+<div class="line">    case &#x27;find_treasure&#x27;:</div>
+<div class="line">      return `${npc.name}（${realmName}境）在一处遗迹中寻得宝物`</div>
+<div class="line">    case &#x27;sect_join&#x27;:</div>
+<div class="line">      return `${npc.name}（${realmName}境）加入了一方宗门`</div>
+<div class="line">    case &#x27;rivalry&#x27;:</div>
+<div class="line">      return `${npc.name}（${realmName}境）与一位修士结下梁子`</div>
+<div class="line">    case &#x27;romance&#x27;:</div>
+<div class="line">      return `${npc.name}（${realmName}境）遇到了心慕之人`</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 43 页</span></div>
+<div class="line">    case &#x27;seclusion&#x27;:</div>
+<div class="line">      return `${npc.name}（${realmName}境）开始闭关修炼`</div>
+<div class="line">    case &#x27;wandering&#x27;:</div>
+<div class="line">      return `${npc.name}（${realmName}境）开始云游天下`</div>
+<div class="line">    default:</div>
+<div class="line">      return null</div>
+<div class="line">  }</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">// ===== NPC死亡（寿元/斗法） =====</div>
+<div class="line"></div>
+<div class="line">export function tickNpcMortality(state: GameState, time: WorldTime): string[] {</div>
+<div class="line">  const messages: string[] = []</div>
+<div class="line">  const npcs = state.proceduralNpcs || []</div>
+<div class="line"></div>
+<div class="line">  for (const npc of npcs) {</div>
+<div class="line">    if (!npc.alive) continue</div>
+<div class="line"></div>
+<div class="line">    // 高境界NPC有寿元限制（化神境500年等）</div>
+<div class="line">    const maxLifespan = [80, 150, 300, 500, 1000, 2000]</div>
+<div class="line">    const lifespan = maxLifespan[npc.realm] || 100</div>
+<div class="line">    const npcAge = (npc as any).age || Math.floor(Math.random() * lifespan * 0.5) + 10</div>
+<div class="line"></div>
+<div class="line">    // 老死概率</div>
+<div class="line">    if (npcAge &gt; lifespan * 0.8) {</div>
+<div class="line">      if (Math.random() &lt; 0.02) {</div>
+<div class="line">        npc.alive = false</div>
+<div class="line">        messages.push(`${npc.name}寿元已尽，坐化于天地之间`)</div>
+<div class="line">        const record: NpcLifeEventRecord = {</div>
+<div class="line">          npcId: npc.id,</div>
+<div class="line">          npcName: npc.name,</div>
+<div class="line">          eventType: &#x27;death&#x27;,</div>
+<div class="line">          description: `${npc.name}寿元已尽，坐化于天地之间`,</div>
+<div class="line">          year: time.year,</div>
+<div class="line">          timestamp: Date.now(),</div>
+<div class="line">        }</div>
+<div class="line">        state.npcLifeEventsLog.push(record)</div>
+<div class="line">      }</div>
+<div class="line">    }</div>
+<div class="line"></div>
+<div class="line">    // NPC间斗法死亡（低概率）</div>
+<div class="line">    if (Math.random() &lt; 0.001) {</div>
+<div class="line">      npc.alive = false</div>
+<div class="line">      messages.push(`${npc.name}在一场斗法中陨落`)</div>
+<div class="line">      const record: NpcLifeEventRecord = {</div>
+<div class="line">        npcId: npc.id,</div>
+<div class="line">        npcName: npc.name,</div>
+<div class="line">        eventType: &#x27;death&#x27;,</div>
+<div class="line">        description: `${npc.name}在一场斗法中陨落`,</div>
+<div class="line">        year: time.year,</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 44 页</span></div>
+<div class="line">        timestamp: Date.now(),</div>
+<div class="line">      }</div>
+<div class="line">      state.npcLifeEventsLog.push(record)</div>
+<div class="line">    }</div>
+<div class="line">  }</div>
+<div class="line"></div>
+<div class="line">  return messages</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">// ===== 世界宏观演进 =====</div>
+<div class="line"></div>
+<div class="line">export interface WorldEvolutionState {</div>
+<div class="line">  era: string              // 当前纪元</div>
+<div class="line">  totalNpcBreakthroughs: number  // NPC总突破次数</div>
+<div class="line">  totalSectWars: number          // 宗门战争总数</div>
+<div class="line">  totalAnnualEvents: number      // 年度事件总数</div>
+<div class="line">  activeAlliances: number        // 活跃联盟数</div>
+<div class="line">  fallenSects: number            // 灭门宗门数</div>
+<div class="line">  powerBalance: number           // 势力平衡值（-100~100，正=正道盛，负=魔道盛）</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">export function getWorldEvolutionState(state: GameState): WorldEvolutionState {</div>
+<div class="line">  const score = state.worldEvolutionScore || 0</div>
+<div class="line">  const annualEvents = state.annualEventLog || []</div>
+<div class="line">  const morality = state.morality || 0</div>
+<div class="line"></div>
+<div class="line">  // 纪元判定</div>
+<div class="line">  let era = &#x27;初灵纪&#x27;</div>
+<div class="line">  if (score &gt;= 100) era = &#x27;灵启纪&#x27;</div>
+<div class="line">  if (score &gt;= 250) era = &#x27;仙凡纪&#x27;</div>
+<div class="line">  if (score &gt;= 500) era = &#x27;大乘纪&#x27;</div>
+<div class="line">  if (score &gt;= 1000) era = &#x27;永恒纪&#x27;</div>
+<div class="line"></div>
+<div class="line">  return {</div>
+<div class="line">    era,</div>
+<div class="line">    totalNpcBreakthroughs: state.npcLifeEventsLog?.filter(e =&gt; e.eventType === &#x27;breakthrough&#x27;).length || 0,</div>
+<div class="line">    totalSectWars: state.totalSectWarsWon || 0,</div>
+<div class="line">    totalAnnualEvents: annualEvents.length,</div>
+<div class="line">    activeAlliances: 0,</div>
+<div class="line">    fallenSects: 0,</div>
+<div class="line">    powerBalance: morality,</div>
+<div class="line">  }</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">// ===== 每日世界演进 =====</div>
+<div class="line"></div>
+<div class="line">export function tickWorldEvolution(state: GameState, time: WorldTime): string[] {</div>
+<div class="line">  const messages: string[] = []</div>
+<div class="line"></div>
+<div class="line">  // 1. NPC突破</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 45 页</span></div>
+<div class="line">  const breakthroughs = tickNpcBreakthroughs(state, time)</div>
+<div class="line">  for (const bt of breakthroughs) {</div>
+<div class="line">    messages.push(bt.description)</div>
+<div class="line">  }</div>
+<div class="line"></div>
+<div class="line">  // 2. NPC人生事件</div>
+<div class="line">  const lifeEvents = tickNpcLifeEvents(state, time)</div>
+<div class="line">  messages.push(...lifeEvents)</div>
+<div class="line"></div>
+<div class="line">  // 3. NPC死亡</div>
+<div class="line">  const deaths = tickNpcMortality(state, time)</div>
+<div class="line">  messages.push(...deaths)</div>
+<div class="line"></div>
+<div class="line">  // 4. 世界演进分数自然增长</div>
+<div class="line">  state.worldEvolutionScore = (state.worldEvolutionScore || 0) + 1</div>
+<div class="line"></div>
+<div class="line">  // 5. 纪元变迁检测</div>
+<div class="line">  const evolution = getWorldEvolutionState(state)</div>
+<div class="line">  const score = state.worldEvolutionScore || 0</div>
+<div class="line">  if (score === 100 || score === 250 || score === 500 || score === 1000) {</div>
+<div class="line">    messages.push(`【纪元变迁】世界进入了「${evolution.era}」！`)</div>
+<div class="line">  }</div>
+<div class="line"></div>
+<div class="line">  // 限制消息数量</div>
+<div class="line">  return messages.slice(0, 5)</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">// ===== 获取NPC人生履历 =====</div>
+<div class="line"></div>
+<div class="line">export function getNpcLifeEvents(state: GameState, npcId: string): NpcLifeEventRecord[] {</div>
+<div class="line">  return (state.npcLifeEventsLog || []).filter(e =&gt; e.npcId === npcId)</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">// ===== 生成新NPC补充人口 =====</div>
+<div class="line"></div>
+<div class="line">export function maintainNpcPopulation(state: GameState): string[] {</div>
+<div class="line">  const messages: string[] = []</div>
+<div class="line">  const npcs = state.proceduralNpcs || []</div>
+<div class="line">  const aliveCount = npcs.filter(n =&gt; n.alive).length</div>
+<div class="line"></div>
+<div class="line">  // 如果存活NPC太少，生成新NPC</div>
+<div class="line">  if (aliveCount &lt; 20) {</div>
+<div class="line">    const need = 30 - aliveCount</div>
+<div class="line">    messages.push(`世界新生了${need}位修士，崭露头角`)</div>
+<div class="line">  }</div>
+<div class="line"></div>
+<div class="line">  return messages</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">/* ====== 文件: src/world-fog.ts ====== */</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 46 页</span></div>
+<div class="line">// ---------- 大地图迷雾系统 ----------</div>
+<div class="line">// 玩家走过的区域被永久照亮</div>
+<div class="line"></div>
+<div class="line">import type { GameState } from &#x27;./state&#x27;</div>
+<div class="line"></div>
+<div class="line">const TILE_SIZE = 48  // 大地图每个迷雾格的像素大小</div>
+<div class="line"></div>
+<div class="line">export function exploreTile(state: GameState, domain: string, x: number, y: number): void {</div>
+<div class="line">  const cx = Math.floor(x / TILE_SIZE)</div>
+<div class="line">  const cy = Math.floor(y / TILE_SIZE)</div>
+<div class="line">  const key = `${domain}:${cx}:${cy}`</div>
+<div class="line">  if (!state.worldFogData[key]) {</div>
+<div class="line">    state.worldFogData[key] = true</div>
+<div class="line">    // 同时照亮周围1格</div>
+<div class="line">    for (let dx = -1; dx &lt;= 1; dx++) {</div>
+<div class="line">      for (let dy = -1; dy &lt;= 1; dy++) {</div>
+<div class="line">        const k = `${domain}:${cx + dx}:${cy + dy}`</div>
+<div class="line">        state.worldFogData[k] = true</div>
+<div class="line">      }</div>
+<div class="line">    }</div>
+<div class="line">  }</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">export function isExplored(state: GameState, domain: string, x: number, y: number): boolean {</div>
+<div class="line">  const cx = Math.floor(x / TILE_SIZE)</div>
+<div class="line">  const cy = Math.floor(y / TILE_SIZE)</div>
+<div class="line">  return !!state.worldFogData[`${domain}:${cx}:${cy}`]</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">export function getExploredTiles(state: GameState, domain: string): { cx: number; cy: number }[] {</div>
+<div class="line">  const tiles: { cx: number; cy: number }[] = []</div>
+<div class="line">  for (const key of Object.keys(state.worldFogData)) {</div>
+<div class="line">    const parts = key.split(&#x27;:&#x27;)</div>
+<div class="line">    if (parts[0] === domain) {</div>
+<div class="line">      tiles.push({ cx: parseInt(parts[1]), cy: parseInt(parts[2]) })</div>
+<div class="line">    }</div>
+<div class="line">  }</div>
+<div class="line">  return tiles</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">export function getVisionRadius(playerRealm: number): number {</div>
+<div class="line">  return 120 + playerRealm * 20  // 境界越高视野越大</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">// 清除某域迷雾（debug/作弊用）</div>
+<div class="line">export function revealAllDomain(state: GameState, domain: string): void {</div>
+<div class="line">  for (let cx = 0; cx &lt; 40; cx++) {</div>
+<div class="line">    for (let cy = 0; cy &lt; 60; cy++) {</div>
+<div class="line">      state.worldFogData[`${domain}:${cx}:${cy}`] = true</div>
+<div class="line">    }</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 47 页</span></div>
+<div class="line">  }</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">/* ====== 文件: src/world-icons.ts ====== */</div>
+<div class="line">// ---------- 大地图兴趣点图标程序化生成器 ----------</div>
+<div class="line">// 生成 48×48 高质量像素风图标，替换旧的小尺寸 PNG</div>
+<div class="line"></div>
+<div class="line">import Phaser from &#x27;phaser&#x27;</div>
+<div class="line"></div>
+<div class="line">const S = 48</div>
+<div class="line"></div>
+<div class="line">function px(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, color: string) {</div>
+<div class="line">  ctx.fillStyle = color</div>
+<div class="line">  ctx.fillRect(x, y, w, h)</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">function shade(hex: number, delta: number): string {</div>
+<div class="line">  const r = Math.max(0, Math.min(255, ((hex &gt;&gt; 16) &amp; 0xff) + delta))</div>
+<div class="line">  const g = Math.max(0, Math.min(255, ((hex &gt;&gt; 8) &amp; 0xff) + delta))</div>
+<div class="line">  const b = Math.max(0, Math.min(255, (hex &amp; 0xff) + delta))</div>
+<div class="line">  return `rgb(${r},${g},${b})`</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">function hexStr(hex: number): string { return `#${hex.toString(16).padStart(6, &#x27;0&#x27;)}` }</div>
+<div class="line"></div>
+<div class="line">// ---------- 洞府 ----------</div>
+<div class="line">function drawHome(ctx: CanvasRenderingContext2D) {</div>
+<div class="line">  ctx.clearRect(0, 0, S, S)</div>
+<div class="line">  const base = 0x6b5d4f, dark = 0x4a3f35, roof = 0x8b6f47, roofDark = 0x5a4a30</div>
+<div class="line">  // 山体背景</div>
+<div class="line">  px(ctx, 10, 30, 28, 10, shade(base, -15))</div>
+<div class="line">  px(ctx, 8, 32, 32, 8, shade(base, -25))</div>
+<div class="line">  // 洞口</div>
+<div class="line">  px(ctx, 18, 28, 12, 12, &#x27;#1a1a1a&#x27;)</div>
+<div class="line">  px(ctx, 19, 29, 10, 10, &#x27;#0d0d0d&#x27;)</div>
+<div class="line">  // 洞口光晕</div>
+<div class="line">  ctx.fillStyle = &#x27;rgba(72,224,138,0.15)&#x27;</div>
+<div class="line">  ctx.beginPath(); ctx.arc(24, 34, 6, 0, Math.PI * 2); ctx.fill()</div>
+<div class="line">  // 屋顶（洞府门檐）</div>
+<div class="line">  px(ctx, 14, 26, 20, 3, hexStr(roof))</div>
+<div class="line">  px(ctx, 12, 28, 24, 2, hexStr(roofDark))</div>
+<div class="line">  // 两侧树木</div>
+<div class="line">  px(ctx, 6, 24, 3, 10, &#x27;#2a4a2a&#x27;)</div>
+<div class="line">  px(ctx, 5, 22, 5, 4, &#x27;#3a6a3a&#x27;)</div>
+<div class="line">  px(ctx, 7, 20, 3, 3, &#x27;#4a7a4a&#x27;)</div>
+<div class="line">  px(ctx, 39, 24, 3, 10, &#x27;#2a4a2a&#x27;)</div>
+<div class="line">  px(ctx, 38, 22, 5, 4, &#x27;#3a6a3a&#x27;)</div>
+<div class="line">  px(ctx, 40, 20, 3, 3, &#x27;#4a7a4a&#x27;)</div>
+<div class="line">  // 石阶</div>
+<div class="line">  px(ctx, 16, 40, 16, 2, shade(base, -30))</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 48 页</span></div>
+<div class="line">  px(ctx, 14, 42, 20, 2, shade(base, -40))</div>
+<div class="line">  // 灵气光点</div>
+<div class="line">  px(ctx, 24, 8, 1, 1, &#x27;#48e08a&#x27;)</div>
+<div class="line">  px(ctx, 20, 12, 1, 1, &#x27;#48e08a&#x27;)</div>
+<div class="line">  px(ctx, 28, 10, 1, 1, &#x27;#48e08a&#x27;)</div>
+<div class="line">  px(ctx, 16, 16, 1, 1, &#x27;#5df0a0&#x27;)</div>
+<div class="line">  px(ctx, 32, 14, 1, 1, &#x27;#5df0a0&#x27;)</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">// ---------- 城市 ----------</div>
+<div class="line">function drawCity(ctx: CanvasRenderingContext2D) {</div>
+<div class="line">  ctx.clearRect(0, 0, S, S)</div>
+<div class="line">  const wall = 0x8a7a5a, wallDark = 0x5a4a35, roof = 0xc4953a, roofDark = 0x8a6520</div>
+<div class="line">  // 城墙基座</div>
+<div class="line">  px(ctx, 6, 28, 36, 14, hexStr(wallDark))</div>
+<div class="line">  px(ctx, 8, 26, 32, 16, hexStr(wall))</div>
+<div class="line">  // 城垛</div>
+<div class="line">  for (let i = 0; i &lt; 5; i++) px(ctx, 10 + i * 7, 22, 4, 4, hexStr(wall))</div>
+<div class="line">  // 城门</div>
+<div class="line">  px(ctx, 20, 30, 8, 12, &#x27;#1a1a1a&#x27;)</div>
+<div class="line">  px(ctx, 21, 31, 6, 11, &#x27;#0d0d0d&#x27;)</div>
+<div class="line">  // 城门上方匾额</div>
+<div class="line">  px(ctx, 19, 26, 10, 3, hexStr(roof))</div>
+<div class="line">  px(ctx, 20, 27, 8, 1, hexStr(roofDark))</div>
+<div class="line">  // 中央高塔</div>
+<div class="line">  px(ctx, 21, 8, 6, 18, hexStr(wall))</div>
+<div class="line">  px(ctx, 20, 6, 8, 4, hexStr(roof))</div>
+<div class="line">  px(ctx, 19, 4, 10, 3, hexStr(roofDark))</div>
+<div class="line">  // 塔窗</div>
+<div class="line">  px(ctx, 23, 14, 2, 3, &#x27;#ffdd44&#x27;)</div>
+<div class="line">  px(ctx, 23, 20, 2, 3, &#x27;#ffdd44&#x27;)</div>
+<div class="line">  // 两侧旗帜</div>
+<div class="line">  px(ctx, 12, 16, 1, 8, &#x27;#5a3a1a&#x27;)</div>
+<div class="line">  px(ctx, 13, 16, 4, 3, &#x27;#c0392b&#x27;)</div>
+<div class="line">  px(ctx, 35, 16, 1, 8, &#x27;#5a3a1a&#x27;)</div>
+<div class="line">  px(ctx, 31, 16, 4, 3, &#x27;#c0392b&#x27;)</div>
+<div class="line">  // 地面阴影</div>
+<div class="line">  px(ctx, 4, 42, 40, 2, &#x27;rgba(0,0,0,0.3)&#x27;)</div>
+<div class="line">  px(ctx, 6, 44, 36, 1, &#x27;rgba(0,0,0,0.2)&#x27;)</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">// ---------- 秘境入口 ----------</div>
+<div class="line">function drawDungeon(ctx: CanvasRenderingContext2D) {</div>
+<div class="line">  ctx.clearRect(0, 0, S, S)</div>
+<div class="line">  const rock = 0x5a4a3a, rockDark = 0x3a2f25</div>
+<div class="line">  // 山体</div>
+<div class="line">  for (let y = 0; y &lt; S; y++) {</div>
+<div class="line">    const halfW = y &lt; 8 ? Math.floor((y + 1) * 1.2) : Math.floor(10 + Math.sin(y * 0.3) * 2)</div>
+<div class="line">    px(ctx, 24 - halfW, y, halfW * 2, 1, shade(rock, y &lt; 12 ? -5 : 0))</div>
+<div class="line">  }</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 49 页</span></div>
+<div class="line">  // 山体暗面</div>
+<div class="line">  for (let y = 8; y &lt; S; y++) {</div>
+<div class="line">    const halfW = Math.floor(10 + Math.sin(y * 0.3) * 2)</div>
+<div class="line">    px(ctx, 24, y, halfW, 1, hexStr(rockDark))</div>
+<div class="line">  }</div>
+<div class="line">  // 裂隙洞口</div>
+<div class="line">  px(ctx, 18, 18, 12, 24, &#x27;#0a0a0a&#x27;)</div>
+<div class="line">  px(ctx, 19, 19, 10, 22, &#x27;#050505&#x27;)</div>
+<div class="line">  // 洞口红光</div>
+<div class="line">  ctx.fillStyle = &#x27;rgba(255,107,107,0.2)&#x27;</div>
+<div class="line">  ctx.beginPath(); ctx.ellipse(24, 30, 7, 12, 0, 0, Math.PI * 2); ctx.fill()</div>
+<div class="line">  // 红色眼眸</div>
+<div class="line">  px(ctx, 21, 26, 2, 2, &#x27;#ff4444&#x27;)</div>
+<div class="line">  px(ctx, 25, 26, 2, 2, &#x27;#ff4444&#x27;)</div>
+<div class="line">  px(ctx, 21, 26, 1, 1, &#x27;#ff8888&#x27;)</div>
+<div class="line">  px(ctx, 25, 26, 1, 1, &#x27;#ff8888&#x27;)</div>
+<div class="line">  // 苔藓</div>
+<div class="line">  px(ctx, 12, 20, 2, 1, &#x27;#3a5a2a&#x27;)</div>
+<div class="line">  px(ctx, 34, 24, 2, 1, &#x27;#3a5a2a&#x27;)</div>
+<div class="line">  px(ctx, 10, 30, 3, 1, &#x27;#2a4a2a&#x27;)</div>
+<div class="line">  px(ctx, 36, 32, 3, 1, &#x27;#2a4a2a&#x27;)</div>
+<div class="line">  // 顶部尖锐岩石</div>
+<div class="line">  px(ctx, 22, 2, 4, 6, hexStr(rock))</div>
+<div class="line">  px(ctx, 20, 4, 2, 4, shade(rock, -10))</div>
+<div class="line">  px(ctx, 26, 4, 2, 4, shade(rock, -10))</div>
+<div class="line">  // 地面阴影</div>
+<div class="line">  px(ctx, 8, 44, 32, 2, &#x27;rgba(0,0,0,0.3)&#x27;)</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">// ---------- 资源点 ----------</div>
+<div class="line">function drawResource(ctx: CanvasRenderingContext2D) {</div>
+<div class="line">  ctx.clearRect(0, 0, S, S)</div>
+<div class="line">  // 灵石结晶</div>
+<div class="line">  const gem = 0x5dade2, gemLight = 0x7dc8eb, gemDark = 0x3a8db8</div>
+<div class="line">  // 底部岩石</div>
+<div class="line">  px(ctx, 10, 36, 28, 8, &#x27;#4a4035&#x27;)</div>
+<div class="line">  px(ctx, 12, 38, 24, 6, &#x27;#3a3530&#x27;)</div>
+<div class="line">  // 主水晶</div>
+<div class="line">  ctx.fillStyle = hexStr(gem)</div>
+<div class="line">  ctx.beginPath()</div>
+<div class="line">  ctx.moveTo(24, 6); ctx.lineTo(36, 30); ctx.lineTo(24, 38); ctx.lineTo(12, 30)</div>
+<div class="line">  ctx.closePath(); ctx.fill()</div>
+<div class="line">  // 水晶暗面</div>
+<div class="line">  ctx.fillStyle = hexStr(gemDark)</div>
+<div class="line">  ctx.beginPath()</div>
+<div class="line">  ctx.moveTo(24, 6); ctx.lineTo(24, 38); ctx.lineTo(12, 30)</div>
+<div class="line">  ctx.closePath(); ctx.fill()</div>
+<div class="line">  // 水晶亮面</div>
+<div class="line">  ctx.fillStyle = hexStr(gemLight)</div>
+<div class="line">  ctx.beginPath()</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 50 页</span></div>
+<div class="line">  ctx.moveTo(24, 6); ctx.lineTo(20, 18); ctx.lineTo(24, 20)</div>
+<div class="line">  ctx.closePath(); ctx.fill()</div>
+<div class="line">  // 高光</div>
+<div class="line">  px(ctx, 23, 10, 1, 8, &#x27;#bdeaff&#x27;)</div>
+<div class="line">  px(ctx, 22, 12, 1, 4, &#x27;#e0f4ff&#x27;)</div>
+<div class="line">  // 小水晶</div>
+<div class="line">  ctx.fillStyle = hexStr(gem)</div>
+<div class="line">  ctx.beginPath()</div>
+<div class="line">  ctx.moveTo(8, 28); ctx.lineTo(13, 36); ctx.lineTo(3, 36)</div>
+<div class="line">  ctx.closePath(); ctx.fill()</div>
+<div class="line">  ctx.fillStyle = hexStr(gemDark)</div>
+<div class="line">  ctx.beginPath()</div>
+<div class="line">  ctx.moveTo(8, 28); ctx.lineTo(8, 36); ctx.lineTo(3, 36)</div>
+<div class="line">  ctx.closePath(); ctx.fill()</div>
+<div class="line">  ctx.fillStyle = hexStr(gem)</div>
+<div class="line">  ctx.beginPath()</div>
+<div class="line">  ctx.moveTo(40, 28); ctx.lineTo(45, 36); ctx.lineTo(35, 36)</div>
+<div class="line">  ctx.closePath(); ctx.fill()</div>
+<div class="line">  ctx.fillStyle = hexStr(gemLight)</div>
+<div class="line">  ctx.beginPath()</div>
+<div class="line">  ctx.moveTo(40, 28); ctx.lineTo(42, 32); ctx.lineTo(38, 32)</div>
+<div class="line">  ctx.closePath(); ctx.fill()</div>
+<div class="line">  // 灵气光点</div>
+<div class="line">  px(ctx, 24, 4, 1, 1, &#x27;#bdeaff&#x27;)</div>
+<div class="line">  px(ctx, 18, 8, 1, 1, &#x27;#7dc8eb&#x27;)</div>
+<div class="line">  px(ctx, 30, 6, 1, 1, &#x27;#7dc8eb&#x27;)</div>
+<div class="line">  // 地面阴影</div>
+<div class="line">  px(ctx, 8, 44, 32, 2, &#x27;rgba(0,0,0,0.3)&#x27;)</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">// ---------- 传送阵 ----------</div>
+<div class="line">function drawTeleport(ctx: CanvasRenderingContext2D) {</div>
+<div class="line">  ctx.clearRect(0, 0, S, S)</div>
+<div class="line">  const rune = 0xbb8fce, runeBright = 0xd4a8e8, runeDark = 0x8a6ba0</div>
+<div class="line">  // 外圈法阵</div>
+<div class="line">  ctx.strokeStyle = hexStr(runeDark)</div>
+<div class="line">  ctx.lineWidth = 2</div>
+<div class="line">  ctx.beginPath(); ctx.arc(24, 24, 20, 0, Math.PI * 2); ctx.stroke()</div>
+<div class="line">  ctx.strokeStyle = hexStr(rune)</div>
+<div class="line">  ctx.lineWidth = 1</div>
+<div class="line">  ctx.beginPath(); ctx.arc(24, 24, 18, 0, Math.PI * 2); ctx.stroke()</div>
+<div class="line">  // 六芒星</div>
+<div class="line">  ctx.strokeStyle = hexStr(runeBright)</div>
+<div class="line">  ctx.lineWidth = 1.5</div>
+<div class="line">  for (let i = 0; i &lt; 6; i++) {</div>
+<div class="line">    const a1 = (i * Math.PI) / 3</div>
+<div class="line">    const a2 = a1 + Math.PI</div>
+<div class="line">    ctx.beginPath()</div>
+<div class="line">    ctx.moveTo(24 + Math.cos(a1) * 16, 24 + Math.sin(a1) * 16)</div>
+<div class="line">    ctx.lineTo(24 + Math.cos(a2) * 16, 24 + Math.sin(a2) * 16)</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 51 页</span></div>
+<div class="line">    ctx.stroke()</div>
+<div class="line">  }</div>
+<div class="line">  // 中心光球</div>
+<div class="line">  ctx.fillStyle = &#x27;rgba(187,143,206,0.4)&#x27;</div>
+<div class="line">  ctx.beginPath(); ctx.arc(24, 24, 8, 0, Math.PI * 2); ctx.fill()</div>
+<div class="line">  ctx.fillStyle = hexStr(runeBright)</div>
+<div class="line">  ctx.beginPath(); ctx.arc(24, 24, 4, 0, Math.PI * 2); ctx.fill()</div>
+<div class="line">  ctx.fillStyle = &#x27;#ffffff&#x27;</div>
+<div class="line">  ctx.beginPath(); ctx.arc(24, 24, 2, 0, Math.PI * 2); ctx.fill()</div>
+<div class="line">  // 四角符文点</div>
+<div class="line">  for (let i = 0; i &lt; 4; i++) {</div>
+<div class="line">    const a = (i * Math.PI) / 2 + Math.PI / 4</div>
+<div class="line">    const x = 24 + Math.cos(a) * 20</div>
+<div class="line">    const y = 24 + Math.sin(a) * 20</div>
+<div class="line">    px(ctx, Math.round(x) - 1, Math.round(y) - 1, 3, 3, hexStr(rune))</div>
+<div class="line">    px(ctx, Math.round(x), Math.round(y), 1, 1, hexStr(runeBright))</div>
+<div class="line">  }</div>
+<div class="line">  // 旋转光环（静态帧，动画在 WorldScene 中处理）</div>
+<div class="line">  ctx.strokeStyle = &#x27;rgba(212,168,232,0.5)&#x27;</div>
+<div class="line">  ctx.lineWidth = 1</div>
+<div class="line">  ctx.beginPath(); ctx.arc(24, 24, 12, 0, Math.PI * 1.5); ctx.stroke()</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">// ---------- 地标 ----------</div>
+<div class="line">function drawLandmark(ctx: CanvasRenderingContext2D) {</div>
+<div class="line">  ctx.clearRect(0, 0, S, S)</div>
+<div class="line">  const stone = 0x8a8070, stoneDark = 0x5a5040, gold = 0xf0c987</div>
+<div class="line">  // 碑体</div>
+<div class="line">  px(ctx, 16, 8, 16, 34, hexStr(stone))</div>
+<div class="line">  px(ctx, 18, 6, 12, 4, hexStr(stoneDark))</div>
+<div class="line">  px(ctx, 14, 10, 2, 32, hexStr(stoneDark))</div>
+<div class="line">  px(ctx, 32, 10, 2, 32, hexStr(stoneDark))</div>
+<div class="line">  // 碑面刻纹</div>
+<div class="line">  px(ctx, 20, 14, 8, 1, hexStr(gold))</div>
+<div class="line">  px(ctx, 20, 14, 1, 8, hexStr(gold))</div>
+<div class="line">  px(ctx, 27, 14, 1, 8, hexStr(gold))</div>
+<div class="line">  // 符文中心</div>
+<div class="line">  px(ctx, 23, 18, 2, 2, &#x27;#ffdd66&#x27;)</div>
+<div class="line">  px(ctx, 22, 22, 4, 1, hexStr(gold))</div>
+<div class="line">  px(ctx, 23, 26, 2, 2, &#x27;#ffdd66&#x27;)</div>
+<div class="line">  // 底座</div>
+<div class="line">  px(ctx, 10, 40, 28, 4, hexStr(stoneDark))</div>
+<div class="line">  px(ctx, 8, 42, 32, 2, &#x27;#3a3530&#x27;)</div>
+<div class="line">  // 灵气光点</div>
+<div class="line">  px(ctx, 24, 4, 1, 1, &#x27;#ffe0a0&#x27;)</div>
+<div class="line">  px(ctx, 18, 8, 1, 1, &#x27;#f0c987&#x27;)</div>
+<div class="line">  px(ctx, 30, 8, 1, 1, &#x27;#f0c987&#x27;)</div>
+<div class="line">  // 地面阴影</div>
+<div class="line">  px(ctx, 6, 44, 36, 2, &#x27;rgba(0,0,0,0.3)&#x27;)</div>
+<div class="line">}</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 52 页</span></div>
+<div class="line"></div>
+<div class="line">// ---------- 宗门山门 ----------</div>
+<div class="line">function drawSect(ctx: CanvasRenderingContext2D) {</div>
+<div class="line">  ctx.clearRect(0, 0, S, S)</div>
+<div class="line">  const pillar = 0x9a8a6a, pillarDark = 0x6a5a40, roof = 0xc0392b, roofDark = 0x8a2820, gold = 0xfbbf24</div>
+<div class="line">  // 屋顶（中式飞檐）</div>
+<div class="line">  ctx.fillStyle = hexStr(roof)</div>
+<div class="line">  ctx.beginPath()</div>
+<div class="line">  ctx.moveTo(6, 18); ctx.lineTo(24, 6); ctx.lineTo(42, 18); ctx.lineTo(38, 20); ctx.lineTo(24, 10); ctx.lineTo(10, 20)</div>
+<div class="line">  ctx.closePath(); ctx.fill()</div>
+<div class="line">  ctx.fillStyle = hexStr(roofDark)</div>
+<div class="line">  ctx.beginPath()</div>
+<div class="line">  ctx.moveTo(6, 18); ctx.lineTo(10, 20); ctx.lineTo(24, 10); ctx.lineTo(24, 6)</div>
+<div class="line">  ctx.closePath(); ctx.fill()</div>
+<div class="line">  // 飞檐翘角</div>
+<div class="line">  px(ctx, 4, 17, 3, 2, hexStr(roof))</div>
+<div class="line">  px(ctx, 41, 17, 3, 2, hexStr(roof))</div>
+<div class="line">  // 匾额</div>
+<div class="line">  px(ctx, 16, 20, 16, 5, hexStr(gold))</div>
+<div class="line">  px(ctx, 17, 21, 14, 3, &#x27;#d4a020&#x27;)</div>
+<div class="line">  px(ctx, 22, 21, 4, 3, &#x27;#8a6010&#x27;)</div>
+<div class="line">  // 左柱</div>
+<div class="line">  px(ctx, 10, 25, 5, 17, hexStr(pillar))</div>
+<div class="line">  px(ctx, 10, 25, 1, 17, hexStr(pillarDark))</div>
+<div class="line">  px(ctx, 14, 25, 1, 17, shade(pillar, -15))</div>
+<div class="line">  // 右柱</div>
+<div class="line">  px(ctx, 33, 25, 5, 17, hexStr(pillar))</div>
+<div class="line">  px(ctx, 33, 25, 1, 17, hexStr(pillarDark))</div>
+<div class="line">  px(ctx, 37, 25, 1, 17, shade(pillar, -15))</div>
+<div class="line">  // 门洞</div>
+<div class="line">  px(ctx, 16, 28, 16, 14, &#x27;#1a1a1a&#x27;)</div>
+<div class="line">  px(ctx, 17, 29, 14, 12, &#x27;#0a0a0a&#x27;)</div>
+<div class="line">  // 门内光晕</div>
+<div class="line">  ctx.fillStyle = &#x27;rgba(251,191,36,0.12)&#x27;</div>
+<div class="line">  ctx.beginPath(); ctx.arc(24, 36, 5, 0, Math.PI * 2); ctx.fill()</div>
+<div class="line">  // 台阶</div>
+<div class="line">  px(ctx, 8, 42, 32, 2, hexStr(pillarDark))</div>
+<div class="line">  px(ctx, 6, 44, 36, 2, &#x27;#3a3025&#x27;)</div>
+<div class="line">  // 灯笼</div>
+<div class="line">  px(ctx, 8, 22, 3, 4, &#x27;#c0392b&#x27;)</div>
+<div class="line">  px(ctx, 8, 21, 3, 1, &#x27;#5a3a1a&#x27;)</div>
+<div class="line">  px(ctx, 37, 22, 3, 4, &#x27;#c0392b&#x27;)</div>
+<div class="line">  px(ctx, 37, 21, 3, 1, &#x27;#5a3a1a&#x27;)</div>
+<div class="line">  px(ctx, 9, 24, 1, 1, &#x27;#ffdd44&#x27;)</div>
+<div class="line">  px(ctx, 38, 24, 1, 1, &#x27;#ffdd44&#x27;)</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">// ---------- 域门 ----------</div>
+<div class="line">function drawDomainGate(ctx: CanvasRenderingContext2D) {</div>
+<div class="line">  ctx.clearRect(0, 0, S, S)</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 53 页</span></div>
+<div class="line">  const blue = 0x60a5fa, blueBright = 0x93c5fd, blueDark = 0x3b6fd6</div>
+<div class="line">  // 外圈</div>
+<div class="line">  ctx.strokeStyle = hexStr(blueDark)</div>
+<div class="line">  ctx.lineWidth = 3</div>
+<div class="line">  ctx.beginPath(); ctx.arc(24, 24, 20, 0, Math.PI * 2); ctx.stroke()</div>
+<div class="line">  ctx.strokeStyle = hexStr(blue)</div>
+<div class="line">  ctx.lineWidth = 1</div>
+<div class="line">  ctx.beginPath(); ctx.arc(24, 24, 17, 0, Math.PI * 2); ctx.stroke()</div>
+<div class="line">  // 六个符文节点</div>
+<div class="line">  for (let i = 0; i &lt; 6; i++) {</div>
+<div class="line">    const a = (i * Math.PI) / 3 - Math.PI / 2</div>
+<div class="line">    const x = 24 + Math.cos(a) * 17</div>
+<div class="line">    const y = 24 + Math.sin(a) * 17</div>
+<div class="line">    ctx.fillStyle = hexStr(blue)</div>
+<div class="line">    ctx.beginPath(); ctx.arc(x, y, 3.5, 0, Math.PI * 2); ctx.fill()</div>
+<div class="line">    ctx.fillStyle = hexStr(blueBright)</div>
+<div class="line">    ctx.beginPath(); ctx.arc(x, y, 1.5, 0, Math.PI * 2); ctx.fill()</div>
+<div class="line">  }</div>
+<div class="line">  // 中心漩涡</div>
+<div class="line">  ctx.fillStyle = &#x27;rgba(96,165,250,0.3)&#x27;</div>
+<div class="line">  ctx.beginPath(); ctx.arc(24, 24, 10, 0, Math.PI * 2); ctx.fill()</div>
+<div class="line">  // 螺旋纹</div>
+<div class="line">  ctx.strokeStyle = hexStr(blueBright)</div>
+<div class="line">  ctx.lineWidth = 1.5</div>
+<div class="line">  ctx.beginPath()</div>
+<div class="line">  for (let t = 0; t &lt; Math.PI * 4; t += 0.1) {</div>
+<div class="line">    const r = t * 1.2</div>
+<div class="line">    const x = 24 + Math.cos(t) * r</div>
+<div class="line">    const y = 24 + Math.sin(t) * r</div>
+<div class="line">    if (t === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y)</div>
+<div class="line">  }</div>
+<div class="line">  ctx.stroke()</div>
+<div class="line">  // 中心亮点</div>
+<div class="line">  ctx.fillStyle = &#x27;#ffffff&#x27;</div>
+<div class="line">  ctx.beginPath(); ctx.arc(24, 24, 2, 0, Math.PI * 2); ctx.fill()</div>
+<div class="line">  // 外圈光点</div>
+<div class="line">  for (let i = 0; i &lt; 12; i++) {</div>
+<div class="line">    const a = (i * Math.PI) / 6</div>
+<div class="line">    const x = 24 + Math.cos(a) * 20</div>
+<div class="line">    const y = 24 + Math.sin(a) * 20</div>
+<div class="line">    px(ctx, Math.round(x), Math.round(y), 1, 1, hexStr(blueBright))</div>
+<div class="line">  }</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">// ---------- 主生成函数 ----------</div>
+<div class="line"></div>
+<div class="line">const DRAWERS: Record&lt;string, (ctx: CanvasRenderingContext2D) =&gt; void&gt; = {</div>
+<div class="line">  home: drawHome,</div>
+<div class="line">  city: drawCity,</div>
+<div class="line">  dungeon: drawDungeon,</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 54 页</span></div>
+<div class="line">  resource: drawResource,</div>
+<div class="line">  teleport: drawTeleport,</div>
+<div class="line">  landmark: drawLandmark,</div>
+<div class="line">  sect: drawSect,</div>
+<div class="line">  domain_gate: drawDomainGate,</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">export function generateWorldIcons(scene: Phaser.Scene): void {</div>
+<div class="line">  for (const [type, draw] of Object.entries(DRAWERS)) {</div>
+<div class="line">    const key = `world_icon_v2_${type}`</div>
+<div class="line">    if (scene.textures.exists(key)) continue</div>
+<div class="line">    const canvas = scene.textures.createCanvas(key, S, S)</div>
+<div class="line">    if (!canvas) continue</div>
+<div class="line">    const ctx = canvas.getContext()</div>
+<div class="line">    ctx.imageSmoothingEnabled = false</div>
+<div class="line">    draw(ctx)</div>
+<div class="line">    canvas.refresh()</div>
+<div class="line">  }</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">/** 获取兴趣点图标纹理 key（优先使用程序化生成的 v2 版本） */</div>
+<div class="line">export function getWorldIconKey(type: string): string {</div>
+<div class="line">  return `world_icon_v2_${type}`</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line"></div>
+<div class="line">/* ====== 文件: src/world-map.ts ====== */</div>
+<div class="line">// ---------- 大地图类型与数据加载（五域系统） ----------</div>
+<div class="line"></div>
+<div class="line">import worldMapJson from &#x27;./data/world-map.json&#x27;</div>
+<div class="line">import worldMapCentralJson from &#x27;./data/world-map-central.json&#x27;</div>
+<div class="line">import worldMapEastJson from &#x27;./data/world-map-east.json&#x27;</div>
+<div class="line">import worldMapWestJson from &#x27;./data/world-map-west.json&#x27;</div>
+<div class="line">import worldMapNorthJson from &#x27;./data/world-map-north.json&#x27;</div>
+<div class="line"></div>
+<div class="line">export type WorldPointType = &#x27;home&#x27; | &#x27;city&#x27; | &#x27;dungeon&#x27; | &#x27;resource&#x27; | &#x27;teleport&#x27; | &#x27;landmark&#x27; | &#x27;sect&#x27; | &#x27;domain_gate&#x27;</div>
+<div class="line">export type DomainId = &#x27;south&#x27; | &#x27;central&#x27; | &#x27;east&#x27; | &#x27;west&#x27; | &#x27;north&#x27;</div>
+<div class="line"></div>
+<div class="line">export interface DungeonEntryData {</div>
+<div class="line">  region: string</div>
+<div class="line">  startFloor: number</div>
+<div class="line">  difficulty: number</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">export interface WorldPoint {</div>
+<div class="line">  id: string</div>
+<div class="line">  name: string</div>
+<div class="line">  type: WorldPointType</div>
+<div class="line">  x: number</div>
+<div class="line">  y: number</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 55 页</span></div>
+<div class="line">  icon: string</div>
+<div class="line">  description: string</div>
+<div class="line">  domain: DomainId</div>
+<div class="line">  dungeonData?: DungeonEntryData</div>
+<div class="line">  resourceType?: string</div>
+<div class="line">  resourceLevel?: number</div>
+<div class="line">  unlockCondition?: { level?: number; realm?: number; questDone?: string } | null</div>
+<div class="line">  domainGateTarget?: DomainId</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">const ALL_POINTS: WorldPoint[] = [</div>
+<div class="line">  ...(worldMapJson as WorldPoint[]),</div>
+<div class="line">  ...(worldMapCentralJson as WorldPoint[]),</div>
+<div class="line">  ...(worldMapEastJson as WorldPoint[]),</div>
+<div class="line">  ...(worldMapWestJson as WorldPoint[]),</div>
+<div class="line">  ...(worldMapNorthJson as WorldPoint[]),</div>
+<div class="line">]</div>
+<div class="line"></div>
+<div class="line">export const WORLD_POINTS: WorldPoint[] = ALL_POINTS</div>
+<div class="line"></div>
+<div class="line">/** 各域地图尺寸（统一） */</div>
+<div class="line">export const WORLD_MAP_W = 1200</div>
+<div class="line">export const WORLD_MAP_H = 1700</div>
+<div class="line"></div>
+<div class="line">/** 域定义 */</div>
+<div class="line">export interface DomainDef {</div>
+<div class="line">  id: DomainId</div>
+<div class="line">  name: string</div>
+<div class="line">  desc: string</div>
+<div class="line">  bgTint: number</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">export const DOMAINS: DomainDef[] = [</div>
+<div class="line">  { id: &#x27;south&#x27;, name: &#x27;南域&#x27;, desc: &#x27;青冥山脚，初入修仙之地。气候温润，灵气稀薄。&#x27;, bgTint: 0x1a3b2a },</div>
+<div class="line">  { id: &#x27;central&#x27;, name: &#x27;中域&#x27;, desc: &#x27;苍玄界腹地，万宗林立，坊市繁华。修仙界的中心。&#x27;, bgTint: 0x2a2a4a },</div>
+<div class="line">  { id: &#x27;east&#x27;, name: &#x27;东域&#x27;, desc: &#x27;碧海苍梧，仙岛星罗。海族与修士共处之地。&#x27;, bgTint: 0x1a3a4a },</div>
+<div class="line">  { id: &#x27;west&#x27;, name: &#x27;西域&#x27;, desc: &#x27;大漠黄沙，古战场遗迹遍布。炼器材料丰富。&#x27;, bgTint: 0x4a3a1a },</div>
+<div class="line">  { id: &#x27;north&#x27;, name: &#x27;北域&#x27;, desc: &#x27;冰原万里，极寒之地。上古妖兽沉睡于此。&#x27;, bgTint: 0x3a4a5a },</div>
+<div class="line">]</div>
+<div class="line"></div>
+<div class="line">/** 获取某域的所有点位 */</div>
+<div class="line">export function getDomainPoints(domain: DomainId): WorldPoint[] {</div>
+<div class="line">  return ALL_POINTS.filter(p =&gt; p.domain === domain)</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">/** 获取域定义 */</div>
+<div class="line">export function getDomainDef(id: DomainId): DomainDef | undefined {</div>
+<div class="line">  return DOMAINS.find(d =&gt; d.id === id)</div>
+<div class="line">}</div>
+<div class="line"></div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 56 页</span></div>
+<div class="line">export function getPoint(id: string): WorldPoint | undefined {</div>
+<div class="line">  return ALL_POINTS.find(p =&gt; p.id === id)</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">export function isPointUnlocked(p: WorldPoint, s: {</div>
+<div class="line">  level: number</div>
+<div class="line">  realm: number</div>
+<div class="line">  progress: { qmCleared: boolean; ymCleared: boolean }</div>
+<div class="line">}): boolean {</div>
+<div class="line">  if (!p.unlockCondition) return true</div>
+<div class="line">  const c = p.unlockCondition</div>
+<div class="line">  if (c.level &amp;&amp; s.level &lt; c.level) return false</div>
+<div class="line">  if (c.realm &amp;&amp; s.realm &lt; c.realm) return false</div>
+<div class="line">  if (c.questDone === &#x27;qmCleared&#x27; &amp;&amp; !s.progress.qmCleared) return false</div>
+<div class="line">  if (c.questDone === &#x27;ymCleared&#x27; &amp;&amp; !s.progress.ymCleared) return false</div>
+<div class="line">  return true</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">/** 获取传送阵目标列表 */</div>
+<div class="line">export function getTeleportTargets(domain: DomainId): WorldPoint[] {</div>
+<div class="line">  return getDomainPoints(domain).filter(p =&gt; p.type === &#x27;teleport&#x27;)</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">/* ====== 文件: src/xian-realm.ts ====== */</div>
+<div class="line">// ---------- 破碎仙宫：无尽模式 + 仙人/妖兽敌人 + 敌人使用玩家招式 ----------</div>
+<div class="line">// 化神期解锁，每层敌人携带不同的攻击模式/神通/套装效果</div>
+<div class="line"></div>
+<div class="line">import { MONSTERS, SETS, type AttackMode, type ArtMode, type MonsterDef } from &#x27;./data&#x27;</div>
+<div class="line">import { resolveSetEffectRuntime, type SetEffectRuntime } from &#x27;./effects&#x27;</div>
+<div class="line"></div>
+<div class="line">// ========== 仙界敌人模板 ==========</div>
+<div class="line">// 仙人/妖兽：携带 attackMode + artMode + 套装效果，使用玩家级别的招式</div>
+<div class="line"></div>
+<div class="line">export interface XianEnemyDef {</div>
+<div class="line">  id: string</div>
+<div class="line">  name: string</div>
+<div class="line">  tex: string            // 贴图 key（xian/xxx）</div>
+<div class="line">  tier: 1 | 2 | 3 | 4    // 敌人阶级：1散仙/灵兽 2真仙/仙兽 3金仙/圣兽 4仙尊/Boss</div>
+<div class="line">  hp: number</div>
+<div class="line">  atk: number</div>
+<div class="line">  def: number</div>
+<div class="line">  speed: number</div>
+<div class="line">  exp: number</div>
+<div class="line">  gold: [number, number]</div>
+<div class="line">  attackMode: AttackMode  // 普攻模式（同玩家）</div>
+<div class="line">  artMode: ArtMode       // 神通模式（同玩家）</div>
+<div class="line">  setId?: string         // 携带套装（提供数值加成 + 视觉效果）</div>
+<div class="line">  ai: &#x27;xian_melee&#x27; | &#x27;xian_ranged&#x27; | &#x27;xian_boss&#x27;</div>
+<div class="line">  range?: number</div>
+<div class="line">  cd?: number</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 57 页</span></div>
+<div class="line">  scale?: number</div>
+<div class="line">  isBoss?: boolean</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">export const XIAN_ENEMIES: XianEnemyDef[] = [</div>
+<div class="line">  // ===== Tier 1：散仙 / 低阶灵兽 =====</div>
+<div class="line">  {</div>
+<div class="line">    id: &#x27;xian_sanxian_m&#x27;, name: &#x27;青锋散仙&#x27;, tex: &#x27;xian_sanxian_m&#x27;, tier: 1,</div>
+<div class="line">    hp: 120, atk: 14, def: 4, speed: 55, exp: 40, gold: [15, 30],</div>
+<div class="line">    attackMode: &#x27;melee_arc&#x27;, artMode: &#x27;sword_fan&#x27;,</div>
+<div class="line">    setId: &#x27;set_qm&#x27;,</div>
+<div class="line">    ai: &#x27;xian_melee&#x27;, range: 28, cd: 1200,</div>
+<div class="line">  },</div>
+<div class="line">  {</div>
+<div class="line">    id: &#x27;xian_sanxian_f&#x27;, name: &#x27;玉露散仙&#x27;, tex: &#x27;xian_sanxian_f&#x27;, tier: 1,</div>
+<div class="line">    hp: 100, atk: 12, def: 3, speed: 60, exp: 38, gold: [15, 28],</div>
+<div class="line">    attackMode: &#x27;magic_bolt&#x27;, artMode: &#x27;fire_rain&#x27;,</div>
+<div class="line">    ai: &#x27;xian_ranged&#x27;, range: 180, cd: 1500,</div>
+<div class="line">  },</div>
+<div class="line">  {</div>
+<div class="line">    id: &#x27;xian_tong_nan&#x27;, name: &#x27;守山仙童&#x27;, tex: &#x27;xian_tong_nan&#x27;, tier: 1,</div>
+<div class="line">    hp: 80, atk: 10, def: 2, speed: 70, exp: 30, gold: [10, 20],</div>
+<div class="line">    attackMode: &#x27;flying_sword&#x27;, artMode: &#x27;sword_fan&#x27;,</div>
+<div class="line">    ai: &#x27;xian_ranged&#x27;, range: 150, cd: 1300,</div>
+<div class="line">  },</div>
+<div class="line">  {</div>
+<div class="line">    id: &#x27;beast_crane&#x27;, name: &#x27;云中仙鹤&#x27;, tex: &#x27;beast_crane&#x27;, tier: 1,</div>
+<div class="line">    hp: 90, atk: 13, def: 3, speed: 75, exp: 35, gold: [12, 22],</div>
+<div class="line">    attackMode: &#x27;flying_sword&#x27;, artMode: &#x27;thunder_strike&#x27;,</div>
+<div class="line">    ai: &#x27;xian_ranged&#x27;, range: 160, cd: 1100,</div>
+<div class="line">  },</div>
+<div class="line"></div>
+<div class="line">  // ===== Tier 2：真仙 / 高阶仙兽 =====</div>
+<div class="line">  {</div>
+<div class="line">    id: &#x27;xian_zhenxian_m&#x27;, name: &#x27;赤霞真仙&#x27;, tex: &#x27;xian_zhenxian_m&#x27;, tier: 2,</div>
+<div class="line">    hp: 220, atk: 22, def: 8, speed: 55, exp: 80, gold: [30, 55],</div>
+<div class="line">    attackMode: &#x27;whirlwind&#x27;, artMode: &#x27;fire_rain&#x27;,</div>
+<div class="line">    setId: &#x27;set_huo&#x27;,</div>
+<div class="line">    ai: &#x27;xian_melee&#x27;, range: 32, cd: 1100,</div>
+<div class="line">  },</div>
+<div class="line">  {</div>
+<div class="line">    id: &#x27;xian_zhenxian_f&#x27;, name: &#x27;紫霞真仙&#x27;, tex: &#x27;xian_zhenxian_f&#x27;, tier: 2,</div>
+<div class="line">    hp: 180, atk: 20, def: 6, speed: 60, exp: 75, gold: [28, 50],</div>
+<div class="line">    attackMode: &#x27;frost_nova&#x27;, artMode: &#x27;thunder_strike&#x27;,</div>
+<div class="line">    setId: &#x27;set_bing&#x27;,</div>
+<div class="line">    ai: &#x27;xian_ranged&#x27;, range: 170, cd: 1400,</div>
+<div class="line">  },</div>
+<div class="line">  {</div>
+<div class="line">    id: &#x27;beast_deer&#x27;, name: &#x27;九色灵鹿&#x27;, tex: &#x27;beast_deer&#x27;, tier: 2,</div>
+<div class="line">    hp: 200, atk: 18, def: 7, speed: 80, exp: 70, gold: [25, 45],</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 58 页</span></div>
+<div class="line">    attackMode: &#x27;thunder_chain&#x27;, artMode: &#x27;thunder_strike&#x27;,</div>
+<div class="line">    ai: &#x27;xian_ranged&#x27;, range: 160, cd: 1200,</div>
+<div class="line">  },</div>
+<div class="line">  {</div>
+<div class="line">    id: &#x27;beast_pixiu&#x27;, name: &#x27;镇山貔貅&#x27;, tex: &#x27;beast_pixiu&#x27;, tier: 2,</div>
+<div class="line">    hp: 280, atk: 24, def: 12, speed: 50, exp: 85, gold: [35, 60],</div>
+<div class="line">    attackMode: &#x27;giant_sword&#x27;, artMode: &#x27;dageng&#x27;,</div>
+<div class="line">    ai: &#x27;xian_melee&#x27;, range: 30, cd: 1300,</div>
+<div class="line">  },</div>
+<div class="line"></div>
+<div class="line">  // ===== Tier 3：金仙 / 圣兽 =====</div>
+<div class="line">  {</div>
+<div class="line">    id: &#x27;xian_jinxian_m&#x27;, name: &#x27;太清金仙&#x27;, tex: &#x27;xian_jinxian_m&#x27;, tier: 3,</div>
+<div class="line">    hp: 450, atk: 38, def: 15, speed: 50, exp: 180, gold: [70, 120],</div>
+<div class="line">    attackMode: &#x27;sword_array&#x27;, artMode: &#x27;dageng&#x27;,</div>
+<div class="line">    setId: &#x27;set_qm&#x27;,</div>
+<div class="line">    ai: &#x27;xian_melee&#x27;, range: 36, cd: 1000,</div>
+<div class="line">  },</div>
+<div class="line">  {</div>
+<div class="line">    id: &#x27;xian_jinxian_f&#x27;, name: &#x27;瑶池金仙&#x27;, tex: &#x27;xian_jinxian_f&#x27;, tier: 3,</div>
+<div class="line">    hp: 380, atk: 35, def: 12, speed: 55, exp: 170, gold: [65, 110],</div>
+<div class="line">    attackMode: &#x27;frost_nova_burst&#x27;, artMode: &#x27;fire_rain&#x27;,</div>
+<div class="line">    setId: &#x27;set_lei&#x27;,</div>
+<div class="line">    ai: &#x27;xian_ranged&#x27;, range: 180, cd: 1300,</div>
+<div class="line">  },</div>
+<div class="line">  {</div>
+<div class="line">    id: &#x27;xian_tong_nv&#x27;, name: &#x27;莲花仙童&#x27;, tex: &#x27;xian_tong_nv&#x27;, tier: 3,</div>
+<div class="line">    hp: 320, atk: 32, def: 10, speed: 70, exp: 150, gold: [55, 90],</div>
+<div class="line">    attackMode: &#x27;flying_sword_burst&#x27;, artMode: &#x27;sword_fan&#x27;,</div>
+<div class="line">    ai: &#x27;xian_ranged&#x27;, range: 170, cd: 1000,</div>
+<div class="line">  },</div>
+<div class="line">  {</div>
+<div class="line">    id: &#x27;beast_phoenix&#x27;, name: &#x27;南明朱雀&#x27;, tex: &#x27;beast_phoenix&#x27;, tier: 3,</div>
+<div class="line">    hp: 420, atk: 40, def: 10, speed: 75, exp: 200, gold: [80, 140],</div>
+<div class="line">    attackMode: &#x27;magic_bolt&#x27;, artMode: &#x27;fire_rain&#x27;,</div>
+<div class="line">    setId: &#x27;set_huo&#x27;,</div>
+<div class="line">    ai: &#x27;xian_ranged&#x27;, range: 200, cd: 900,</div>
+<div class="line">  },</div>
+<div class="line"></div>
+<div class="line">  // ===== Tier 4：仙尊 Boss =====</div>
+<div class="line">  {</div>
+<div class="line">    id: &#x27;boss_xianzun&#x27;, name: &#x27;玄天仙尊&#x27;, tex: &#x27;boss_xianzun&#x27;, tier: 4,</div>
+<div class="line">    hp: 1200, atk: 55, def: 25, speed: 45, exp: 500, gold: [200, 350],</div>
+<div class="line">    attackMode: &#x27;sword_array&#x27;, artMode: &#x27;dageng&#x27;,</div>
+<div class="line">    setId: &#x27;set_lei&#x27;,</div>
+<div class="line">    ai: &#x27;xian_boss&#x27;, range: 40, cd: 900,</div>
+<div class="line">    isBoss: true, scale: 0.95,</div>
+<div class="line">  },</div>
+<div class="line">]</div>
+<div class="line"></div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 59 页</span></div>
+<div class="line">export const XIAN_ENEMY_MAP = new Map(XIAN_ENEMIES.map((e) =&gt; [e.id, e]))</div>
+<div class="line"></div>
+<div class="line">// 转换为 MonsterDef 兼容格式（给现有 Enemy 类使用）</div>
+<div class="line">export function xianToMonster(def: XianEnemyDef): MonsterDef {</div>
+<div class="line">  // 借用对应基础 AI 的行为模式，但携带独立的攻击/神通配置</div>
+<div class="line">  const baseAi: &#x27;melee&#x27; | &#x27;ranged&#x27; | &#x27;boss&#x27; =</div>
+<div class="line">    def.ai === &#x27;xian_boss&#x27; ? &#x27;boss&#x27; :</div>
+<div class="line">    def.ai === &#x27;xian_ranged&#x27; ? &#x27;ranged&#x27; : &#x27;melee&#x27;</div>
+<div class="line"></div>
+<div class="line">  return {</div>
+<div class="line">    id: def.id,</div>
+<div class="line">    name: def.name,</div>
+<div class="line">    tex: def.tex,</div>
+<div class="line">    hp: def.hp,</div>
+<div class="line">    atk: def.atk,</div>
+<div class="line">    def: def.def,</div>
+<div class="line">    speed: def.speed,</div>
+<div class="line">    exp: def.exp,</div>
+<div class="line">    gold: def.gold,</div>
+<div class="line">    ai: baseAi,</div>
+<div class="line">    range: def.range,</div>
+<div class="line">    cd: def.cd,</div>
+<div class="line">    scale: def.scale,</div>
+<div class="line">  } as MonsterDef</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">// ========== 仙界无尽模式：楼层生成 ==========</div>
+<div class="line"></div>
+<div class="line">/** 获取仙界第 n 层的敌人池和难度倍率 */</div>
+<div class="line">export function xianFloorPool(floor: number): {</div>
+<div class="line">  enemies: string[]</div>
+<div class="line">  scale: number</div>
+<div class="line">  hpMult: number</div>
+<div class="line">  atkMult: number</div>
+<div class="line">  isBoss: boolean</div>
+<div class="line">  bossId?: string</div>
+<div class="line">} {</div>
+<div class="line">  const isBoss = floor % 10 === 0</div>
+<div class="line">  const depth = floor // 仙界层数从 1 开始</div>
+<div class="line"></div>
+<div class="line">  // 难度曲线：每层 HP +20%, ATK +8%, DEF +3</div>
+<div class="line">  const hpMult = 1 + (depth - 1) * 0.20</div>
+<div class="line">  const atkMult = 1 + (depth - 1) * 0.08</div>
+<div class="line">  const scale = 1 + (depth - 1) * 0.03</div>
+<div class="line"></div>
+<div class="line">  // 敌人池按深度解锁</div>
+<div class="line">  const pool: string[] = []</div>
+<div class="line"></div>
+<div class="line">  // Tier 1：1 层起</div>
+<div class="line">  if (depth &gt;= 1) {</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 60 页</span></div>
+<div class="line">    pool.push(&#x27;xian_sanxian_m&#x27;, &#x27;xian_sanxian_f&#x27;, &#x27;beast_crane&#x27;)</div>
+<div class="line">  }</div>
+<div class="line">  if (depth &gt;= 3) {</div>
+<div class="line">    pool.push(&#x27;xian_tong_nan&#x27;)</div>
+<div class="line">  }</div>
+<div class="line">  // Tier 2：5 层起</div>
+<div class="line">  if (depth &gt;= 5) {</div>
+<div class="line">    pool.push(&#x27;xian_zhenxian_m&#x27;, &#x27;xian_zhenxian_f&#x27;, &#x27;beast_pixiu&#x27;)</div>
+<div class="line">  }</div>
+<div class="line">  if (depth &gt;= 7) {</div>
+<div class="line">    pool.push(&#x27;beast_deer&#x27;)</div>
+<div class="line">  }</div>
+<div class="line">  // Tier 3：10 层起</div>
+<div class="line">  if (depth &gt;= 10) {</div>
+<div class="line">    pool.push(&#x27;xian_jinxian_m&#x27;, &#x27;xian_jinxian_f&#x27;, &#x27;beast_phoenix&#x27;)</div>
+<div class="line">  }</div>
+<div class="line">  if (depth &gt;= 15) {</div>
+<div class="line">    pool.push(&#x27;xian_tong_nv&#x27;)</div>
+<div class="line">  }</div>
+<div class="line"></div>
+<div class="line">  // Boss 轮换：每 10 层一位，循环仙尊 → 后续可扩展更多 Boss</div>
+<div class="line">  let bossId: string | undefined</div>
+<div class="line">  if (isBoss) {</div>
+<div class="line">    bossId = &#x27;boss_xianzun&#x27;</div>
+<div class="line">  }</div>
+<div class="line"></div>
+<div class="line">  return { enemies: pool, scale, hpMult, atkMult, isBoss, bossId }</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">/** 生成仙界某层的刷怪表（格式同 spawnTableFor） */</div>
+<div class="line">export function xianSpawnTable(floor: number): Array&lt;[string, number, number]&gt; {</div>
+<div class="line">  const { enemies, isBoss, bossId, hpMult } = xianFloorPool(floor)</div>
+<div class="line">  const result: Array&lt;[string, number, number]&gt; = []</div>
+<div class="line"></div>
+<div class="line">  if (isBoss &amp;&amp; bossId) {</div>
+<div class="line">    // Boss 层：1 个 Boss + 2~3 个精英小怪</div>
+<div class="line">    result.push([bossId, 1, 1])</div>
+<div class="line">    const minion = enemies[Math.floor(Math.random() * enemies.length)]</div>
+<div class="line">    result.push([minion, 2, 3])</div>
+<div class="line">  } else {</div>
+<div class="line">    // 普通层：3~5 个敌人混合</div>
+<div class="line">    const count = 3 + Math.floor(Math.random() * 3)</div>
+<div class="line">    for (let i = 0; i &lt; count; i++) {</div>
+<div class="line">      const id = enemies[Math.floor(Math.random() * enemies.length)]</div>
+<div class="line">      result.push([id, 1, 2])</div>
+<div class="line">    }</div>
+<div class="line">  }</div>
+<div class="line"></div>
+<div class="line">  return result</div>
+<div class="line">}</div>
+</div>
+<div class="page">
+<div class="page-header"><span>修仙与地下城 V0.5</span><span>第 61 页</span></div>
+<div class="line"></div>
+<div class="line">/** 计算仙界敌人实际数值（应用层数倍率） */</div>
+<div class="line">export function xianEnemyStats(def: XianEnemyDef, floor: number) {</div>
+<div class="line">  const { hpMult, atkMult, scale } = xianFloorPool(floor)</div>
+<div class="line">  return {</div>
+<div class="line">    hp: Math.round(def.hp * hpMult * scale),</div>
+<div class="line">    atk: Math.round(def.atk * atkMult * (0.8 + scale * 0.2)),</div>
+<div class="line">    def: def.def + Math.floor((scale - 1) * 3),</div>
+<div class="line">    speed: def.speed,</div>
+<div class="line">    exp: Math.round(def.exp * scale),</div>
+<div class="line">    gold: [Math.round(def.gold[0] * scale), Math.round(def.gold[1] * scale)] as [number, number],</div>
+<div class="line">  }</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">// ========== 仙界入口条件 ==========</div>
+<div class="line"></div>
+<div class="line">/** 玩家是否达到进入仙界的境界要求（化神期及以上） */</div>
+<div class="line">export function canEnterXianRealm(realmIndex: number): boolean {</div>
+<div class="line">  // 境界索引：0炼气 1筑基 2金丹 3元婴 4化神 5炼虚</div>
+<div class="line">  return realmIndex &gt;= 4</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">/** 仙界起始楼层（用于传送门进入） */</div>
+<div class="line">export const XIAN_START_FLOOR = 10000</div>
+<div class="line"></div>
+<div class="line">/** 判断楼层是否在仙界 */</div>
+<div class="line">export function isXianFloor(floor: number): boolean {</div>
+<div class="line">  return floor &gt;= XIAN_START_FLOOR</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">/** 将仙界楼层转换为显示用的层数（10000 → 第1层） */</div>
+<div class="line">export function xianFloorDisplay(floor: number): number {</div>
+<div class="line">  return floor - XIAN_START_FLOOR + 1</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">/** 仙界最高记录楼层（用于存档） */</div>
+<div class="line">export function xianCheckpointFloor(state: { xianMaxDepth: number }): number {</div>
+<div class="line">  const maxDepth = state.xianMaxDepth ?? 1</div>
+<div class="line">  // 每 5 层设置一个存档点，从最近的存档点开始</div>
+<div class="line">  const checkpoint = Math.max(1, Math.floor((maxDepth - 1) / 5) * 5 + 1)</div>
+<div class="line">  return checkpoint</div>
+<div class="line">}</div>
+<div class="line"></div>
+<div class="line">/** 记录仙界最深层数 */</div>
+<div class="line">export function recordXianDepth(state: { xianMaxDepth: number }, floor: number): void {</div>
+<div class="line">  if (floor &gt; (state.xianMaxDepth ?? 0)) {</div>
+<div class="line">    state.xianMaxDepth = floor</div>
+<div class="line">  }</div>
+<div class="line">}</div>
+<div class="line"></div>
+</div>
+</body></html>

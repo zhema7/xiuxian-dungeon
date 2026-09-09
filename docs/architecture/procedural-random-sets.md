@@ -57,7 +57,8 @@
 - **legacy 路径仅限属性缺失**：`Object.prototype.hasOwnProperty.call(record, 'schemaVersion')` 为 false 才能走 legacy。显式 `schemaVersion: undefined` 不是 legacy。
 - **current schema 必须整体严格验证**：`schemaVersion === 2` 的记录要求顶层、`generation`、`set`、2 件／4 件 bonus 与四个 `bases` 的字段集合和交叉关系全部成立。验证覆盖 `generatorVersion`、32 位 `seed`、`sequence ↔ set_dyN/base ID`、`profile ↔ theme/move/art/recipe`、受控命名、数值范围与取整、`fxTags === ['procedural_vfx']`、模式与 recipe 兼容性，以及四槽件完整对应。
 - **显式 schema 不允许降级**：显式 `undefined`、未知版本、残缺或伪造的 schema 2 都隔离整条动态记录；不得删除字段、局部修补、读档重掷或降级为 legacy。合法同档记录与基础 `GameState` 继续加载。
-- **双重入口防线**：`SAVE_VERSION = 5` 的当前读档与旧档迁移都会调用 `normalizeDynamicSetRecords()`；`registerDynamicContent()` 再次规范化。动态内容不得覆盖模块加载时冻结的静态／测试 `SETS` 和 `ITEM_BASE_MAP` ID 边界。
+- **双重入口防线**：当前读档与旧档迁移都会调用 `normalizeDynamicSetRecords()`；`registerDynamicContent()` 再次规范化。动态内容不得覆盖模块加载时冻结的静态／测试 `SETS` 和 `ITEM_BASE_MAP` ID 边界。
+  > **【2026-09-09 回填】** 本文原写 `SAVE_VERSION = 5`，实际当前 **`SAVE_VERSION = 11`**（`src/state.ts:189`，已改为多槽位存档）。该防线是**流程约束**，与具体版本号无关，版本号以代码为准。
 
 ## 3. 随机但受限的行为语法
 

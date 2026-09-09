@@ -18,6 +18,8 @@ import { V4_KIT_SETS } from './v4/kit-data'
 import { gainExp } from './state'
 import { classNameOf, getRecords, type RecordEntry } from './records'
 import { sfx, getBgmVolume, getSfxVolume, setBgmVolume, setSfxVolume } from './audio'
+import { generateDisciple } from './disciple-data'
+import { discipleCapacity } from './sect-data'
 import { listSaveSlots, loadSaveSlot, deleteSaveSlot, hasSaveSlot, MAX_SAVE_SLOTS, type SaveSlotMeta } from './state'
 import { needsTribulation, getTribulation, canAscend, performAscension, ascensionBonus, ASCENSION_REQUIREMENTS } from './tribulation-data'
 import { getDomainDef, type DomainId } from './world-map'
@@ -104,6 +106,17 @@ export function openGmPanel() {
   html += `<div class="item"><span>灵草 +10</span><button data-gm-res="lingcao">增加</button></div>`
   html += `<div class="item"><span>等级 +5（含悟道/天赋点）</span><button data-gm-level>升级</button></div>`
   html += `<div class="item"><span>气血回满</span><button data-gm-heal>回血</button></div>`
+  html += `<p class="dim" style="margin:8px 0 2px">【宗门资源】</p>`
+  html += `<div class="item"><span>灵石 +5000</span><button data-gm-sectres="stone">增加</button></div>`
+  html += `<div class="item"><span>灵草 +100</span><button data-gm-sectres="herb">增加</button></div>`
+  html += `<div class="item"><span>矿石 +100</span><button data-gm-sectres="ore">增加</button></div>`
+  html += `<div class="item"><span>木材 +100</span><button data-gm-sectres="wood">增加</button></div>`
+  html += `<div class="item"><span>悟道 +50</span><button data-gm-sectres="insight">增加</button></div>`
+  html += `<div class="item"><span>声望 +50</span><button data-gm-sectres="prestige">增加</button></div>`
+  html += `<p class="dim" style="margin:8px 0 2px">【宗门弟子】</p>`
+  html += `<div class="item"><span>招募一名普通弟子</span><button data-gm-disciple="normal">招募</button></div>`
+  html += `<div class="item"><span>招募一名精英弟子（天灵根+稀有天赋）</span><button data-gm-disciple="elite">招募</button></div>`
+  html += `<div class="item"><span>招募一名大师兄/大师姐（金丹+全紫天赋）</span><button data-gm-disciple="master">招募</button></div>`
   html += `<div style="text-align:right;margin-top:8px"><button data-close>关闭</button></div></div>`
   panel.innerHTML = html
 
@@ -194,6 +207,50 @@ export function openGmPanel() {
     sfx('sfx_potion')
     after('气血已回满')
   })
+  // 宗门资源
+  panel.querySelectorAll('[data-gm-sectres]').forEach((b) => b.addEventListener('click', (e) => {
+    if (!state.sect) { toast('尚未建立宗门', '#f87171'); return }
+    const kind = (e.target as HTMLElement).getAttribute('data-gm-sectres')!
+    const amounts: Record<string, number> = { stone: 5000, herb: 100, ore: 100, wood: 100, insight: 50, prestige: 50 }
+    const amt = amounts[kind] ?? 100
+    ;(state.sect.resources as any)[kind] = ((state.sect.resources as any)[kind] ?? 0) + amt
+    sfx('sfx_pickup')
+    after(`宗门${kind === 'stone' ? '灵石' : kind === 'herb' ? '灵草' : kind === 'ore' ? '矿石' : kind === 'wood' ? '木材' : kind === 'insight' ? '悟道' : '声望'} +${amt}`)
+  }))
+  // 宗门弟子
+  panel.querySelectorAll('[data-gm-disciple]').forEach((b) => b.addEventListener('click', (e) => {
+    if (!state.sect) { toast('尚未建立宗门', '#f87171'); return }
+    const kind = (e.target as HTMLElement).getAttribute('data-gm-disciple')!
+    const cap = discipleCapacity(state.sect.buildings.disciple_room ?? 0)
+    if (state.sect.disciples.length >= cap && cap > 0) {
+      toast('弟子数量已达上限', '#f87171')
+      return
+    }
+    const d = generateDisciple(Math.random, state.sect.level)
+    if (kind === 'elite') {
+      d.root = 'thunder'
+      d.rootTier = 'epic'
+      d.talents = ['heavenly_root', 'sword_affinity', 'spirit_eye']
+      d.realm = 1
+      d.expToNext = 100 + 80 + 20
+      d.loyalty = 80
+    } else if (kind === 'master') {
+      d.root = 'thunder'
+      d.rootTier = 'epic'
+      d.talents = ['heavenly_root', 'sword_affinity', 'merciless', 'body_tempering']
+      d.realm = 2
+      d.exp = 0
+      d.expToNext = 100 + 2 * 80 + 4 * 20
+      d.rank = 2
+      d.loyalty = 95
+      d.atk = Math.floor(d.atk * 1.5)
+      d.def = Math.floor(d.def * 1.5)
+      d.maxHp = Math.floor(d.maxHp * 1.5)
+    }
+    state.sect.disciples.push(d)
+    sfx('sfx_levelup')
+    after(`已招募弟子「${d.name}」（${kind === 'normal' ? '普通' : kind === 'elite' ? '精英' : '大师兄/姐'}）`)
+  }))
 }
 
 export function setFloorText(t: string) { floorText = t }
@@ -486,6 +543,7 @@ export interface SectDashboardCallbacks {
   onPlaceNpc?: () => void
   onManageDisciples?: () => void
   onDiplomacy?: () => void
+  onRevengeList?: () => void
 }
 
 let sectCallbacks: SectDashboardCallbacks = {}
@@ -571,6 +629,7 @@ export function openSectDashboard(data: SectDashboardData) {
         <button data-sect-act="npc" style="padding:6px;font-size:12px">NPC安排</button>
         <button data-sect-act="disciple" style="padding:6px;font-size:12px">弟子管理</button>
         <button data-sect-act="diplomacy" style="padding:6px;font-size:12px">外交</button>
+        <button data-sect-act="revenge" style="padding:6px;font-size:12px">仇人名录</button>
       </div>
     </div>
     <div style="text-align:right;margin-top:8px"><button data-close>关闭</button></div>
@@ -597,6 +656,11 @@ export function openSectDashboard(data: SectDashboardData) {
     sfx('sfx_click', 0.4)
     closePanel()
     sectCallbacks.onDiplomacy?.()
+  })
+  panel.querySelector('[data-sect-act="revenge"]')?.addEventListener('click', () => {
+    sfx('sfx_click', 0.4)
+    closePanel()
+    sectCallbacks.onRevengeList?.()
   })
   panel.querySelector('[data-close]')!.addEventListener('click', closePanel)
 }

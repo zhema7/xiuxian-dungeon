@@ -10,7 +10,6 @@ import {
   hasCompleteSequenceResourceBundleForRegistration,
   type SequenceResourceBundleRegistrationKey,
 } from '../fx/sequence-contract'
-import { V4_KIT_ASSET_READY } from '../v4/manifest'
 
 const ANIM_CLASSES = ['sword', 'fairy', 'mage', 'sword_new', 'fairy_new']
 
@@ -18,33 +17,6 @@ const ANIM_CLASSES = ['sword', 'fairy', 'mage', 'sword_new', 'fairy_new']
 const BEAST_ANIM_IDS = ['wolf', 'turtle', 'fox', 'bear', 'eagle', 'serpent', 'qilin', 'dragon']
 // 阵法动画种类（3 种类型，每类 1 个 spin 动画）
 const FORMATION_ANIM_TYPES = ['attack', 'defense', 'trap']
-// 宗门建筑（14 种，单帧 atlas）
-const BUILDING_IDS = [
-  'main_hall', 'spirit_vein', 'disciple_room', 'alchemy_room', 'forge_pavilion',
-  'library', 'training_ground', 'guard_array', 'quest_hall', 'spirit_farm',
-  'ore_mine', 'wood_pavilion', 'beast_park', 'realm_gate',
-]
-// NPC/弟子 角色（4 种，4方向 idle 动画）
-const NPC_ANIM_IDS = ['disciple_outer', 'disciple_inner', 'elder', 'deacon']
-// 建筑所在的精灵表（building id -> 精灵表文件名）
-const BUILDING_SHEET_MAP: Record<string, string> = {
-  main_hall: 'sect_buildings_core',
-  library: 'sect_buildings_core',
-  guard_array: 'sect_buildings_core',
-  realm_gate: 'sect_buildings_core',
-  alchemy_room: 'sect_buildings_craft',
-  forge_pavilion: 'sect_buildings_craft',
-  training_ground: 'sect_buildings_craft',
-  quest_hall: 'sect_buildings_craft',
-  spirit_vein: 'sect_buildings_resource',
-  disciple_room: 'sect_buildings_resource',
-  spirit_farm: 'sect_buildings_resource',
-  beast_park: 'sect_buildings_resource',
-  ore_mine: 'sect_buildings_mine_wood',
-  wood_pavilion: 'sect_buildings_mine_wood',
-}
-// 建筑精灵表图片文件（去重后的列表）
-const BUILDING_SHEET_FILES = ['core', 'craft', 'resource', 'mine_wood']
 
 // 序列帧特效动画：逐帧独立 PNG，仅在所有帧加载成功时注册动画
 // - 无 anim 字段者为多段动画（sword_proj / slash），沿用下方硬编码注册块
@@ -112,7 +84,7 @@ export class BootScene extends Phaser.Scene {
   // 资源加载占整个启动过程的 80%，create() 阶段占 20%
   private static readonly LOAD_RATIO = 0.8
   private static readonly CREATE_RATIO = 0.2
-  private static readonly CREATE_STEPS = 10
+  private static readonly CREATE_STEPS = 8
   private createStep = 0
 
   constructor() { super('Boot') }
@@ -296,38 +268,6 @@ export class BootScene extends Phaser.Scene {
         this.load.image(`terrain_${r.terrainPrefix}_${tile}`, `sprites/terrain/${r.terrainPrefix}_${tile}.png`)
       }
     }
-    // 仙界敌人形象（16帧精灵动画：4行×4列 = idle/walk/attack/hit）
-    const xianEnemies = [
-      'xian_sanxian_m', 'xian_sanxian_f', 'xian_zhenxian_m', 'xian_zhenxian_f',
-      'xian_jinxian_m', 'xian_jinxian_f', 'xian_tong_nan', 'xian_tong_nv',
-      'beast_crane', 'beast_deer', 'beast_pixiu', 'beast_phoenix',
-      'boss_xianzun',
-    ]
-    for (const e of xianEnemies) {
-      // 主贴图（帧 1）用于精灵创建
-      this.load.image(e, `sprites/xian/${e}_1.png`)
-      // 全部 16 帧用于动画
-      for (let i = 1; i <= 16; i++) {
-        this.load.image(`${e}_${i}`, `sprites/xian/${e}_${i}.png`)
-      }
-    }
-    // 仙界专用物件
-    this.load.image('portal_xian', 'sprites/portal_xian.png')
-    this.load.image('cave_bg_xian', 'sprites/cave_bg_xian.png')
-    this.load.image('chest_xian', 'sprites/chest_xian.png')
-    this.load.image('altar_xian', 'sprites/altar_xian.png')
-    this.load.image('talisman_save', 'sprites/talisman_save.png')
-    // AI 生成攻击特效帧（仙界专用）
-    const aiEffectSheets = ['ai_slash', 'ai_sword_proj', 'ai_bolt_fly', 'ai_proj_fx', 'ai_mod', 'ai_burst']
-    for (const prefix of aiEffectSheets) {
-      for (let i = 1; i <= 16; i++) {
-        this.load.image(`${prefix}_${i}`, `sprites/${prefix}_${i}.png`)
-      }
-    }
-    // thunder_prison 神通特效帧（AI 生成）
-    for (let i = 1; i <= 4; i++) {
-      this.load.image(`thunder_prison_${i}`, `sprites/thunder_prison_${i}.png`)
-    }
     // 角色帧动画（atlas + 动画定义）
     for (const cls of ANIM_CLASSES) {
       this.load.atlas(`${cls}_atlas`, `sprites/${cls}_spritesheet.png`, `sprites/${cls}_atlas.json`)
@@ -343,66 +283,6 @@ export class BootScene extends Phaser.Scene {
       this.load.atlas(`formation_${t}_atlas`, `sprites/formation_${t}_spin.png`, `sprites/formation_${t}_atlas.json`)
       this.load.json(`formation_${t}_anims`, `sprites/formation_${t}_anims.json`)
     }
-    // 宗门建筑（每个建筑一个单帧 atlas，指向对应的精灵表）
-    for (const bid of BUILDING_IDS) {
-      const sheet = BUILDING_SHEET_MAP[bid]
-      if (sheet) {
-        this.load.atlas(`building_${bid}`, `sprites/${sheet}.png`, `sprites/building_${bid}.json`)
-      }
-    }
-    // NPC/弟子角色动画（atlas + 动画定义）
-    for (const nid of NPC_ANIM_IDS) {
-      this.load.atlas(`npc_${nid}_atlas`, `sprites/npc_${nid}_sheet.png`, `sprites/npc_${nid}_atlas.json`)
-      this.load.json(`npc_${nid}_anims`, `sprites/npc_${nid}_anims.json`)
-    }
-    // 宗门场景背景
-    this.load.image('sect_bg', 'sprites/sect_bg.png')
-    // 大地图五域背景（AI 生成）
-    this.load.image('world_south_bg', 'sprites/world_south_bg.jpg')
-    this.load.image('world_central_bg', 'sprites/world_central_bg.jpg')
-    this.load.image('world_east_bg', 'sprites/world_east_bg.jpg')
-    this.load.image('world_west_bg', 'sprites/world_west_bg.jpg')
-    this.load.image('world_north_bg', 'sprites/world_north_bg.jpg')
-    // AI 生成大地图建筑贴图 v2（高精度像素风 + 名称调性匹配）
-    this.load.image('ai_bldg_home', 'sprites/bldg_home_v2.jpg')
-    this.load.image('ai_bldg_city', 'sprites/bldg_city_v2.jpg')
-    this.load.image('ai_bldg_sect', 'sprites/bldg_sect_v2.jpg')
-    this.load.image('ai_bldg_dungeon', 'sprites/bldg_dungeon_v2.jpg')
-    this.load.image('ai_bldg_landmark', 'sprites/bldg_landmark_v2.jpg')
-    // AI 生成域特色地形贴图
-    this.load.image('ai_terrain_south', 'sprites/terrain_south.jpg')
-    this.load.image('ai_terrain_central', 'sprites/terrain_central.jpg')
-    this.load.image('ai_terrain_east', 'sprites/terrain_east.jpg')
-    this.load.image('ai_terrain_west', 'sprites/terrain_west.jpg')
-    this.load.image('ai_terrain_north', 'sprites/terrain_north.jpg')
-    // AI 生成大地图装饰物贴图
-    this.load.image('ai_deco_waterfall', 'sprites/world_deco_waterfall.jpg')
-    this.load.image('ai_deco_altar', 'sprites/world_deco_altar.jpg')
-    this.load.image('ai_deco_bonfire', 'sprites/world_deco_bonfire.jpg')
-    // AI 生成高清地形贴图
-    this.load.image('ai_grass_hq', 'sprites/ai_grass_hq.jpg')
-    this.load.image('ai_stone_hq', 'sprites/ai_stone_hq.jpg')
-    this.load.image('ai_water_hq', 'sprites/ai_water_hq.jpg')
-    this.load.image('ai_shrine', 'sprites/ai_shrine.jpg')
-    // 高清像素风地貌贴图（无缝平铺）
-    this.load.image('tex_grass', 'sprites/tex_grass.jpg')
-    this.load.image('tex_stone', 'sprites/tex_stone.jpg')
-    this.load.image('tex_water', 'sprites/tex_water.jpg')
-    this.load.image('tex_sand', 'sprites/tex_sand.jpg')
-    this.load.image('tex_snow', 'sprites/tex_snow.jpg')
-    this.load.image('tex_forest', 'sprites/tex_forest.jpg')
-    // 3D 植被装饰精灵（白底，后续抠图处理）
-    this.load.image('spr_pine_tree', 'sprites/spr_pine_tree.jpg')
-    this.load.image('spr_willow_tree', 'sprites/spr_willow_tree.jpg')
-    this.load.image('spr_bamboo', 'sprites/spr_bamboo.jpg')
-    this.load.image('spr_rock_formation', 'sprites/spr_rock_formation.jpg')
-    this.load.image('spr_spirit_crystal', 'sprites/spr_spirit_crystal.jpg')
-    this.load.image('spr_dead_tree', 'sprites/spr_dead_tree.jpg')
-    this.load.image('spr_lotus_pond', 'sprites/spr_lotus_pond.jpg')
-    // 大地图地点图标
-    for (const icon of ['home', 'city', 'dungeon', 'resource', 'teleport', 'landmark', 'sect', 'domain_gate']) {
-      this.load.image(`world_icon_${icon}`, `sprites/world_icon_${icon}.png`)
-    }
     // Sequence texture keys come from registration bundles; missing assets retain static fallback paths.
     for (const fx of FX_ANIMS) {
       for (const textureKey of SEQUENCE_RESOURCE_BUNDLE_REGISTRATION_CONTRACTS[fx.key].requiredTextureKeysForRegistration) {
@@ -417,28 +297,11 @@ export class BootScene extends Phaser.Scene {
     this.load.image('hanli_base', 'sprites/hanli_base.png')
     this.load.image('hanli_cast', 'sprites/hanli_cast.png')
     this.load.image('leshangshi', 'sprites/leshangshi.png')
-    // 天枢城场景资源（城池背景、竞技场背景、NPC精灵）
-    this.load.image('city_map', 'sprites/city_map_large.png')
-    this.load.image('city_bg', 'sprites/city_bg.png')
-    this.load.image('arena_bg', 'sprites/arena_bg.png')
-    this.load.image('npc_auctioneer', 'sprites/npc_auctioneer.png')
-    this.load.image('npc_arena', 'sprites/npc_arena.png')
-    this.load.image('npc_honor', 'sprites/npc_honor.png')
-    this.load.image('npc_quest1', 'sprites/npc_quest1.png')
-    this.load.image('npc_quest2', 'sprites/npc_quest2.png')
-    this.load.image('npc_quest3', 'sprites/npc_quest3.png')
-    this.load.image('npc_city_lord', 'sprites/npc_city_lord.png')
-    this.load.image('npc_arena_champion', 'sprites/npc_arena_champion.png')
-    this.load.image('npc', 'sprites/npc.png')
     // 洞府NPC（统一像素风）
     this.load.image('npc_merchant', 'sprites/npc_merchant.png')
     this.load.image('npc_elder', 'sprites/npc_elder.png')
     this.load.image('npc_blacksmith', 'sprites/npc_blacksmith.png')
-    // 竞技场敌方NPC
-    this.load.image('e_dark_sword', 'sprites/e_dark_sword.png')
-    this.load.image('e_fire_mage', 'sprites/e_fire_mage.png')
-    this.load.image('e_beast_tamer', 'sprites/e_beast_tamer.png')
-    this.load.image('e_shadow_assassin', 'sprites/e_shadow_assassin.png')
+    this.load.image('npc', 'sprites/npc.png')
     // 新怪物
     this.load.image('m_spirit_fox', 'sprites/m_spirit_fox.png')
     this.load.image('m_demon_general', 'sprites/m_demon_general.png')
@@ -456,10 +319,6 @@ export class BootScene extends Phaser.Scene {
     for (const tribe of ['spirit_beast', 'ancient_human', 'elemental', 'shadow_folk', 'crystal_people']) {
       this.load.image(`tribe_${tribe}`, `sprites/tribes/tribe_${tribe}.png`)
       this.load.spritesheet(`tribe_${tribe}_anim`, `sprites/tribes/tribe_${tribe}_sheet.png`, { frameWidth: 64, frameHeight: 64 })
-    }
-    // v4 Kit Atlas 资产（30 套 × 9 帧 = 270 帧，请求数 30）
-    for (const kitId of V4_KIT_ASSET_READY) {
-      this.load.atlas(`v4_${kitId}_atlas`, `sprites/v4-atlas/${kitId}_atlas.png`, `sprites/v4-atlas/${kitId}_atlas.json`)
     }
   }
 
@@ -594,7 +453,7 @@ export class BootScene extends Phaser.Scene {
     }
         this.setLoadingText('正在唤醒灵兽...')
       },
-      // Step 5: 阵法 + NPC 动画注册
+      // Step 5: 阵法动画注册
       () => {
     // 注册阵法动画
     for (const t of FORMATION_ANIM_TYPES) {
@@ -611,40 +470,10 @@ export class BootScene extends Phaser.Scene {
         if (!this.anims.exists(def.key!)) this.anims.create(def)
       }
     }
-    // 注册 NPC/弟子角色动画
-    for (const nid of NPC_ANIM_IDS) {
-      const atlasKey = `npc_${nid}_atlas`
-      const animsKey = `npc_${nid}_anims`
-      if (!this.textures.exists(atlasKey)) { console.warn(`[npc-anim] ${atlasKey} missing`); continue }
-      const tex = this.textures.get(atlasKey)
-      const testFrame = `npc_${nid}_00`
-      const hasFrame = tex && tex.has ? tex.has(testFrame) : false
-      if (!hasFrame) { console.warn(`[npc-anim] ${nid} frame ${testFrame} NOT in texture!`); continue }
-      const defs = this.cache.json.get(animsKey) as Record<string, Phaser.Types.Animations.Animation> | undefined
-      if (!defs) { console.warn(`[npc-anim] ${animsKey} missing`); continue }
-      for (const def of Object.values(defs)) {
-        if (!this.anims.exists(def.key!)) this.anims.create(def)
-      }
-    }
         this.setLoadingText('正在布设阵法...')
       },
-      // Step 6: v4 Kit + 坐骑 + 部落动画
+      // Step 6: 坐骑 + 部落动画
       () => {
-    // 注册 v4 Kit 神通动画（30 套 × 8 帧 art_main）
-    for (const kitId of V4_KIT_ASSET_READY) {
-      const atlasKey = `v4_${kitId}_atlas`
-      const animKey = `v4_${kitId}_art_main`
-      if (!this.textures.exists(atlasKey)) { console.warn(`[v4-anim] ${atlasKey} missing`); continue }
-      if (this.anims.exists(animKey)) continue
-      const tex = this.textures.get(atlasKey)
-      const testFrame = `${kitId}_art_main_1`
-      if (!tex.has(testFrame)) { console.warn(`[v4-anim] ${kitId} frame ${testFrame} NOT in texture!`); continue }
-      const frames: { key: string; frame: string }[] = []
-      for (let f = 1; f <= 8; f++) {
-        frames.push({ key: atlasKey, frame: `${kitId}_art_main_${f}` })
-      }
-      this.anims.create({ key: animKey, frames, frameRate: 12, repeat: 0 })
-    }
     // Phase 7: 注册坐骑灵驹奔跑动画（4帧）
     if (this.textures.exists('mount_spirit_horse_anim')) {
       const mountFrames: { key: string; frame: number }[] = []
@@ -713,86 +542,7 @@ export class BootScene extends Phaser.Scene {
     }
         this.setLoadingText('正在注入仙法...')
       },
-      // Step 8: 仙界敌人动画注册
-      () => {
-    // 仙界敌人动画注册（4行×4列：idle/walk/attack/hit）
-    const xianAnimIds = [
-      'xian_sanxian_m', 'xian_sanxian_f', 'xian_zhenxian_m', 'xian_zhenxian_f',
-      'xian_jinxian_m', 'xian_jinxian_f', 'xian_tong_nan', 'xian_tong_nv',
-      'beast_crane', 'beast_deer', 'beast_pixiu', 'beast_phoenix',
-      'boss_xianzun',
-    ]
-    for (const id of xianAnimIds) {
-      // 检查帧是否齐全
-      const hasFrame = (n: number) => this.textures.exists(`${id}_${n}`)
-      if (!hasFrame(1)) continue
-
-      // idle: 帧 1-4, 循环, 6fps
-      if ([1, 2, 3, 4].every(hasFrame) && !this.anims.exists(`${id}_idle`)) {
-        this.anims.create({
-          key: `${id}_idle`,
-          frames: [1, 2, 3, 4].map((n) => ({ key: `${id}_${n}` })),
-          frameRate: 6,
-          repeat: -1,
-        })
-      }
-      // walk: 帧 5-8, 循环, 10fps
-      if ([5, 6, 7, 8].every(hasFrame) && !this.anims.exists(`${id}_walk`)) {
-        this.anims.create({
-          key: `${id}_walk`,
-          frames: [5, 6, 7, 8].map((n) => ({ key: `${id}_${n}` })),
-          frameRate: 10,
-          repeat: -1,
-        })
-      }
-      // attack: 帧 9-12, 单次, 12fps
-      if ([9, 10, 11, 12].every(hasFrame) && !this.anims.exists(`${id}_attack`)) {
-        this.anims.create({
-          key: `${id}_attack`,
-          frames: [9, 10, 11, 12].map((n) => ({ key: `${id}_${n}` })),
-          frameRate: 12,
-          repeat: 0,
-        })
-      }
-      // hit: 帧 13-16, 单次, 10fps
-      if ([13, 14, 15, 16].every(hasFrame) && !this.anims.exists(`${id}_hit`)) {
-        this.anims.create({
-          key: `${id}_hit`,
-          frames: [13, 14, 15, 16].map((n) => ({ key: `${id}_${n}` })),
-          frameRate: 10,
-          repeat: 0,
-        })
-      }
-    }
-        this.setLoadingText('正在召唤仙兵...')
-      },
-      // Step 9: AI 特效动画注册
-      () => {
-    // AI 攻击特效动画注册（仙界专用）
-    const aiEffects = [
-      { prefix: 'ai_slash', keys: [1, 2, 3, 4, 5, 6], rate: 14, repeat: 0 },     // 剑光
-      { prefix: 'ai_sword_proj', keys: [1, 2, 3, 4], rate: 10, repeat: -1 },      // 飞剑弹道
-      { prefix: 'ai_bolt_fly', keys: [1, 2, 3, 4], rate: 10, repeat: -1 },         // 法弹弹道
-      { prefix: 'ai_proj_fx', keys: [5, 6, 7, 8], rate: 12, repeat: 0 },          // 爆裂
-      { prefix: 'ai_mod', keys: [1, 2, 3, 4], rate: 14, repeat: 0 },              // 命中
-      { prefix: 'ai_burst', keys: [1, 2, 3, 4], rate: 12, repeat: 0 },            // 爆发
-      { prefix: 'thunder_prison', keys: [1, 2, 3, 4], rate: 10, repeat: 0 },      // 雷牢
-    ]
-    for (const fx of aiEffects) {
-      const animKey = `${fx.prefix}_anim`
-      if (this.anims.exists(animKey)) continue
-      const allExist = fx.keys.every((k) => this.textures.exists(`${fx.prefix}_${k}`))
-      if (!allExist) continue
-      this.anims.create({
-        key: animKey,
-        frames: fx.keys.map((k) => ({ key: `${fx.prefix}_${k}` })),
-        frameRate: fx.rate,
-        repeat: fx.repeat,
-      })
-    }
-        this.setLoadingText('正在开启天机...')
-      },
-      // Step 10: 加载存档 + 初始化 UI + 启动标题
+      // Step 8: 加载存档 + 初始化 UI + 启动标题
       () => {
         const state = loadGame()
         this.registry.set('state', state)

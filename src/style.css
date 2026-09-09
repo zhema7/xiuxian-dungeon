@@ -179,3 +179,130 @@
     #dialogName { color: #f0d98c; font-size: 13px; margin-bottom: 4px; }
     #dialogText { font-size: 13px; line-height: 1.8; min-height: 40px; }
     #dialogHint { text-align: right; color: var(--dim); font-size: 11px; margin-top: 6px; }
+
+/* ============================================================
+   PC 模式（body.mode-wide）— 游戏保持竖屏比例居中，键鼠增强
+   ============================================================ */
+
+body.mode-wide {
+  /* PC 模式背景：两侧显示星空/云雾装饰 */
+  background: 
+    radial-gradient(ellipse at 20% 50%, rgba(138,43,226,0.08) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 50%, rgba(240,217,140,0.06) 0%, transparent 50%),
+    #0b0e14;
+}
+
+/* 隐藏触屏控件 */
+body.mode-wide #controls { display: none !important; }
+body.mode-wide #joy { display: none !important; }
+
+/* PC模式下 #app 内游戏居中，两侧留空用于装饰 */
+body.mode-wide #game {
+  left: 50% !important;
+  right: auto !important;
+  transform: translateX(-50%);
+  width: auto !important;
+  max-width: 100vw;
+}
+
+/* HUD 适配：PC模式下保持跟随游戏画布居中 */
+body.mode-wide #hud {
+  font-size: 13px;
+}
+
+/* 面板：PC模式下适当放大 */
+body.mode-wide .card {
+  width: min(60vw, 480px);
+  max-height: 72vh;
+  font-size: 13px;
+}
+body.mode-wide .card.wide { width: min(70vw, 680px); }
+
+/* 标题界面 */
+body.mode-wide #title {
+  padding: 50px 40px;
+}
+body.mode-wide #titleName { font-size: 48px; }
+body.mode-wide #titleSub { font-size: 12px; letter-spacing: 6px; }
+body.mode-wide #titleBtns { width: 240px; gap: 14px; }
+body.mode-wide #titleBtns button { font-size: 15px; padding: 12px 24px; }
+body.mode-wide #titleVer { font-size: 11px; }
+body.mode-wide #titleAuthor { font-size: 10px; }
+
+/* 对话 */
+body.mode-wide #dialog .card {
+  max-width: 560px;
+  max-height: 38vh;
+}
+
+/* 自定义光标：战斗中显示十字准星 */
+body.mode-wide.aim-cursor #game canvas {
+  cursor: crosshair;
+}
+
+/* 快捷键提示条（PC版底部显示） */
+#keyHints {
+  position: fixed;
+  left: 50%;
+  bottom: 10px;
+  transform: translateX(-50%);
+  display: none;
+  z-index: 15;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--dim);
+  pointer-events: none;
+  text-shadow: 1px 1px 0 #000;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 95%;
+}
+body.mode-wide #keyHints { display: flex; }
+#keyHints .key {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 8px;
+  background: rgba(30,38,58,.85);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  white-space: nowrap;
+}
+#keyHints .key b {
+  color: var(--ink);
+  font-weight: normal;
+  font-family: Consolas, monospace;
+  background: rgba(120,132,160,.3);
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 10px;
+  min-width: 16px;
+  text-align: center;
+}
+
+/* PC模式侧边装饰：左右两侧显示游戏信息 */
+.side-info {
+  position: fixed;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 180px;
+  z-index: 5;
+  pointer-events: none;
+  font-size: 11px;
+  color: var(--dim);
+  display: none;
+}
+body.mode-wide .side-info { display: block; }
+.side-info.left { left: 20px; text-align: right; }
+.side-info.right { right: 20px; text-align: left; }
+.side-info h4 {
+  margin: 0 0 8px;
+  color: #f0d98c;
+  font-size: 12px;
+  font-weight: normal;
+  letter-spacing: 2px;
+}
+.side-info .info-item {
+  margin: 4px 0;
+  opacity: 0.7;
+}

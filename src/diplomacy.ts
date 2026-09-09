@@ -217,7 +217,14 @@ export function tickAllAiSects(state: GameState, aiSects: AiSect[]): string[] {
 
   for (const ai of aiSects) {
     const msg = aiSectTick(ai, playerPower, rng)
-    if (msg) events.push(msg)
+    if (msg) {
+      events.push(msg)
+      // 外交型宗门派遣使者送礼：玩家获得灵石
+      if (msg.includes('派遣使者前来') && msg.includes('赠送灵石')) {
+        const gift = ai.level * 20
+        state.gold += gift
+      }
+    }
   }
 
   // 附庸进贡结算

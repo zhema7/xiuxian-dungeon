@@ -48,8 +48,15 @@ Thumbs.db
 *.apk.idsig
 *.idsig
 dist-taptap.zip
+dist-taptap-h5.zip
 android-manual-build/
 android/
+
+# ---------- 根目录临时产物（2026-09-09 补）----------
+.tmp-*.json
+typecheck-output.txt
+_vd*.log
+.trae/
 
 # ---------- 开发文档临时产物 ----------
 dev-retrospective.html

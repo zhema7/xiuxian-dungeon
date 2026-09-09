@@ -350,6 +350,7 @@ export class TownScene extends Phaser.Scene {
   private async talkTo(id: NpcId) {
     this.player.halt()
     if (id === 'blacksmith') return this.forgeFlow()
+    if (id === 'elder') return this.openElderDashboard()
     this.bumpTalkFavor(id)
     const names: Record<NpcId, string> = { elder: '守山老者', merchant: '坊市商人', sister: '道友', blacksmith: '锻造师', city: '天枢城' }
     const f = favorOf(this.state, id)
@@ -359,11 +360,6 @@ export class TownScene extends Phaser.Scene {
     // 特殊选项
     const disc = shopDiscount(favorOf(this.state, 'merchant'))
     const special: Array<{ label: string; value: string }> = []
-    if (id === 'elder') {
-      special.push({ label: '请教修行（转职）', value: 'class' })
-      special.push({ label: '成就回顾', value: 'achievements' })
-      special.push({ label: '日常任务', value: 'daily' })
-    }
     if (id === 'merchant') {
       special.push({ label: `看看货物${disc < 1 ? `（${Math.round(disc * 10)}折）` : ''}`, value: 'shop' })
       special.push({ label: '商会珍品', value: 'merchant_goods' })
@@ -554,6 +550,39 @@ export class TownScene extends Phaser.Scene {
       saveGame(this.state)
       toast(`接下任务【${quest.name}】`, '#48c9b0')
     }
+  }
+
+  private async openElderDashboard() {
+    this.bumpTalkFavor('elder')
+    const f = favorOf(this.state, 'elder')
+    const tier = tierOf(f)
+    const greet = this.greetLines('elder')
+
+    const achCount = getAchievementCount(this.state)
+    const dailyStats = getDailyQuestStats(this.state)
+    const questText = getQuestHudText(this.state)
+
+    const lines = [
+      ...greet,
+      `—— 好感【${tier.name} · ${f}】 ——`,
+      `境界：${['练气','筑基','金丹','元婴','化神','合体','大乘','渡劫'][this.state.realm]}　等级：Lv.${this.state.level}`,
+      `成就：${achCount.unlocked}/${achCount.total}　日常：${dailyStats.completed}/${dailyStats.total}　主线：${questText}`,
+    ]
+
+    const choice = await showDialog('守山老者 · 修炼看板', lines, [
+      { label: '请教修行（转职）', value: 'class' },
+      { label: '成就回顾', value: 'achievements' },
+      { label: '日常任务', value: 'daily' },
+      { label: '送礼', value: 'gift' },
+      { label: '任务', value: 'quest' },
+      { label: '告辞', value: 'bye' },
+    ])
+
+    if (choice === 'class') await this.classFlow()
+    else if (choice === 'achievements') await this.openAchievements()
+    else if (choice === 'daily') await this.openDailyQuests()
+    else if (choice === 'gift') await this.giftFlow('elder', '守山老者')
+    else if (choice === 'quest') await this.questFlow('elder', '守山老者')
   }
 
   private async classFlow() {

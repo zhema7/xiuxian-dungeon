@@ -10,9 +10,9 @@
 
 | 项 | 现状 | 位置 |
 |---|---|---|
-| schema/generator 版本 | `DYNAMIC_SET_SCHEMA_VERSION = 3`、`DYNAMIC_SET_GENERATOR_VERSION = 2`；v2=2/1 | `src/lore.ts:204-207` |
+| schema/generator 版本 | `DYNAMIC_SET_SCHEMA_VERSION = 3`、`DYNAMIC_SET_GENERATOR_VERSION = 2`；v2=2/1 | `src/lore.ts:367-368` |
 | 生成 | `generateDynamicSetV3` 24 主题 × 8 固定 profile，4 件（weapon/head/armor/boots） | `src/lore.ts:352-434`；profiles `lore.ts:71-128`；themes `lore.ts:38-42` |
-| 存档 | `SAVE_VERSION = 6`；load 时 normalize→register | `src/state.ts:54,182-214` |
+| 存档 | `SAVE_VERSION = 11`；load 时 normalize→register（多槽位 `MAX_SAVE_SLOTS = 4`） | `src/state.ts:188-194` |
 | 归一化 | `normalizeDynamicSetRecords` 仅接受 legacy/v2/v3，显式拒绝其它 | `src/lore.ts:893-967`，schema 门 `951-955` |
 | 注册 | `registerDynamicContent` 写入共享 `SETS`/`ITEM_BASE_MAP`/`ITEM_BASES`/`SKILLS` | `src/lore.ts:969-985` |
 | 运行时分派 | `resolveAttackMode`（set→skill→默认）、`resolveSetArtOverride` | `src/effects.ts:341-349,472-489` |
@@ -23,7 +23,7 @@
 | 资产注册轨 | BootScene `FX_ANIMS`→`SEQUENCE_RESOURCE_BUNDLE_REGISTRATION_CONTRACTS`→四层 | `src/scenes/BootScene.ts:31-46,63-68,115-155`；`src/fx/sequence-contract.ts:71-124` |
 | 模块 FX | `playModularOnce` + 特征 flag（SWORD_SPLIT/FIRE_BURST/...） | `src/fx/modularFx.ts:175-193` |
 | Palette V1 | 仅 schema v3/generator v2 + transformId 的动态套着色 | `src/palette-v1.ts:7-8,78-113` |
-| validate 常量 | `ATTACK_MODES`(10)/`ART_MODES`(4)/`SET_EFFECT_TAGS`(9)/`MOD_KEYS`(12)/`SKILL_CLASSES`(sword/fairy/any) | `scripts/validate-data.mjs:12-24` |
+| validate 常量 | `ATTACK_MODES`(29)/`ART_MODES`(20)/`SET_EFFECT_TAGS`(9)/`MOD_KEYS`(12)/`SKILL_CLASSES`(sword/fairy/sword_new/fairy_new/mage/any) | `scripts/validate-data.mjs:13-19` |
 | 既有帧池 | 13 组 / 82 通用帧（slash/sword_proj/fx_*/mod_*/bolt_fly/proj_fly） | `public/sprites/` |
 
 ---
@@ -87,7 +87,8 @@ export interface KitResourceManifest {
 
 ## 4. 存档与确定性
 
-- v4 记录用 `schemaVersion=4` 独立门（S8），与 v2/v3/legacy 隔离；`SAVE_VERSION` 是否 bump 至 7 待决（若 v4 记录进 `dynamicSets` 数组则须 bump + 迁移用例；若独立存 `v4Kits` 字段亦须 bump）。**建议**：独立 `state.v4Kits: V4KitRecord[]` 字段 + `SAVE_VERSION` bump 至 7，附迁移链测试（legacy→v5→v6→v7，未知高版本回退新游戏）。
+- v4 记录用 `schemaVersion=4` 独立门（S8），与 v2/v3/legacy 隔离。
+- **【2026-09-09 回填】** `SAVE_VERSION` 实际已演进至 **11**（`src/state.ts:189`），本文原「bump 至 7」建议已被后续版本超越，不再待决。v4 记录是否落盘由 `src/v4/runtime.ts` 独立管理，**不持久化**（进本由种子重建），因此未占用 `SAVE_VERSION` 迁移链。后续若 v4 记录改为持久化，**须** bump 至 12 并补迁移用例。
 - 确定性边界（D10）：`calcDamage`（`core.ts:38`）、掉落（`core.ts:146,195-201`）、`ui.ts:106` 用 live RNG。v4 只保证 **Kit 选择与生成**可复现（显式 seed），**不保证**全局战斗可复现。文档与对外描述不得宣称全局确定性。
 
 ---
@@ -105,7 +106,22 @@ export interface KitResourceManifest {
 
 - 新增 v4 Kit 白名单常量 `V4_KIT_IDS`（k01..k30）与 `KIT_PRIMITIVES`（8 原语）。
 - 新增校验：Kit 定义文件（`src/data/v4-kits.json`）每条 `kitId∈白名单`、`normalPrimitive/artPrimitive∈8 原语`、`artPower/artCooldownMs` 在数值上限内。
-- **原语计数硬校验**：脚本断言 30 Kit 的普攻原语分布 = §2 表（往返5/折射5/标记5/定点3/雷网1/雷桩2/蓄力2/回旋7）、神通原语分布 =（往返2/折射1/标记4/定点3/雷网5/雷桩5/蓄力4/回旋6），两侧各精确 30。不等则 `validate:data` 非零退出。这是 GDD §3 草案表回填的校验门。
+- **原语计数硬校验**：脚本断言 30 Kit 的普攻/神通原语分布精确匹配 `EXPECTED_NORMAL_COUNTS` / `EXPECTED_ART_COUNTS`，两侧各精确 30，且八原语全覆盖、`(normal, art)` 组合全唯一。不等则 `validate:data` 非零退出。
+- **【2026-09-09 回填】实际分布**（与 `scripts/validate-data.mjs:164-165` 一致，`validate:data` 当前通过，exit=0）：
+
+  | 原语 | 普攻(N) | 神通(ART) |
+  |---|---|---|
+  | 往返 roundtrip | 5 | 2 |
+  | 折射 refract | 5 | 2 |
+  | 标记 mark | 5 | 4 |
+  | 定点 fixedpoint | 3 | 3 |
+  | 雷网 thundernet | 2 | 5 |
+  | 雷桩 thunderstake | 2 | 5 |
+  | 蓄力 charge | 2 | 4 |
+  | 回旋 boomerang | 6 | 5 |
+  | **合计** | **30** | **30** |
+
+  > 本文早期版本写的「回旋7/雷网1/折射神通1」为草案值，**已被实际数据取代**。校验脚本常量才是唯一权威来源，改 Kit 分布应同步改 `validate-data.mjs:164-165`。
 - 不新增 `AttackMode`/`ArtMode`/`SET_EFFECT_TAGS` 值（v4 不复用旧联合，D8）。
 - `SKILL_CLASSES` 不动（v4 Kit 不挂职业）。
 

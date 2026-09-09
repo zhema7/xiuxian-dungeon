@@ -148,6 +148,13 @@ export function purifyDemon(
     return { success: false, reducedIntensity: 0, message: '该心魔已被封印或不存在' }
   }
 
+  const typeNames: Record<InnerDemonType, string> = {
+    killing: '杀戮', betrayal: '背叛', dark_arts: '魔功',
+    heartbreak: '情伤', greed: '贪欲', pride: '傲慢',
+    fear: '恐惧', obsession: '执念',
+  }
+  const demonName = typeNames[demonType]
+
   const methodEffects: Record<PurificationMethod, { reduction: number; cost: string; risk: number }> = {
     meditation: { reduction: 5, cost: '消耗1时辰', risk: 0.05 },
     pill: { reduction: 20, cost: '消耗净魔丹×1', risk: 0.02 },
@@ -192,7 +199,7 @@ export function purifyDemon(
   return {
     success: true,
     reducedIntensity: effect.reduction,
-    message: `${demonType}心魔减弱${effect.reduction}点（剩余${demon.intensity}/100）。${effect.cost}`,
+    message: `${demonName}心魔减弱${effect.reduction}点（剩余${demon.intensity}/100）。${effect.cost}`,
   }
 }
 

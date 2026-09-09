@@ -35,10 +35,13 @@ import { v4SetId } from '../v4/kit-data'
 import { FogSystem } from '../fog'
 import { DungeonLightSystem } from '../dungeon-light'
 import { generateTerrainTextures } from '../terrain-textures'
+import { getOrCreateNpcTexture } from '../npc-sprite-gen'
+import { getNpcEquipName, getNpcSkillName, getNpcItemName, getRealmName } from '../procedural-npc'
 import { executeKitNormal, executeKitArt, type KitCombatContext } from '../v4/executor'
 import { executeV4NormalInScene, executeV4ArtInScene, type V4SceneContext } from '../v4/scene-adapter'
 import { ladderDifficulty, ladderReward, LADDER } from '../tribulation-data'
 import type { KitAbility, KitId } from '../data'
+import { loadLazyGroup, registerLazyAnimations } from '../lazy-assets'
 
 const ARENA = { x: OX, y: OY, w: COLS * TILE, h: ROWS * TILE }  // 整张地图（800×960，相机跟随）
 const COMBO_MULT = [1, 1.15, 1.55]
@@ -240,6 +243,12 @@ export class DungeonScene extends Phaser.Scene {
 
   constructor() { super('Dungeon') }
 
+  preload() {
+    const data = (this.scene.settings.data || {}) as { mode?: string }
+    loadLazyGroup(this, 'v4kit')
+    if (data.mode === 'xian') loadLazyGroup(this, 'xian')
+  }
+
   /** 运行时随装备变动重算标签；撤下阵眼套时立即清理遗留阵图。 */
   private refreshSetFx() {
     const next = resolveSetEffectRuntime(this.state)
@@ -318,6 +327,8 @@ export class DungeonScene extends Phaser.Scene {
   create(data: { floor?: number; diff?: string; mode?: 'hl' | 'xian' | 'arena' | 'ladder' | 'npcCombat'; subMode?: '1v1' | '1vN' | 'plunder' | 'attack'; rank?: number; regionOverride?: string; npcId?: string }) {
     this.state = this.registry.get('state')
     this.setFx = resolveSetEffectRuntime(this.state)
+    registerLazyAnimations(this, 'v4kit')
+    if (data.mode === 'xian') registerLazyAnimations(this, 'xian')
     this.thunderFxGuard.clear()
     this.hlMode = data.mode === 'hl'
     this.xianMode = data.mode === 'xian'
@@ -335,7 +346,13 @@ export class DungeonScene extends Phaser.Scene {
     // 退出时位置恢复：普通秘境/无尽妖域/破碎仙宫保存楼层，特殊模式回城
     if (!data.mode || data.mode === 'hl' || data.mode === 'xian') {
       this.state.lastScene = 'Dungeon'
-      this.state.lastSceneData = { floor: this.floor, diff: data.diff, mode: data.mode }
+      this.state.lastSceneData = {
+        floor: this.floor,
+        diff: data.diff,
+        mode: data.mode,
+        regionOverride: this.regionOverrideId,
+        regionName: this.getRegion().name,
+      }
     } else {
       this.state.lastScene = data.mode === 'arena' ? 'City' : 'Town'
       this.state.lastSceneData = {}
@@ -564,6 +581,7 @@ export class DungeonScene extends Phaser.Scene {
     resetControls()
     document.getElementById('btnSkill')!.style.display = 'flex'
     document.getElementById('btnRetreat')!.style.display = !this.hlMode && (region.id === 'sy' || this.arenaMode || this.ladderMode || this.npcCombatMode) ? 'block' : 'none'
+    document.getElementById('btnRetreat')!.textContent = '撤退'
     document.getElementById('btnSettings')!.style.display = 'block'
     setSettingsCallbacks({
       onLoadSave: (slotIndex) => {
@@ -654,22 +672,45 @@ export class DungeonScene extends Phaser.Scene {
       npcDef: number
       npcRealm: number
       npcMorality: number
+      appearanceSeed?: number
+      gender?: string
+      daoPath?: string
+      level?: number
+      background?: string
+      profession?: string
+      skills?: string[]
+      equipment?: { weapon?: string; armor?: string; accessory?: string }
+      inventory?: Record<string, number>
+      story?: { surface: string; middle: string; deep: string }
+      lifeGoal?: string
+      currentPurpose?: string
+      personality?: string[]
     } | undefined
 
     if (!combatData) {
-      // 没有数据，直接退出
       this.scene.start('World')
       return
     }
 
     const pt = randomFloorPoint(this.level, this.rng, 120, this.level.spawn) ?? { x: this.level.portal.x, y: this.level.portal.y }
 
-    // NPC 战斗使用原始属性，不做 dungeon 动态缩放
-    // NPC 的 hp/atk/def 已由 procedural-npc.ts 按 realm/level 计算
+    // 生成NPC程序化贴图
+    let texKey = 'npc'
+    if (combatData.appearanceSeed != null && combatData.gender && combatData.daoPath) {
+      const tex = getOrCreateNpcTexture(this, {
+        id: combatData.npcId,
+        appearanceSeed: combatData.appearanceSeed,
+        gender: combatData.gender as 'male' | 'female',
+        daoPath: combatData.daoPath as any,
+        realm: combatData.npcRealm,
+      })
+      if (tex) texKey = tex.key
+    }
+
     const enemyCfg = {
       id: combatData.npcId,
       name: combatData.npcName,
-      tex: 'npc',
+      tex: texKey,
       hp: combatData.npcMaxHp,
       atk: combatData.npcAtk,
       def: combatData.npcDef,
@@ -684,10 +725,39 @@ export class DungeonScene extends Phaser.Scene {
     e.isBoss = combatData.mode === 'attack'
     this.enemies.push(e)
 
+    // 显示NPC详细信息
     const modeText = combatData.mode === 'plunder' ? '劫掠' : '强攻'
     const moralityTag = combatData.npcMorality > 0 ? '正道修士' : combatData.npcMorality < -20 ? '魔修' : '散修'
+
+    const infoLines: string[] = [
+      `${combatData.npcName} · ${getRealmName(combatData.npcRealm)}${combatData.level ? ' ' + combatData.level + '级' : ''}`,
+      `身份：${moralityTag} · ${combatData.profession || '散修'}`,
+    ]
+    if (combatData.background) infoLines.push(`出身：${combatData.background}`)
+    if (combatData.daoPath) infoLines.push(`道途：${combatData.daoPath}`)
+    if (combatData.skills && combatData.skills.length > 0) infoLines.push(`功法：${combatData.skills.map(s => getNpcSkillName(s)).join('、')}`)
+    if (combatData.equipment) {
+      const eqParts: string[] = []
+      if (combatData.equipment.weapon) eqParts.push(getNpcEquipName(combatData.equipment.weapon))
+      if (combatData.equipment.armor) eqParts.push(getNpcEquipName(combatData.equipment.armor))
+      if (combatData.equipment.accessory) eqParts.push(getNpcEquipName(combatData.equipment.accessory))
+      if (eqParts.length > 0) infoLines.push(`装备：${eqParts.join('、')}`)
+    }
+    if (combatData.inventory) {
+      const items = Object.entries(combatData.inventory).map(([k, v]) => `${getNpcItemName(k)}×${v}`).join('、')
+      if (items) infoLines.push(`持有：${items}`)
+    }
+    if (combatData.story?.surface) infoLines.push(`「${combatData.story.surface}」`)
+
     toast(`${modeText}！对方是${moralityTag}${combatData.npcName}`, '#f87171')
     setFloorText(`${modeText} · ${combatData.npcName}`)
+
+    // 延迟显示信息面板，避免与场景过渡冲突
+    this.time.delayedCall(400, () => {
+      showDialog(`${modeText} · ${combatData.npcName}`, infoLines, [{ label: '应战', value: 'ok' }]).then(() => {
+        input.clearQueues()
+      })
+    })
   }
 
   // ---------- 场景搭建（程序化瓦片地图 v2：自动拼接 + 多层装饰 + 水动画） ----------
@@ -1123,7 +1193,7 @@ export class DungeonScene extends Phaser.Scene {
     if (xianFloor % 5 === 0 && this.textures.exists('talisman_save')) {
       const pt = randomFloorPoint(this.level, this.rng, 120, this.level.spawn)
       if (pt) {
-        this.talisman = this.add.image(pt.x, pt.y, 'talisman_save').setDepth(4).setScale(0.5)
+        this.talisman = this.add.image(pt.x, pt.y, 'talisman_save').setDepth(4).setScale(0.017)
         // 符箓发光效果
         const glow = this.add.circle(pt.x, pt.y, 14, 0xffd54a, 0.12).setDepth(3)
         this.tweens.add({
@@ -1503,8 +1573,9 @@ export class DungeonScene extends Phaser.Scene {
         this.registry.set('npcCombatData', combatData)
       }
       const modeText = this.npcCombatSubMode === 'plunder' ? '劫掠成功' : '强攻得手'
+      const npcName = combatData?.npcName ?? '对手'
       const lines = [
-        `${modeText}！`,
+        `${modeText}！击败${npcName}`,
         `<span class="dim">战斗中获得灵石 ${this.runGold}</span>`,
       ]
       showResult(modeText, lines, '返回大地图', () => {
@@ -1926,7 +1997,7 @@ export class DungeonScene extends Phaser.Scene {
   // ---------- 玩家伤害结算（含吸血） ----------
   private dealDamage(e: Enemy, mult: number, stats: Stats, isSkill: boolean, fromX?: number, fromY?: number) {
     const finalMult = mult * (isSkill ? 1 + stats.skillPct : 1)
-    const { dmg, crit } = calcDamage(stats.atk * (1 + this.buffAtkPct + this.formationAtkBonus), finalMult, stats.crit, e.def, Math.random)
+    const { dmg, crit } = calcDamage(stats.atk * (1 + this.buffAtkPct + this.formationAtkBonus), finalMult, stats.crit, e.def, this.rng)
     const killed = e.takeDamage(dmg, fromX ?? this.player.sprite.x, fromY ?? this.player.sprite.y)
     // 打击感：顿帧 + 受击闪白 + 粒子迸发 + 震屏 + 音效
     this.hitStopUntil = this.time.now + (crit ? 70 : 40)
@@ -2027,13 +2098,25 @@ export class DungeonScene extends Phaser.Scene {
   }
 
   // ---------- v4 Kit 场景旁路（ADR §2 S4/S5 旁路） ----------
+  /** 获取攻击方向：PC宽屏且鼠标在游戏内时用鼠标瞄准，否则用移动方向 */
+  private getAttackDirAngle(): number {
+    const p = this.player
+    const ptr = this.input.activePointer
+    if (ptr && input.useMouseAim) {
+      const dx = ptr.worldX - p.sprite.x
+      const dy = ptr.worldY - p.sprite.y
+      if (Math.hypot(dx, dy) > 2) return Math.atan2(dy, dx)
+    }
+    return p.dir.angle()
+  }
+
   private buildV4SceneContext(stats: Stats, kitId?: string): V4SceneContext {
     const p = this.player
     return {
       scene: this,
       playerX: p.sprite.x,
       playerY: p.sprite.y,
-      dirAngle: p.dir.angle(),
+      dirAngle: this.getAttackDirAngle(),
       stats,
       enemies: this.enemies,
       dealDamage: (e, mult, isSkill, fromX, fromY) => {
@@ -2054,7 +2137,7 @@ export class DungeonScene extends Phaser.Scene {
     const stage = this.player.tryAttack(time, stats.aspd)
     if (stage === 0) return
     const p = this.player
-    const dirAngle = p.dir.angle()
+    const dirAngle = this.getAttackDirAngle()
     const ctx: KitCombatContext = {
       origin: { x: p.sprite.x, y: p.sprite.y },
       direction: { x: Math.cos(dirAngle), y: Math.sin(dirAngle) },
@@ -2108,7 +2191,7 @@ export class DungeonScene extends Phaser.Scene {
     if (v4Ability) {
       if (v4Ability.normalPrimitive !== 'charge') {
         const p = this.player
-        const dirAngle = p.dir.angle()
+        const dirAngle = this.getAttackDirAngle()
         const ctx: KitCombatContext = {
           origin: { x: p.sprite.x, y: p.sprite.y },
           direction: { x: Math.cos(dirAngle), y: Math.sin(dirAngle) },
@@ -2134,7 +2217,7 @@ export class DungeonScene extends Phaser.Scene {
     else if (mode !== 'sword_array') sfx('sfx_magic_cast', 0.45)
     const p = this.player
     const px = p.sprite.x, py = p.sprite.y
-    const dirAngle = p.dir.angle()
+    const dirAngle = this.getAttackDirAngle()
     const power = stylePower(this.state)
     // Attack and art palettes intentionally resolve through separate winners.
     // Static/v2/legacy return undefined and retain every existing fixed-color route.
@@ -3103,7 +3186,7 @@ export class DungeonScene extends Phaser.Scene {
         : Math.round(resolved.cooldownMs / Math.max(0.0001, 1 - stats.cdPct))
       // 大庚 normally returns before the common art VFX branch. Keep its
       // phase-local art palette and recipe on the art-owned route explicitly.
-      if (resolved.source === 'set') playProceduralVfx(this, resolveProceduralArtVfx(this.state), 'art', this.player.sprite.x, this.player.sprite.y, this.player.dir.angle(), artPalette)
+      if (resolved.source === 'set') playProceduralVfx(this, resolveProceduralArtVfx(this.state), 'art', this.player.sprite.x, this.player.sprite.y, this.getAttackDirAngle(), artPalette)
       this.castDageng(time, executionPower, baseCooldownMs, resolved.displayName, artPalette)
       return
     }
@@ -3115,7 +3198,7 @@ export class DungeonScene extends Phaser.Scene {
     this.artReadyAt = time + cooldownMs
     const p = this.player
     const power = executionPower
-    const dirAngle = p.dir.angle()
+    const dirAngle = this.getAttackDirAngle()
     // 套装神通的 VFX 由覆写 resolver 严格校验；无 recipe 的官方/旧动态套不受影响。
     if (resolved.source === 'set') playProceduralVfx(this, resolveProceduralArtVfx(this.state), 'art', p.sprite.x, p.sprite.y, dirAngle, artPalette)
     if (resolved.mode === 'fire_rain') {
@@ -3717,7 +3800,7 @@ export class DungeonScene extends Phaser.Scene {
   private damagePlayer(rawAtk: number, fromX: number, fromY: number) {
     if (this.over || this.time.now < this.player.hurtUntil) return
     const stats = calcStats(this.state)
-    let dmg = Math.max(1, Math.round(rawAtk * (0.9 + Math.random() * 0.2) * (1 - this.formationDmgReduce) - stats.def * 0.7))
+    let dmg = Math.max(1, Math.round(rawAtk * (0.9 + this.rng() * 0.2) * (1 - this.formationDmgReduce) - stats.def * 0.7))
     // 黄龙山金雷护盾：优先吸收伤害
     if (this.shieldHp > 0) {
       const absorbed = Math.min(this.shieldHp, dmg)
@@ -3996,6 +4079,16 @@ export class DungeonScene extends Phaser.Scene {
     this.player.halt()
     const lost = Math.floor(this.runGold / 2)
     this.state.gold = Math.max(0, this.state.gold - lost)
+    // 死亡后归位到安全场景，避免关闭游戏后重进卡在0血
+    if (this.arenaMode) {
+      this.state.lastScene = 'City'
+    } else if (this.npcCombatMode) {
+      this.state.lastScene = 'World'
+    } else {
+      this.state.lastScene = 'Town'
+    }
+    this.state.lastSceneData = {}
+    this.state.hp = Math.max(1, Math.floor(calcStats(this.state).maxHp * 0.25)) // 复活后保留25%血量
     saveGame(this.state)
     if (this.arenaMode) {
       showResult('擂台落败', [
@@ -4013,8 +4106,9 @@ export class DungeonScene extends Phaser.Scene {
         combatData.victory = false
         this.registry.set('npcCombatData', combatData)
       }
+      const npcName = combatData?.npcName ?? '对方'
       showResult('战斗失利', [
-        `你未能击败对方，铩羽而归。`,
+        `你不敌${npcName}，铩羽而归。`,
         `<span class="dim">遗失灵石 ${lost}。</span>`,
       ], '返回大地图', () => {
         this.state.hp = -1
@@ -4167,6 +4261,21 @@ export class DungeonScene extends Phaser.Scene {
   // ---------- 主循环 ----------
   update(time: number, delta: number) {
     input.poll()
+
+    // ---- PC宽屏：每帧更新鼠标瞄准方向 ----
+    {
+      const ptr = this.input.activePointer
+      if (ptr && input.useMouseAim) {
+        const p = this.player
+        const dx = ptr.worldX - p.sprite.x
+        const dy = ptr.worldY - p.sprite.y
+        const len = Math.hypot(dx, dy)
+        if (len > 1) {
+          input.aim.x = dx / len
+          input.aim.y = dy / len
+        }
+      }
+    }
 
     // 水波纹动画（每 250ms 切换一帧，4 帧循环）
     if (this.waterTiles.length > 0) {

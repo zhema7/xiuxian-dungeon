@@ -27,7 +27,7 @@
 | **新增系统模块测试（v0.4）** | 17 个系统模块**全部**进入自动化测试覆盖（详见 §6）：此前零覆盖 → 现由 6 个新增测试文件承载 351 例。**测试质量复验结论：ADEQUATE（真测试，非空壳）**——无 `.skip`/`.only`/`.todo`、无占位断言、断言密度 3.3–4.7/例、随机性全部经注入 rng 驱动因而确定性无 flaky。但覆盖仅限**纯逻辑层**：`npc-system`/`storyline-system` 的 UI 编排路径与场景集成（`SectScene`/`CityScene` 调用链）仍为零覆盖。 |
 | 配置校验 | `npm run validate:data` 已实际通过，exit 0（`5 职业 / 22 怪物 / 63 装备基座 / 10 词缀 / 67 功法 / 9 天赋节点 / 30 v4Kit`）。`scripts/validate-data.mjs`（`predev`/`prebuild` 自动跑，失败非零退出）仍为当前数据质量门。 |
 | 类型检查 | `npm run typecheck`（`tsc --noEmit`）已实际通过，exit 0。 |
-| 存档版本 | `src/state.ts` 当前 `SAVE_VERSION = 6`；PRS current-schema 使用版本化记录并须复验 legacy／历史版本隔离、完整往返和重复注册边界。 |
+| 存档版本 | `src/state.ts:189` 当前 **`SAVE_VERSION = 11`**（2026-09-09 回填；本表原写 6 已过时）；PRS current-schema 使用版本化记录并须复验 legacy／历史版本隔离、完整往返和重复注册边界。 |
 | PRS／Palette V1 源码自动化 | current-schema 严格校验、对抗覆盖与 Palette V1／`sword_proj` 专项自动化已通过；**源码／自动化 P0：PASS，`sword_proj` P0 已关闭**。这不替代浏览器真实播放、Phaser 场景 E2E、实际缺帧降级或手工验收。 |
 | 标准构建 | `npm run build` 尚未作为当前候选的标准构建门完成签收；不以任何历史或替代构建证据关闭标准 build 或发布门。 |
 | 发布体验缺口 | 浏览器真实播放、Phaser 场景 E2E、实际缺帧降级、核心手动烟雾、低端 Android / 中端 Android / iOS Safari 三档设备（或浏览器）验证、可读性／性能，以及结构化 Playtest 与平衡模拟报告均待签收。 |
@@ -151,9 +151,9 @@
 
 ### 2.5 存档迁移链（P0，最高优先）
 
-> 当前 `SAVE_VERSION = 6`。三职业或未来 PRS schema/生成器演进若引入新存档字段（丹方 / 阵眼 / 魔煞状态、新套装 / 功法、`classId∈5类` 等），必须明确版本策略、迁移路径和回归夹具。
+> 当前 **`SAVE_VERSION = 11`**（`src/state.ts:189`，2026-09-09 回填；原写 6 已过时）。三职业或未来 PRS schema/生成器演进若引入新存档字段（丹方 / 阵眼 / 魔煞状态、新套装 / 功法、`classId∈5类` 等），必须明确版本策略、迁移路径和回归夹具。
 
-- [P0] `SAVE_VERSION` 当前 = 6；任何破坏性结构变更须 **bump** 并断言，不可重写已落盘 PRS 结果
+- [P0] `SAVE_VERSION` 当前 = **11**（`src/state.ts:189`，2026-09-09 回填；原写 6）；任何破坏性结构变更须 **bump** 并断言，不可重写已落盘 PRS 结果
 - [P0] 逐步迁移链需覆盖已有历史版本至 v6；至少验证 legacy 动态记录、历史版本（含 v5）与 v6 current-schema、未知高版本和损坏记录的隔离/回退边界
 - [P0] 新增字段写入 → 读取往返一致（`dynamicSets` / `dynamicSkills` / `codex` 模式复用）；PRS 须同时断言已装备状态、路由、图鉴和注册内容不丢失
 - [P0] `registerDynamicContent()` 重复调用不得污染 `SETS` / `ITEM_BASE_MAP` / `SKILLS`，不得覆盖官方/测试内容
@@ -261,7 +261,7 @@
 
 | # | 风险 | 影响 | 缓解（本规划对应项） |
 |---|---|---|---|
-| **R1** | **存档迁移链**：当前 `SAVE_VERSION=6`；未来字段或 PRS schema 演进可能破坏 legacy／历史版本/current-schema、重复注册或完整往返 | Block（玩家存档损坏 / 官方内容被污染） | §2.5 版本化迁移、隔离夹具、往返/幂等回归 + §1.1 设计门「迁移规划」 |
+| **R1** | **存档迁移链**：当前 **`SAVE_VERSION=11`**（2026-09-09 回填，原写 6）；未来字段或 PRS schema 演进可能破坏 legacy／历史版本/current-schema、重复注册或完整往返 | Block（玩家存档损坏 / 官方内容被污染） | §2.5 版本化迁移、隔离夹具、往返/幂等回归 + §1.1 设计门「迁移规划」 |
 | **R2** | **浏览器／Phaser 运行时证据缺失**：自动化 P0 已 PASS，但尚未验证真实播放、场景 E2E 与实际缺帧降级 | Block（route、回退或实例生命周期在运行时失效而未被发现） | §1.3、§4.2 留存浏览器实例、Phaser 场景 E2E 与主动缺帧降级证据；未完成前 NO-GO |
 | **R3** | **标准构建未签收** | Block（无当前候选的标准构建产物与可复验发布门） | 运行标准 `npm run build` 并留存当前候选证据；历史或替代构建不得关闭发布门 |
 | **R4** | **PRS／Palette V1 手工运行时边界未签收** | Block（视觉、路由／降级、静态套回归、可读性与生命周期未最终签收） | §1.3、§2.5、浏览器／Phaser E2E、实际缺帧降级与手动烟雾范围 |

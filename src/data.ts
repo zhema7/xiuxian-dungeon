@@ -360,6 +360,9 @@ export const REALMS: RealmDef[] = [
 /** 每突破一重境界，基础属性 +12% */
 export const REALM_STAT_BONUS = 0.12
 
+/** 玩家最大等级上限（防止经验值异常导致死循环） */
+export const MAX_PLAYER_LEVEL = 200
+
 // ---------- 地区 ----------
 export interface RegionDef {
   id: string

@@ -17,12 +17,12 @@ import { initNpcStates, updateNpcGrowth } from '../npc-system'
 import { generateAiSect, generateResourceNodes, getDiplomacyStatus, diplomacyStatusName, dispositionDesc, type AiSect, type ResourceNode } from '../ai-sect-data'
 import { tickAllAiSects, processTradeIncome, processResourceIncome, executeDiplomacy, attackResourceNode, launchSectWar } from '../diplomacy'
 import { tryCompleteQuest, initMainQuest, onSectEstablished, getQuestHudText } from '../storyline-system'
-import { refreshNpcsAroundPlayer, moveNpc, findNearbyNpcs, type ProceduralNpc } from '../procedural-npc'
+import { refreshNpcsAroundPlayer, moveNpc, findNearbyNpcs, type ProceduralNpc, getNpcEquipName, getNpcSkillName, getNpcItemName, getRealmName } from '../procedural-npc'
 import { getOrCreateNpcTexture } from '../npc-sprite-gen'
 import { createNpcCombatData, decideNpcAction, damageNpc, npcAttackDamage, onNpcDefeated, plunderNpc, sparWithNpc, type NpcCombatData } from '../npc-combat'
 import { performDivineSense, updateDivineSenseLevel, type DivineSenseResult } from '../divine-sense'
 import { addMorality, addKarma, onHelpNpc, getMoralityTier, getReputationTier, checkRetribution } from '../karma'
-import { runDailyKarmaCheck } from '../karma-v2'
+import { runDailyKarmaCheck, type RevengeEvent } from '../karma-v2'
 import { runDailyKarmaV3 } from '../karma-v3'
 import { addInnerDemon, checkDemonManifestation, getDemonSummary, purifyDemon, getCultivationModifier, generateDemonIllusion, type InnerDemonType } from '../inner-demon'
 import { canTriggerTribulation, prepareTribulation, buildEnhancedTribulation, calculateTribulationReward, calculateTribulationFailure } from '../tribulation-v2'
@@ -42,14 +42,16 @@ import { getPendingAnnualEvent, executeAnnualEvent, getUpcomingEvent } from '../
 import { tickSectWars, aiDeclareWars } from '../sect-war'
 import { tickWorldEvolution, getWorldEvolutionState } from '../world-evolution'
 import { checkAllChains, completeChainStage, type EventChainId, type ChainEvent } from '../deep-event-chain'
-import { getMountSpeedMultiplier, getMountVisionBonus, canFly, tickMountEndurance, MOUNTS, summonMount, dismissMount, purchaseMount, type MountType } from '../mount-system'
+import { getMountSpeedMultiplier, getMountVisionBonus, canFly, tickMountEndurance, MOUNTS, MOUNT_TEXTURES, summonMount, dismissMount, purchaseMount, type MountType } from '../mount-system'
 import { getWeatherType, getWeatherConfig, type WeatherType } from '../weather'
 import { getBiomePalette, type BiomePalette } from '../biome-palette'
 import { generateWorldIcons, getWorldIconKey } from '../world-icons'
 import { generateWorldDecorations, scatterDecorations, getDecoKey, type ScatterContext } from '../world-decorations'
 import { generateDomainTerrain, DOMAIN_WATER, DOMAIN_TERRAIN_PLACEMENTS, getTerrainKey, type WaterPath } from '../domain-terrain'
+import { loadLazyGroup } from '../lazy-assets'
 import { blendRegionHeight, blendRegionColor, getRegionVegType, getRegionDensity, getRegionPlan } from '../region-plan'
-import { ThreeBridge, fbm } from '../three-bridge'
+import { fbm } from '../fbm'
+import type { ThreeBridge } from '../three-bridge'
 
 const PLAYER_SPEED = 140
 const INTERACT_RANGE = 60
@@ -98,6 +100,7 @@ export class WorldScene extends Phaser.Scene {
   private _hd2dFrameCount = 0
   // HD-2D 精灵阴影
   private playerShadow!: Phaser.GameObjects.Graphics
+  private mountSprite: Phaser.GameObjects.Sprite | null = null
   private npcShadows: Map<string, Phaser.GameObjects.Graphics> = new Map()
   // 3D 模式下需要投影到屏幕的 2D 标签和标记容器
   private projectableItems: { obj: Phaser.GameObjects.Text | Phaser.GameObjects.Container; wx: number; wy: number; yOff: number }[] = []
@@ -140,6 +143,12 @@ export class WorldScene extends Phaser.Scene {
 
   constructor() { super('World') }
 
+  preload() {
+    loadLazyGroup(this, 'world')
+  }
+
+  private static aiBgProcessed = false
+
   create(data?: { fromScene?: string }) {
     this.state = this.registry.get('state')
     this.state.lastScene = 'World'
@@ -156,6 +165,45 @@ export class WorldScene extends Phaser.Scene {
     this.moveAccumulator = this.state.worldEventCooldown || 0
     this.lastTickMs = this.time.now
     this.npcRefreshTimer = 0
+
+    // AI 生成贴图背景移除（仅首次执行）
+    if (!WorldScene.aiBgProcessed) {
+      WorldScene.aiBgProcessed = true
+      const removeAiBg = (key: string) => {
+        if (!this.textures.exists(key)) return
+        const src = this.textures.get(key).getSourceImage() as HTMLImageElement | HTMLCanvasElement
+        const w = src.width as number, h = src.height as number
+        const cv = document.createElement('canvas')
+        cv.width = w; cv.height = h
+        const ctx = cv.getContext('2d')!
+        ctx.imageSmoothingEnabled = false
+        ctx.drawImage(src, 0, 0)
+        const data = ctx.getImageData(0, 0, w, h)
+        const px = data.data
+        const corners = [0, (w - 1) * 4, (h - 1) * w * 4, (h - 1) * w * 4 + (w - 1) * 4]
+        const bgR = corners.reduce((s, i) => s + px[i], 0) / 4
+        const bgG = corners.reduce((s, i) => s + px[i + 1], 0) / 4
+        const bgB = corners.reduce((s, i) => s + px[i + 2], 0) / 4
+        const threshold = 50
+        for (let i = 0; i < px.length; i += 4) {
+          const dr = Math.abs(px[i] - bgR)
+          const dg = Math.abs(px[i + 1] - bgG)
+          const db = Math.abs(px[i + 2] - bgB)
+          if (dr + dg + db < threshold * 3) {
+            px[i + 3] = 0
+          } else if (dr + dg + db < threshold * 6) {
+            px[i + 3] = Math.floor(255 * (dr + dg + db) / (threshold * 6))
+          }
+        }
+        ctx.putImageData(data, 0, 0)
+        this.textures.remove(key)
+        this.textures.addCanvas(key, cv)
+      }
+      removeAiBg('ai_shrine')
+      for (const spr of ['spr_pine_tree', 'spr_willow_tree', 'spr_bamboo', 'spr_rock_formation', 'spr_spirit_crystal', 'spr_dead_tree', 'spr_lotus_pond']) {
+        removeAiBg(spr)
+      }
+    }
 
     // 清理上一轮残留引用（场景 restart 时 Phaser 只销毁游戏对象，不清理 Map/Array）
     this.pointObjects.clear()
@@ -277,6 +325,9 @@ export class WorldScene extends Phaser.Scene {
     this.playerShadow.fillEllipse(0, 0, 44, 15)
     this.playerShadow.setPosition(this.player.sprite.x + 4, this.player.sprite.y + 19)
 
+    // 坐骑贴图：若已召唤坐骑则显示
+    this.refreshMountSprite()
+
     // HD-2D：昼夜光照覆盖层
     this.lightOverlay = this.add.rectangle(0, 0, WORLD_MAP_W, WORLD_MAP_H, 0x000000, 0).setOrigin(0).setDepth(50)
     this.updateLightOverlay()
@@ -391,6 +442,16 @@ export class WorldScene extends Phaser.Scene {
     // 从城市场景回来时恢复
     if (data?.fromScene === 'city') {
       this.player.sprite.setPosition(this.state.worldPlayerX, this.state.worldPlayerY)
+    }
+
+    // 恢复已发现的秘境入口（避免场景重启后入口消失）
+    if (this.state.discoveredRealmDefs && this.state.discoveredRealmDefs.length > 0) {
+      for (const realm of this.state.discoveredRealmDefs) {
+        if (realm.domain === this.currentDomain) {
+          this.discoveredRealmDefs.push(realm)
+          this.renderSecretRealmEntrance(realm)
+        }
+      }
     }
 
     // 转场淡入
@@ -738,6 +799,29 @@ export class WorldScene extends Phaser.Scene {
     }
   }
 
+  /** 刷新坐骑贴图（召唤/收回时调用） */
+  private refreshMountSprite() {
+    const activeMount = (this.state as any).activeMount as { type: MountType; summoned: boolean; endurance: number } | undefined
+    if (activeMount?.summoned && activeMount.endurance > 0) {
+      const texInfo = MOUNT_TEXTURES[activeMount.type]
+      if (this.textures.exists(texInfo.tex)) {
+        if (!this.mountSprite) {
+          this.mountSprite = this.add.sprite(this.player.sprite.x, this.player.sprite.y + 6, texInfo.tex)
+          this.mountSprite.setDepth(4.5).setScale(0.6)
+        } else {
+          this.mountSprite.setTexture(texInfo.tex)
+        }
+        // 播放动画（如有）
+        if (texInfo.anim && this.anims.exists(texInfo.anim)) {
+          this.mountSprite.anims.play(texInfo.anim, true)
+        }
+        this.mountSprite.setVisible(true)
+      }
+    } else {
+      if (this.mountSprite) this.mountSprite.setVisible(false)
+    }
+  }
+
   /** HD-2D：更新 NPC 阴影椭圆位置 */
   private updateNpcShadows() {
     for (const [npcId, shadow] of this.npcShadows) {
@@ -853,7 +937,7 @@ export class WorldScene extends Phaser.Scene {
     ;(this as any)._heightAt = heightAt
   }
 
-  private initHD2DBackground() {
+  private async initHD2DBackground() {
     const domainDef = getDomainDef(this.currentDomain)
     const bgTint = domainDef?.bgTint ?? 0x1a3b2a
 
@@ -863,7 +947,8 @@ export class WorldScene extends Phaser.Scene {
     const TERRAIN_D = 1800
     const WATER_LEVEL = -8
 
-    this.threeBridge = new ThreeBridge(this, 720, 1280)
+    const { ThreeBridge: ThreeBridgeClass } = await import('../three-bridge')
+    this.threeBridge = new ThreeBridgeClass(this, 720, 1280)
 
     // 域海拔调色板：水→沙→草→林→岩→雪
     const palettes: Record<string, { water: number; sand: number; grass: number; forest: number; rock: number; snow: number }> = {
@@ -1986,7 +2071,15 @@ export class WorldScene extends Phaser.Scene {
     }
     for (const node of this.state.resourceNodes) {
       const color = typeColors[node.type] || 0xffffff
+      const isContested = node.contested
       const g = this.add.graphics()
+      // 争夺中：红色外圈
+      if (isContested) {
+        g.fillStyle(0xff0000, 0.1)
+        g.fillCircle(0, 0, 24)
+        g.lineStyle(2, 0xff0000, 0.6)
+        g.strokeCircle(0, 0, 20)
+      }
       g.fillStyle(color, 0.12)
       g.fillCircle(0, 0, 18)
       g.lineStyle(1.5, color, 0.7)
@@ -1995,12 +2088,13 @@ export class WorldScene extends Phaser.Scene {
       g.fillCircle(0, 0, 3)
 
       const container = this.add.container(node.x, node.y, [g]).setDepth(2.5)
-      this.tweens.add({ targets: g, alpha: 0.5, duration: 1200, yoyo: true, repeat: -1 })
+      this.tweens.add({ targets: g, alpha: 0.5, duration: isContested ? 500 : 1200, yoyo: true, repeat: -1 })
       this.registerProjectable(container, node.x, node.y, 0)
 
       const ownerTag = node.ownerId === 'player' ? '[我]' : node.ownerId ? '[敌]' : '[无主]'
-      const label = this.add.text(node.x, node.y - 20, `${typeIcons[node.type]}${ownerTag}`, {
-        fontSize: '8px', color: `#${color.toString(16).padStart(6, '0')}`,
+      const contestTag = isContested ? '⚔' : ''
+      const label = this.add.text(node.x, node.y - 20, `${typeIcons[node.type]}${ownerTag}${contestTag}`, {
+        fontSize: '8px', color: `#${(isContested ? 0xff6b6b : color).toString(16).padStart(6, '0')}`,
         stroke: '#000', strokeThickness: 2,
       }).setOrigin(0.5).setDepth(3)
       this.registerProjectable(label, node.x, node.y, 20)
@@ -2747,21 +2841,153 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private async npcTalk(npc: ProceduralNpc) {
-    const lines = [
-      npc.story.surface,
-      `「${npc.currentPurpose}」`,
-      `当前正在：${getNpcActivityDesc(npc, this.worldTime.hour)}`,
-    ]
-    // Phase 5: 显示社交信息
+    const rel = this.state.playerNpcRelations[npc.id]
+    const favor = rel?.favor ?? 0
+    const realmNames = ['练气', '筑基', '金丹', '元婴', '化神', '合体', '大乘', '渡劫']
+
+    const lines: string[] = []
+
+    // 1. 关系感知问候
+    if (favor >= 60) {
+      lines.push(`${npc.name}眼前一亮：「道友！别来无恙！」`)
+    } else if (favor >= 30) {
+      lines.push(`${npc.name}微笑点头：「许久不见，修为精进不少。」`)
+    } else if (favor >= 10) {
+      lines.push(`${npc.name}颔首致意：「别来无恙。」`)
+    } else if (favor >= -10) {
+      lines.push(`${npc.name}淡淡看了你一眼：「有事？」`)
+    } else if (favor >= -30) {
+      lines.push(`${npc.name}冷哼一声：「又是你。」`)
+    } else if (favor >= -50) {
+      lines.push(`${npc.name}目光冰冷：「你来做什么？」`)
+    } else {
+      lines.push(`${npc.name}杀意凛然：「你竟敢出现在我面前！」`)
+    }
+
+    // 2. 玩家状态感知对话
+    const playerHpMax = this.state.level * 100 + 200
+    const playerHp = this.state.hp === -1 ? playerHpMax : this.state.hp
+    const hpRatio = playerHp / playerHpMax
+
+    if (hpRatio < 0.3) {
+      if (favor >= 30) {
+        lines.push(`「道友气色不佳，可是受了伤？需要丹药么？」`)
+      } else if (favor <= -30) {
+        lines.push(`「哼，伤痕累累还敢出来行走，当真不怕死。」`)
+      } else {
+        lines.push(`「你身上伤势不轻，修行之人当爱惜性命。」`)
+      }
+    } else if (hpRatio < 0.6 && favor >= 30) {
+      lines.push(`「道友似有疲色，万事小心。」`)
+    }
+
+    // 境界差距感知
+    const realmDiff = this.state.realm - npc.realm
+    if (realmDiff >= 2) {
+      if (npc.morality > 0) {
+        lines.push(`（${npc.name}感受到你远超自己的修为，眼中闪过敬畏之色）`)
+      } else {
+        lines.push(`（${npc.name}感受到你远超自己的修为，暗自咬牙）`)
+      }
+    } else if (realmDiff <= -2) {
+      lines.push(`（${npc.name}觉得你修为尚浅，态度变得轻慢）`)
+    }
+
+    // 因果/道德感知
+    if (this.state.morality < -40 && npc.morality > 20) {
+      lines.push(`「你身上戾气太重，望你好自为之。」`)
+    } else if (this.state.morality > 40 && npc.morality > 20) {
+      lines.push(`「道友心性纯善，令人敬佩。」`)
+    } else if (this.state.morality < -40 && npc.morality < -20) {
+      lines.push(`「同道中人，嘿嘿。」`)
+    }
+
+    // 声望感知
+    const repTier = getReputationTier(this.state.reputation || 0)
+    if (repTier.name === '名震天下' || repTier.name === '声名远播') {
+      if (favor >= 10) {
+        lines.push(`「道友如今名声赫赫，${npc.name}与有荣焉。」`)
+      } else if (favor <= -10) {
+        lines.push(`「你名气虽大，未必能吓退我。」`)
+      }
+    }
+
+    // 3. NPC 修为详情
+    lines.push('')
+    lines.push('—— 修为履历 ——')
+    lines.push(`境界：${getRealmName(npc.realm)} ${npc.level}级`)
+    lines.push(`道途：${npc.daoPath}`)
+    lines.push(`出身：${npc.background}`)
+    lines.push(`志向：${npc.lifeGoal}`)
+    if (npc.skills.length > 0) lines.push(`功法：${npc.skills.map(s => getNpcSkillName(s)).join('、')}`)
+
+    // 装备
+    const eqParts: string[] = []
+    if (npc.equipment.weapon) eqParts.push(getNpcEquipName(npc.equipment.weapon))
+    if (npc.equipment.armor) eqParts.push(getNpcEquipName(npc.equipment.armor))
+    if (npc.equipment.accessory) eqParts.push(getNpcEquipName(npc.equipment.accessory))
+    if (eqParts.length > 0) lines.push(`装备：${eqParts.join('、')}`)
+
+    // 持有物品
+    const invEntries = Object.entries(npc.inventory)
+    if (invEntries.length > 0) {
+      lines.push(`持有：${invEntries.map(([k, v]) => `${getNpcItemName(k)}×${v}`).join('、')}`)
+    }
+
+    // 当前活动
+    lines.push(`当前：${getNpcActivityDesc(npc, this.worldTime.hour)}`)
+    lines.push(`「${npc.currentPurpose}」`)
+
+    // 4. 社交关系
     const socialLines = getNpcSocialSummary(npc, this.state)
     if (socialLines.length > 0) {
       lines.push('')
       lines.push('—— 社交关系 ——')
       lines.push(...socialLines)
     }
+
+    // 5. 复杂关系暗示（又爱又恨）
+    if (rel) {
+      const complexHints: string[] = []
+      if (rel.favor > 20 && rel.fear > 20) {
+        complexHints.push(`${npc.name}对你又敬又畏，关系微妙`)
+      }
+      if (rel.saved) {
+        complexHints.push(`${npc.name}感念你的救命之恩`)
+      }
+      if (rel.killedKnown.length > 0) {
+        complexHints.push(`${npc.name}知道你杀过${rel.killedKnown.length}人，心存忌惮`)
+      }
+      if (rel.favor <= -30 && rel.trust > 10) {
+        complexHints.push(`${npc.name}虽对你不满，却仍存一丝信任`)
+      }
+      if (rel.favor >= 30 && rel.fear > 10) {
+        complexHints.push(`${npc.name}既亲近你又畏惧你的手段`)
+      }
+      if (complexHints.length > 0) {
+        lines.push('')
+        for (const h of complexHints) lines.push(`（${h}）`)
+      }
+    }
+
+    // 6. 性格特征对话
+    if (npc.personality.includes('好战') && favor >= 10 && favor < 50) {
+      lines.push('')
+      lines.push(`「改日定要与道友切磋一番！」`)
+    }
+    if (npc.personality.includes('贪婪') && invEntries.length > 2) {
+      lines.push(`（${npc.name}不自觉地摸了摸储物袋）`)
+    }
+    if (npc.personality.includes('孤僻') && favor < 20) {
+      lines.push(`（${npc.name}似乎不愿多说，目光飘向别处）`)
+    }
+    if (npc.personality.includes('热情') && favor >= 10) {
+      lines.push(`「有何需要帮忙的，尽管开口！」`)
+    }
+
     await showDialog(npc.name, lines, [{ label: '继续', value: 'ok' }])
+
     // 交谈增加好感
-    const rel = this.state.playerNpcRelations[npc.id]
     if (rel) { rel.favor += 2; rel.trust += 1 }
     toast(`与${npc.name}交谈甚欢，好感+2`, '#a3e4d7')
     input.clearQueues()
@@ -2962,6 +3188,19 @@ export class WorldScene extends Phaser.Scene {
       npcRealm: npc.realm,
       npcMorality: npc.morality,
       regionId,
+      appearanceSeed: npc.appearanceSeed,
+      gender: npc.gender,
+      daoPath: npc.daoPath,
+      level: npc.level,
+      background: npc.background,
+      profession: npc.profession,
+      skills: npc.skills,
+      equipment: npc.equipment,
+      inventory: npc.inventory,
+      story: npc.story,
+      lifeGoal: npc.lifeGoal,
+      currentPurpose: npc.currentPurpose,
+      personality: npc.personality,
     })
     closePanel()
     this.transitioning = true
@@ -2994,6 +3233,19 @@ export class WorldScene extends Phaser.Scene {
       npcRealm: npc.realm,
       npcMorality: npc.morality,
       regionId,
+      appearanceSeed: npc.appearanceSeed,
+      gender: npc.gender,
+      daoPath: npc.daoPath,
+      level: npc.level,
+      background: npc.background,
+      profession: npc.profession,
+      skills: npc.skills,
+      equipment: npc.equipment,
+      inventory: npc.inventory,
+      story: npc.story,
+      lifeGoal: npc.lifeGoal,
+      currentPurpose: npc.currentPurpose,
+      personality: npc.personality,
     })
     closePanel()
     this.transitioning = true
@@ -3020,6 +3272,11 @@ export class WorldScene extends Phaser.Scene {
       npcName: string
       npcMorality: number
       victory: boolean
+      isArena?: boolean
+      isRevenge?: boolean
+      resourceNodeId?: string
+      resourceName?: string
+      sectName?: string
     } | undefined
 
     if (!combatData) return
@@ -3028,6 +3285,62 @@ export class WorldScene extends Phaser.Scene {
 
     const npc = this.state.proceduralNpcs.find(n => n.id === combatData.npcId)
     if (!npc) {
+      input.clearQueues()
+      return
+    }
+
+    // 擂台模式（切磋，不杀死NPC）
+    if (combatData.isArena) {
+      if (combatData.victory) {
+        // 擂台胜利
+        this.state.honor = (this.state.honor || 0) + 5
+        const expGain = npc.realm * 20 + 15
+        let remaining = expGain
+        while (remaining > 0) {
+          const need = this.state.level * 50
+          if (this.state.exp + remaining >= need) {
+            remaining -= need - this.state.exp
+            this.state.level++
+            this.state.exp = 0
+            sfx('sfx_levelup')
+          } else {
+            this.state.exp += remaining
+            remaining = 0
+          }
+        }
+        toast(`擂台胜利！获得经验${expGain}，荣誉+5`, '#fbbf24')
+
+        // 资源点擂台：夺取控制权
+        if (combatData.resourceNodeId) {
+          const node = this.state.resourceNodes?.find(n => n.id === combatData.resourceNodeId)
+          if (node) {
+            node.ownerId = 'player'
+            node.contested = false
+            node.garrison = Math.max(50, node.garrison - 30)
+            toast(`成功夺取${node.name}的控制权！`, '#4ade80')
+            this.renderResourceNodes()
+          }
+        }
+
+        // 宗门拜访擂台：改善关系
+        if (combatData.sectName) {
+          const aiSect = this.state.aiSects?.find(s => s.name === combatData.sectName)
+          if (aiSect) {
+            aiSect.relationValue = Math.min(100, aiSect.relationValue + 8)
+            toast(`与${aiSect.name}弟子切磋获胜，外交值+8`, '#a3e4d7')
+          }
+        }
+      } else {
+        toast('擂台切磋失利，改日再战', '#f87171')
+        // 资源点失败：保持对方控制
+        if (combatData.resourceNodeId) {
+          const node = this.state.resourceNodes?.find(n => n.id === combatData.resourceNodeId)
+          if (node) node.contested = false
+        }
+      }
+      this.state.hp = Math.max(1, this.state.hp)
+      saveGame(this.state)
+      updateHUD()
       input.clearQueues()
       return
     }
@@ -3084,8 +3397,17 @@ export class WorldScene extends Phaser.Scene {
       }
     } else {
       // 战斗失败
-      toast('战斗失利，未能得手', '#f87171')
+      if (combatData.isRevenge) {
+        toast(`${npc.name}的寻仇得逞，你败下阵来`, '#f87171')
+      } else {
+        toast('战斗失利，未能得手', '#f87171')
+      }
       this.state.hp = Math.max(1, this.state.hp)
+      // 仇人寻仇胜利后更嚣张
+      if (combatData.isRevenge) {
+        const rel = this.state.playerNpcRelations[npc.id]
+        if (rel) { rel.fear += 10; rel.favor -= 5 }
+      }
     }
 
     // 检查报应
@@ -3095,6 +3417,126 @@ export class WorldScene extends Phaser.Scene {
     saveGame(this.state)
     updateHUD()
     input.clearQueues()
+  }
+
+  /** 仇人寻仇触发战斗 */
+  private async triggerRevengeCombat(npc: ProceduralNpc, revenge: RevengeEvent) {
+    if (this.transitioning || this.eventActive || dialogOpen() || panelOpen()) {
+      this.time.delayedCall(2000, () => this.triggerRevengeCombat(npc, revenge))
+      return
+    }
+
+    this.player.halt()
+    const regionId = this.domainToRegionId(this.currentDomain)
+
+    if (revenge.type === 'ambush') {
+      // 偷袭：直接进入战斗，无法拒绝
+      toast(revenge.description, '#f87171')
+      sfx('sfx_boss_spawn', 0.6)
+      this.registry.set('npcCombatData', {
+        npcId: npc.id,
+        mode: 'attack',
+        npcName: npc.name,
+        npcHp: npc.hp,
+        npcMaxHp: npc.maxHp,
+        npcAtk: npc.atk,
+        npcDef: npc.def,
+        npcRealm: npc.realm,
+        npcMorality: npc.morality,
+        regionId,
+        appearanceSeed: npc.appearanceSeed,
+        gender: npc.gender,
+        daoPath: npc.daoPath,
+        level: npc.level,
+        background: npc.background,
+        profession: npc.profession,
+        skills: npc.skills,
+        equipment: npc.equipment,
+        inventory: npc.inventory,
+        story: npc.story,
+        lifeGoal: npc.lifeGoal,
+        currentPurpose: npc.currentPurpose,
+        personality: npc.personality,
+        isRevenge: true,
+      })
+      this.transitioning = true
+      saveGame(this.state)
+      this.worldTime = advanceTime(this.worldTime, 5 * 60 * 1000)
+      this.state.worldTime = this.worldTime
+      this.time.delayedCall(500, () => {
+        this.registry.set('dungeonReturnScene', 'World')
+        this.scene.start('Dungeon', {
+          mode: 'npcCombat',
+          subMode: 'attack',
+          regionOverride: regionId,
+          npcId: npc.id,
+        })
+      })
+    } else {
+      // 挑战：玩家可以选择接受或拒绝
+      const result = await showDialog('仇人挑战', [
+        revenge.description,
+        `${npc.name}·${['练气','筑基','金丹','元婴','化神','合体','大乘','渡劫'][npc.realm] || '未知'} ${npc.level}级`,
+        `道途：${npc.daoPath}`,
+        `危险等级：${'★'.repeat(revenge.dangerLevel)}`,
+      ], [
+        { label: '应战', value: 'accept' },
+        { label: '回避', value: 'refuse' },
+      ])
+
+      if (result === 'accept') {
+        this.registry.set('npcCombatData', {
+          npcId: npc.id,
+          mode: 'attack',
+          npcName: npc.name,
+          npcHp: npc.hp,
+          npcMaxHp: npc.maxHp,
+          npcAtk: npc.atk,
+          npcDef: npc.def,
+          npcRealm: npc.realm,
+          npcMorality: npc.morality,
+          regionId,
+          appearanceSeed: npc.appearanceSeed,
+          gender: npc.gender,
+          daoPath: npc.daoPath,
+          level: npc.level,
+          background: npc.background,
+          profession: npc.profession,
+          skills: npc.skills,
+          equipment: npc.equipment,
+          inventory: npc.inventory,
+          story: npc.story,
+          lifeGoal: npc.lifeGoal,
+          currentPurpose: npc.currentPurpose,
+          personality: npc.personality,
+          isRevenge: true,
+        })
+        this.transitioning = true
+        sfx('sfx_hit')
+        saveGame(this.state)
+        this.worldTime = advanceTime(this.worldTime, 10 * 60 * 1000)
+        this.state.worldTime = this.worldTime
+        this.time.delayedCall(200, () => {
+          this.registry.set('dungeonReturnScene', 'World')
+          this.scene.start('Dungeon', {
+            mode: 'npcCombat',
+            subMode: 'attack',
+            regionOverride: regionId,
+            npcId: npc.id,
+          })
+        })
+      } else {
+        // 回避：增加恐惧，但仇人会更恨你
+        const rel = this.state.playerNpcRelations[npc.id]
+        if (rel) {
+          rel.favor -= 10
+          rel.fear += 5
+        }
+        toast(`你回避了${npc.name}的挑战，对方更加恼怒`, '#fda4af')
+        saveGame(this.state)
+        input.clearQueues()
+      }
+    }
   }
 
   private async npcInvite(npc: ProceduralNpc) {
@@ -3110,11 +3552,11 @@ export class WorldScene extends Phaser.Scene {
   // ===== 秘境发现 =====
 
   private tryDiscoverSecretRealm(): void {
-    if (Math.random() > 0.003) return // 极低概率触发
+    if (this.rng() > 0.003) return // 极低概率触发
     const px = this.player.sprite.x
     const py = this.player.sprite.y
-    const angle = Math.random() * Math.PI * 2
-    const dist = 100 + Math.random() * 150
+    const angle = this.rng() * Math.PI * 2
+    const dist = 100 + this.rng() * 150
     const x = Math.max(50, Math.min(WORLD_MAP_W - 50, px + Math.cos(angle) * dist))
     const y = Math.max(50, Math.min(WORLD_MAP_H - 50, py + Math.sin(angle) * dist))
 
@@ -3129,18 +3571,59 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private renderSecretRealmEntrance(realm: SecretRealmDef): void {
-    const g = this.add.graphics()
-    g.fillStyle(0xaf7ac5, 0.2)
-    g.fillCircle(0, 0, 22)
-    g.lineStyle(2, 0xaf7ac5, 0.8)
-    g.strokeCircle(0, 0, 16)
-    g.fillStyle(0xaf7ac5, 0.6)
-    g.fillCircle(0, 0, 10)
-    g.fillStyle(0xffffff, 0.9)
-    g.fillCircle(0, 0, 4)
+    // 外层光晕
+    const glow = this.add.graphics()
+    glow.fillStyle(0xaf7ac5, 0.08)
+    glow.fillCircle(0, 0, 30)
+    glow.fillStyle(0xaf7ac5, 0.15)
+    glow.fillCircle(0, 0, 22)
 
-    const container = this.add.container(realm.entranceX, realm.entranceY, [g]).setDepth(3.5)
-    this.tweens.add({ targets: g, alpha: 0.5, duration: 800, yoyo: true, repeat: -1 })
+    // 旋转能量环
+    const ring = this.add.graphics()
+    ring.lineStyle(2, 0xc39bd3, 0.7)
+    ring.strokeCircle(0, 0, 18)
+    ring.lineStyle(1, 0xaf7ac5, 0.5)
+    ring.strokeCircle(0, 0, 14)
+
+    // 核心光点
+    const core = this.add.graphics()
+    core.fillStyle(0xaf7ac5, 0.5)
+    core.fillCircle(0, 0, 10)
+    core.fillStyle(0xd2b4de, 0.7)
+    core.fillCircle(0, 0, 6)
+    core.fillStyle(0xffffff, 0.9)
+    core.fillCircle(0, 0, 3)
+
+    // 环绕粒子
+    const sparks: Phaser.GameObjects.Arc[] = []
+    for (let i = 0; i < 4; i++) {
+      const angle = (i / 4) * Math.PI * 2
+      const sx = Math.cos(angle) * 16
+      const sy = Math.sin(angle) * 16
+      const spark = this.add.circle(sx, sy, 1.5, 0xffffff, 0.8).setDepth(0.5)
+      sparks.push(spark)
+    }
+
+    const container = this.add.container(realm.entranceX, realm.entranceY, [glow, ring, core, ...sparks]).setDepth(3.5)
+
+    // 脉动动画
+    this.tweens.add({ targets: glow, alpha: 0.3, duration: 1200, yoyo: true, repeat: -1, ease: 'Sine.inOut' })
+    this.tweens.add({ targets: core, scale: 1.3, duration: 800, yoyo: true, repeat: -1, ease: 'Sine.inOut' })
+    // 旋转环
+    this.tweens.add({ targets: ring, angle: 360, duration: 6000, repeat: -1 })
+    // 粒子环绕
+    sparks.forEach((spark, i) => {
+      this.tweens.add({
+        targets: spark,
+        x: Math.cos((i / 4) * Math.PI * 2 + Math.PI) * 16,
+        y: Math.sin((i / 4) * Math.PI * 2 + Math.PI) * 16,
+        duration: 2000,
+        repeat: -1,
+        ease: 'Sine.inOut',
+        yoyo: true,
+      })
+    })
+
     this.registerProjectable(container, realm.entranceX, realm.entranceY, 0)
 
     const label = this.add.text(realm.entranceX, realm.entranceY - 26, `秘境·${realm.name}`, {
@@ -3325,6 +3808,15 @@ export class WorldScene extends Phaser.Scene {
     const karmaResult = runDailyKarmaCheck(this.state)
     allMessages.push(...karmaResult.messages)
 
+    // 仇人寻仇：触发实际战斗
+    if (karmaResult.revenge && (karmaResult.revenge.type === 'ambush' || karmaResult.revenge.type === 'challenge')) {
+      const revenge = karmaResult.revenge
+      const enemyNpc = this.state.proceduralNpcs.find(n => n.id === revenge.npcId && n.alive)
+      if (enemyNpc && !this.transitioning) {
+        this.time.delayedCall(600, () => this.triggerRevengeCombat(enemyNpc, revenge))
+      }
+    }
+
     // Phase 6: 因果业力v3（天道反噬+善缘奇遇）
     const karmaV3Result = runDailyKarmaV3(this.state)
     allMessages.push(...karmaV3Result.messages)
@@ -3469,6 +3961,12 @@ export class WorldScene extends Phaser.Scene {
     // HD-2D：更新玩家阴影位置（跟随精灵脚底 + 方向偏移）
     if (this.playerShadow) {
       this.playerShadow.setPosition(this.player.sprite.x + 4, this.player.sprite.y + 19)
+    }
+
+    // 更新坐骑贴图位置
+    if (this.mountSprite) {
+      this.mountSprite.setPosition(this.player.sprite.x, this.player.sprite.y + 6)
+      this.mountSprite.setFlipX(this.player.sprite.flipX)
     }
 
     // HD-2D：更新 NPC 阴影位置
@@ -3730,6 +4228,7 @@ export class WorldScene extends Phaser.Scene {
       { label: '派遣使者', value: 'send_envoy' },
       { label: '斥候侦查', value: 'scout' },
     ]
+    if (!ai.atWar && ai.relationValue >= -20) options.push({ label: '拜访宗门', value: 'visit' })
     if (!ai.tradeAgreement && !ai.atWar) options.push({ label: '提议通商', value: 'propose_trade' })
     if (!ai.alliance && !ai.atWar && ai.relationValue >= 50) options.push({ label: '提议结盟', value: 'propose_alliance' })
     if (!ai.atWar && ai.relationValue < -30) options.push({ label: '宣战', value: 'declare_war' })
@@ -3742,13 +4241,214 @@ export class WorldScene extends Phaser.Scene {
 
     const result = await showDialog(ai.name, lines, options)
 
-    if (result === 'sect_war') {
+    if (result === 'visit') {
+      await this.visitAiSect(ai)
+    } else if (result === 'sect_war') {
       await launchSectWar(this.state, ai)
     } else if (result && result !== 'leave') {
       await executeDiplomacy(this.state, ai, result as any)
     } else {
       input.clearQueues()
     }
+  }
+
+  /** 拜访其他宗门：展示宗门场景描述和可交互内容 */
+  private async visitAiSect(ai: AiSect) {
+    const realmNames = ['练气', '筑基', '金丹', '元婴', '化神', '合体', '大乘', '渡劫']
+    const disp = dispositionDesc(ai.disposition)
+
+    // 根据宗门属性生成场景描述
+    const buildingDescs: string[] = []
+    if (ai.level >= 1) buildingDescs.push('主殿巍峨，飞檐翘角，灵气缭绕')
+    if (ai.level >= 2) buildingDescs.push('灵脉阵法光芒流转，汇聚天地灵气')
+    if (ai.level >= 3) buildingDescs.push('弟子房错落有致，可见弟子修习身影')
+    if (ai.level >= 4) buildingDescs.push('炼丹房药香四溢，炉火长明')
+    if (ai.level >= 5) buildingDescs.push('藏经阁古朴庄严，典籍浩如烟海')
+    if (ai.level >= 6) buildingDescs.push('演武场剑气纵横，弟子切磋正酣')
+    if (ai.level >= 7) buildingDescs.push('护山大阵笼罩山门，威压隐现')
+    if (ai.level >= 8) buildingDescs.push('秘境入口隐现虚空，灵光吞吐')
+
+    // 弟子信息
+    const discipleDesc = ai.discipleCount > 50
+      ? `门下弟子${ai.discipleCount}人，人多势众`
+      : ai.discipleCount > 20
+      ? `门下弟子${ai.discipleCount}人，颇有规模`
+      : `门下弟子${ai.discipleCount}人，人丁单薄`
+
+    // 资源状况
+    const r = ai.resources
+    const resourceDesc = `灵石${r.stone} 灵草${r.herb} 矿石${r.ore} 木材${r.wood}`
+
+    const visitLines: string[] = [
+      `你来到${ai.name}山门前。`,
+      '',
+      '—— 宗门景致 ——',
+      ...buildingDescs,
+      '',
+      `掌门修为约${realmNames[Math.min(ai.level, 7)]}境，性格${disp}`,
+      discipleDesc,
+      `库存：${resourceDesc}`,
+    ]
+
+    // 拜访互动选项
+    const visitOptions: { label: string; value: string }[] = []
+
+    // 与弟子交谈
+    visitOptions.push({ label: '与弟子交谈', value: 'chat' })
+
+    // 观摩修炼（增加经验）
+    if (ai.level >= 3) visitOptions.push({ label: '观摩修炼', value: 'observe' })
+
+    // 交易（通商关系或友好）
+    if (ai.tradeAgreement || ai.relationValue >= 30) {
+      visitOptions.push({ label: '交换物资', value: 'trade' })
+    }
+
+    // 擂台切磋（中立以上）
+    if (ai.relationValue >= -10 && !ai.atWar) {
+      visitOptions.push({ label: '擂台切磋', value: 'arena' })
+    }
+
+    // 结缘（高好感）
+    if (ai.relationValue >= 50) {
+      visitOptions.push({ label: '论道参悟', value: 'discuss' })
+    }
+
+    visitOptions.push({ label: '告辞', value: 'leave' })
+
+    const visitResult = await showDialog(`拜访·${ai.name}`, visitLines, visitOptions)
+
+    if (visitResult === 'chat') {
+      // 与弟子交谈：获取宗门情报
+      const gossip = [
+        `${ai.name}弟子：「欢迎道友来访，我宗${disp}，${ai.discipleCount > 30 ? '人才济济' : '虽小却精'}。」`,
+        `「掌门常说：${ai.disposition === 'aggressive' ? '弱肉强食，唯有强者才能守护宗门' : ai.disposition === 'mercantile' ? '和气生财，广结善缘方为长久之道' : ai.disposition === 'isolationist' ? '闭门造车不如潜心修炼' : ai.disposition === 'expansionist' ? '开疆拓土，方能立于不败之地' : '以和为贵，不惹事端'}」`,
+      ]
+      // 随机弟子八卦
+      if (ai.relationValue >= 30) {
+        gossip.push(`「听说附近有个秘境出了不少宝贝，道友若有兴趣不妨去看看。」`)
+      }
+      if (ai.atWar === false && ai.relationValue < -10) {
+        gossip.push(`（弟子小声嘀咕了什么，似乎对你有所戒备）`)
+      }
+      await showDialog(`${ai.name}弟子`, gossip, [{ label: '告辞', value: 'ok' }])
+      // 好感+
+      ai.relationValue = Math.min(100, ai.relationValue + 3)
+      toast(`与${ai.name}弟子交谈甚欢，外交值+3`, '#a3e4d7')
+      saveGame(this.state)
+    } else if (visitResult === 'observe') {
+      // 观摩修炼：获得经验
+      const expGain = ai.level * 15 + 10
+      let remaining = expGain
+      while (remaining > 0) {
+        const need = this.state.level * 50
+        if (this.state.exp + remaining >= need) {
+          remaining -= need - this.state.exp
+          this.state.level++
+          this.state.exp = 0
+          sfx('sfx_levelup')
+        } else {
+          this.state.exp += remaining
+          remaining = 0
+        }
+      }
+      this.worldTime = advanceTime(this.worldTime, 60 * 60 * 1000)
+      this.state.worldTime = this.worldTime
+      toast(`观摩${ai.name}修炼之法，获得经验${expGain}`, '#fbbf24')
+      updateHUD()
+      saveGame(this.state)
+    } else if (visitResult === 'trade') {
+      // 交换物资：用灵石换材料
+      const tradeOptions = [
+        { label: `灵石50→灵草×3`, value: 'herb' },
+        { label: `灵石50→矿石×3`, value: 'ore' },
+        { label: `灵石50→木材×3`, value: 'wood' },
+        { label: '算了', value: 'cancel' },
+      ]
+      const tradeResult = await showDialog(`${ai.name}·交换物资`, [
+        `${ai.name}愿意与你交换物资。`,
+        `你的灵石：${this.state.gold}`,
+      ], tradeOptions)
+
+      if (tradeResult && tradeResult !== 'cancel') {
+        if (this.state.gold >= 50) {
+          this.state.gold -= 50
+          const matKey = tradeResult === 'herb' ? 'lingcao' : tradeResult === 'ore' ? 'kuangshi' : 'mucai'
+          this.state.materials[matKey] = (this.state.materials[matKey] || 0) + 3
+          toast(`交换成功！获得${tradeResult === 'herb' ? '灵草' : tradeResult === 'ore' ? '矿石' : '木材'}×3`, '#4ade80')
+          sfx('sfx_chest')
+          saveGame(this.state)
+          updateHUD()
+        } else {
+          toast('灵石不足', '#f87171')
+        }
+      }
+    } else if (visitResult === 'arena') {
+      // 擂台切磋：1v1战斗，派出对方弟子
+      const enemyLevel = Math.max(1, ai.level + Math.floor(this.state.level / 3))
+      const enemyRealm = Math.min(7, Math.max(0, ai.level - 1))
+      const enemyNpc = this.state.proceduralNpcs.find(n =>
+        n.alive && n.isActive && n.realm <= enemyRealm + 1 && n.realm >= enemyRealm - 1
+      )
+      if (enemyNpc) {
+        this.registry.set('npcCombatData', {
+          npcId: enemyNpc.id,
+          mode: 'arena',
+          npcName: `${ai.name}弟子·${enemyNpc.name}`,
+          npcHp: enemyNpc.hp,
+          npcMaxHp: enemyNpc.maxHp,
+          npcAtk: enemyNpc.atk,
+          npcDef: enemyNpc.def,
+          npcRealm: enemyNpc.realm,
+          npcMorality: enemyNpc.morality,
+          regionId: this.domainToRegionId(this.currentDomain),
+          appearanceSeed: enemyNpc.appearanceSeed,
+          gender: enemyNpc.gender,
+          daoPath: enemyNpc.daoPath,
+          level: enemyNpc.level,
+          background: enemyNpc.background,
+          profession: enemyNpc.profession,
+          skills: enemyNpc.skills,
+          equipment: enemyNpc.equipment,
+          inventory: enemyNpc.inventory,
+          story: enemyNpc.story,
+          lifeGoal: enemyNpc.lifeGoal,
+          currentPurpose: enemyNpc.currentPurpose,
+          personality: enemyNpc.personality,
+          isArena: true,
+          sectName: ai.name,
+        })
+        this.transitioning = true
+        sfx('sfx_hit')
+        saveGame(this.state)
+        this.worldTime = advanceTime(this.worldTime, 30 * 60 * 1000)
+        this.state.worldTime = this.worldTime
+        this.time.delayedCall(200, () => {
+          this.registry.set('dungeonReturnScene', 'World')
+          this.scene.start('Dungeon', {
+            mode: 'npcCombat',
+            subMode: 'attack',
+            regionOverride: this.domainToRegionId(this.currentDomain),
+            npcId: enemyNpc.id,
+          })
+        })
+      } else {
+        toast(`${ai.name}暂时没有合适的弟子出战`, '#94a3b8')
+      }
+    } else if (visitResult === 'discuss') {
+      // 论道参悟：获得悟道点
+      const insightGain = ai.level + 3
+      this.state.insight = (this.state.insight || 0) + insightGain
+      this.worldTime = advanceTime(this.worldTime, 2 * 60 * 60 * 1000)
+      this.state.worldTime = this.worldTime
+      ai.relationValue = Math.min(100, ai.relationValue + 5)
+      toast(`与${ai.name}高人论道，悟道+${insightGain}，外交值+5`, '#af7ac5')
+      sfx('sfx_levelup')
+      updateHUD()
+      saveGame(this.state)
+    }
+
+    input.clearQueues()
   }
 
   private async interactWithResourceNode(node: ResourceNode) {
@@ -3774,8 +4474,11 @@ export class WorldScene extends Phaser.Scene {
     const options: { label: string; value: string }[] = []
     if (node.ownerId !== 'player') {
       options.push({ label: '攻打占领', value: 'attack' })
+      options.push({ label: '擂台挑战', value: 'arena' })
     } else {
       options.push({ label: '查看详情', value: 'info' })
+      // 设置争夺中状态
+      node.contested = false
     }
     options.push({ label: '离开', value: 'leave' })
 
@@ -3784,9 +4487,99 @@ export class WorldScene extends Phaser.Scene {
     if (result === 'attack') {
       await attackResourceNode(this.state, node, this.state.aiSects ?? [])
       this.renderResourceNodes()
+    } else if (result === 'arena') {
+      await this.resourceArenaChallenge(node)
     } else {
       input.clearQueues()
     }
+  }
+
+  /** 资源点擂台挑战：对方宗门派出弟子1v1 */
+  private async resourceArenaChallenge(node: ResourceNode) {
+    // 查找对方宗门
+    const ownerSect = node.ownerId && node.ownerId !== 'player'
+      ? this.state.aiSects?.find(s => s.id === node.ownerId)
+      : null
+    const sectName = ownerSect?.name || '守方'
+
+    // 生成对方出战弟子
+    const enemyRealm = ownerSect ? Math.min(7, Math.max(0, ownerSect.level - 1)) : 1
+    const enemyNpc = this.state.proceduralNpcs.find(n =>
+      n.alive && n.isActive && n.realm <= enemyRealm + 1 && n.realm >= Math.max(0, enemyRealm - 1)
+    )
+
+    if (!enemyNpc) {
+      toast(`${sectName}暂时无人出战擂台`, '#94a3b8')
+      input.clearQueues()
+      return
+    }
+
+    const realmNames = ['练气', '筑基', '金丹', '元婴', '化神', '合体', '大乘', '渡劫']
+    const introLines = [
+      `${node.name} · 擂台争夺`,
+      `守方：${sectName} 派出弟子${enemyNpc.name}`,
+      `${enemyNpc.name}·${realmNames[enemyNpc.realm]} ${enemyNpc.level}级`,
+      `道途：${enemyNpc.daoPath}`,
+      enemyNpc.skills.length > 0 ? `功法：${enemyNpc.skills.map(s => getNpcSkillName(s)).join('、')}` : '',
+      `胜者获得此资源点控制权`,
+    ].filter(Boolean)
+
+    const acceptResult = await showDialog('擂台挑战', introLines, [
+      { label: '出战', value: 'fight' },
+      { label: '放弃', value: 'cancel' },
+    ])
+
+    if (acceptResult !== 'fight') {
+      input.clearQueues()
+      return
+    }
+
+    // 进入战斗
+    this.registry.set('npcCombatData', {
+      npcId: enemyNpc.id,
+      mode: 'arena',
+      npcName: `${sectName}弟子·${enemyNpc.name}`,
+      npcHp: enemyNpc.hp,
+      npcMaxHp: enemyNpc.maxHp,
+      npcAtk: enemyNpc.atk,
+      npcDef: enemyNpc.def,
+      npcRealm: enemyNpc.realm,
+      npcMorality: enemyNpc.morality,
+      regionId: this.domainToRegionId(this.currentDomain),
+      appearanceSeed: enemyNpc.appearanceSeed,
+      gender: enemyNpc.gender,
+      daoPath: enemyNpc.daoPath,
+      level: enemyNpc.level,
+      background: enemyNpc.background,
+      profession: enemyNpc.profession,
+      skills: enemyNpc.skills,
+      equipment: enemyNpc.equipment,
+      inventory: enemyNpc.inventory,
+      story: enemyNpc.story,
+      lifeGoal: enemyNpc.lifeGoal,
+      currentPurpose: enemyNpc.currentPurpose,
+      personality: enemyNpc.personality,
+      isArena: true,
+      resourceName: node.name,
+      resourceNodeId: node.id,
+      sectName,
+    })
+
+    node.contested = true
+    this.transitioning = true
+    sfx('sfx_hit')
+    saveGame(this.state)
+    this.worldTime = advanceTime(this.worldTime, 30 * 60 * 1000)
+    this.state.worldTime = this.worldTime
+    this.time.delayedCall(200, () => {
+      this.registry.set('dungeonReturnScene', 'World')
+      this.scene.start('Dungeon', {
+        mode: 'npcCombat',
+        subMode: 'attack',
+        regionOverride: this.domainToRegionId(this.currentDomain),
+        npcId: enemyNpc.id,
+      })
+    })
   }
 
   private async interactWithPoint(p: WorldPoint) {
@@ -3961,6 +4754,7 @@ export class WorldScene extends Phaser.Scene {
       const r = dismissMount(this.state)
       toast(r.reason, '#fbbf24')
       saveGame(this.state)
+      this.refreshMountSprite()
       await this.openMountMenu()
       return
     }
@@ -3970,6 +4764,7 @@ export class WorldScene extends Phaser.Scene {
       const r = summonMount(this.state, mt)
       toast(r.reason, r.ok ? '#a3e4d7' : '#f87171')
       saveGame(this.state)
+      this.refreshMountSprite()
       await this.openMountMenu()
       return
     }
@@ -4273,7 +5068,7 @@ export class WorldScene extends Phaser.Scene {
     const options = targets.map(t => ({ label: t.name, value: t.id }))
     const result = await showDialog(p.name, [
       '选择传送目标：',
-      ...targets.map(t => `${t.name} (${p.description})`),
+      ...targets.map(t => `${t.name} (${t.description})`),
     ], options)
 
     if (result && result !== 'cancel') {

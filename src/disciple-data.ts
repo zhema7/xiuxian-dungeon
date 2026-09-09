@@ -2,6 +2,7 @@
 
 import type { WorldTime } from './world-time'
 import type { EquipItem } from './core'
+import type { DaoPath, Background, LifeGoal, Profession, PersonalityTrait, Physique, Gender } from './procedural-npc'
 
 /** 灵根类型 */
 export type SpiritRoot =
@@ -68,6 +69,22 @@ export interface SectQuest {
 export interface Disciple {
   uid: string
   name: string
+  /** 性别（用于程序化贴图） */
+  gender: Gender
+  /** 道途（用于程序化贴图和功法倾向） */
+  daoPath: DaoPath
+  /** 出身背景 */
+  background: Background
+  /** 体质 */
+  physique: Physique
+  /** 人生目标 */
+  lifeGoal: LifeGoal
+  /** 当前职业身份 */
+  profession: Profession
+  /** 性格特征 */
+  personality: PersonalityTrait[]
+  /** 程序化贴图种子 */
+  appearanceSeed: number
   root: SpiritRoot
   rootTier: RootTier
   realm: DiscipleRealm
@@ -90,6 +107,10 @@ export interface Disciple {
   guidanceCooldown: number
   /** 切磋冷却（ms 时间戳） */
   sparCooldown: number
+  /** 修炼开始时间（ms 时间戳），0 = 未修炼 */
+  cultivateStartTime: number
+  /** 疲劳值 0-100，修炼增加，休息减少 */
+  fatigue: number
   /** 战斗属性（用于派遣计算） */
   atk: number
   def: number
@@ -113,6 +134,14 @@ export interface Disciple {
     defenseBonus?: number // 宗门防御加成（固定值）
     prestigeBonus?: number // 声望产出加成（%）
   }
+  /** 弟子所在宗门内坐标（用于显示位置） */
+  sectX?: number
+  sectY?: number
+  /** 弟子目标位置（游荡用） */
+  targetX?: number
+  targetY?: number
+  /** 弟子当前活动描述（显示用） */
+  currentActivity?: string
 }
 
 /** 灵根配置 */
@@ -243,9 +272,38 @@ export function generateDisciple(rng: () => number, sectLevel: number): Disciple
   const stats = calcStats(0, root, tier, talents)
   const sectBuffs = generateSectBuffs(rng, talents)
 
+  // 生成 NPC 级别的丰富信息
+  const gender: Gender = rng() < 0.5 ? 'male' : 'female'
+  const daoPaths: DaoPath[] = ['剑道', '丹道', '器道', '符道', '体修', '法修']
+  const daoPath = daoPaths[Math.floor(rng() * daoPaths.length)]
+  const backgrounds: Background[] = ['寒门子弟', '世家嫡子', '宗门遗孤', '魔修遗脉', '商贾之家', '散修传承', '猎户出身', '书香门第', '武将之后', '妖族混血']
+  const background = backgrounds[Math.floor(rng() * backgrounds.length)]
+  const physiques: Physique[] = ['普通', '普通', '普通', '单灵根', '单灵根', '双灵根', '天灵根', '异灵根']
+  const physique = physiques[Math.floor(rng() * physiques.length)]
+  const lifeGoals: LifeGoal[] = ['飞升长生', '报仇雪恨', '扬名立万', '守护宗门', '逍遥自在', '寻访亲人', '光复宗门', '追求大道', '富甲天下', '名垂青史']
+  const lifeGoal = lifeGoals[Math.floor(rng() * lifeGoals.length)]
+  const professions: Profession[] = ['散修', '宗门弟子', '丹师', '器师', '符师', '商人', '镖师', '游侠']
+  const profession = professions[Math.floor(rng() * professions.length)]
+  const personalityTraits: PersonalityTrait[] = ['刚正', '狡诈', '孤僻', '热情', '贪婪', '淡泊', '好战', '谨慎']
+  const pCount = 1 + Math.floor(rng() * 2)
+  const personality: PersonalityTrait[] = []
+  for (let i = 0; i < pCount; i++) {
+    const t = personalityTraits[Math.floor(rng() * personalityTraits.length)]
+    if (!personality.includes(t)) personality.push(t)
+  }
+  const appearanceSeed = Math.floor(rng() * 0xffffffff)
+
   return {
     uid: 'd_' + Date.now().toString(36) + '_' + Math.floor(rng() * 9999).toString(36),
     name: randomName(rng),
+    gender,
+    daoPath,
+    background,
+    physique,
+    lifeGoal,
+    profession,
+    personality,
+    appearanceSeed,
     root,
     rootTier: tier,
     realm: 0,
@@ -261,6 +319,8 @@ export function generateDisciple(rng: () => number, sectLevel: number): Disciple
     retreatEndTime: 0,
     guidanceCooldown: 0,
     sparCooldown: 0,
+    cultivateStartTime: 0,
+    fatigue: 0,
     rank: 0,
     role: null,
     ...stats,
@@ -506,3 +566,253 @@ export const GUIDANCE_COOLDOWN = 600
 
 /** 指点经验加成 */
 export const GUIDANCE_EXP = 50
+
+// ===== 弟子事件日志 =====
+
+export type DiscipleEventType =
+  | 'recruit'       // 招募入宗
+  | 'cultivate'     // 修炼提升
+  | 'breakthrough'  // 境界突破
+  | 'quest_start'   // 开始任务
+  | 'quest_success' // 任务成功
+  | 'quest_fail'    // 任务失败
+  | 'attacked'      // 在外被袭击
+  | 'killed'        // 在外遇害
+  | 'rescued'       // 被救回
+  | 'promote'       // 晋升
+  | 'retreat_start' // 开始闭关
+  | 'retreat_end'   // 闭关结束
+  | 'spar_win'      // 切磋获胜
+  | 'spar_lose'     // 切磋失败
+  | 'guidance'      // 受指点
+
+export interface DiscipleEvent {
+  id: string
+  type: DiscipleEventType
+  discipleUid: string
+  discipleName: string
+  timestamp: number   // ms 时间戳
+  description: string
+  /** 相关数据（如任务名、敌人名、奖励等） */
+  data?: Record<string, any>
+}
+
+// ===== 灵石提升修为 =====
+
+/** 灵石直接提升弟子修为的消耗（每级递增） */
+export function stoneCultivateCost(realm: DiscipleRealm, currentExp: number, expToNext: number): number {
+  const remainExp = expToNext - currentExp
+  // 每10点经验消耗5灵石，境界越高越贵
+  const perExpCost = 0.5 + realm * 0.3
+  return Math.ceil(remainExp * perExpCost)
+}
+
+/** 使用灵石提升修为，返回获得的经验和是否突破 */
+export function stoneCultivate(d: Disciple, stoneAmount: number): { expGained: number; breakthrough: boolean; cost: number } {
+  const perExpCost = 0.5 + d.realm * 0.3
+  const expGained = Math.floor(stoneAmount / perExpCost)
+  let breakthrough = false
+  let cost = stoneAmount
+
+  d.exp += expGained
+  // 检查是否突破
+  while (d.exp >= d.expToNext && d.realm < 6) {
+    d.exp -= d.expToNext
+    d.realm = (d.realm + 1) as DiscipleRealm
+    d.expToNext = expToNextRealm(d.realm)
+    breakthrough = true
+    // 更新属性
+    const stats = calcStats(d.realm, d.root, d.rootTier, d.talents)
+    d.atk = stats.atk
+    d.def = stats.def
+    d.maxHp = stats.maxHp
+    d.crit = stats.crit
+  }
+  // 如果突破了，重新计算实际消耗（可能有多的）
+  if (breakthrough) {
+    // 简化处理：按实际获得经验重算消耗
+    const actualExp = expGained
+    cost = Math.ceil(actualExp * perExpCost)
+  }
+  return { expGained, breakthrough, cost }
+}
+
+// ===== 弟子宗门内位置 =====
+
+/** 宗门内弟子活动区域定义 */
+export const SECT_ACTIVITY_AREAS = {
+  training_ground: { name: '演武场', x: 120, y: 200, w: 80, h: 60, status: 'cultivating' as DiscipleStatus },
+  meditation_hall: { name: '悟道殿', x: 200, y: 120, w: 60, h: 50, status: 'cultivating' as DiscipleStatus },
+  herb_garden: { name: '灵药园', x: 60, y: 280, w: 70, h: 50, status: 'idle' as DiscipleStatus },
+  main_hall: { name: '主殿', x: 160, y: 60, w: 80, h: 50, status: 'idle' as DiscipleStatus },
+  dormitory: { name: '弟子房', x: 260, y: 200, w: 60, h: 70, status: 'idle' as DiscipleStatus },
+}
+
+/** 为空闲弟子分配宗门内游荡位置 */
+export function assignIdleSectPosition(d: Disciple, rng: () => number): { x: number; y: number; activity: string } {
+  const areas = Object.values(SECT_ACTIVITY_AREAS)
+  const area = areas[Math.floor(rng() * areas.length)]
+  const x = area.x + Math.floor(rng() * area.w)
+  const y = area.y + Math.floor(rng() * area.h)
+  return { x, y, activity: area.name }
+}
+
+// ===== 弟子在外遇袭事件 =====
+
+/** 遇袭结果类型 */
+export type AmbushResult = 'victory' | 'injured' | 'killed' | 'fled'
+
+/** 遇袭事件数据 */
+export interface AmbushEvent {
+  attackerName: string
+  attackerType: 'bandit' | 'demon' | 'beast' | 'rogue_cultivator'
+  attackerRealm: number
+  attackerPower: number
+  result: AmbushResult
+  damage: number
+  lootLost: { stone?: number; herb?: number; ore?: number }
+}
+
+/** 敌人名称库 */
+const AMBUSH_ENEMIES = {
+  bandit: [
+    { name: '黑风寨盗匪', realm: 0, power: 80 },
+    { name: '黄沙岭劫匪', realm: 1, power: 150 },
+    { name: '血刀门残党', realm: 2, power: 280 },
+    { name: '幽冥盗圣', realm: 3, power: 500 },
+  ],
+  demon: [
+    { name: '嗜血魔修', realm: 1, power: 180 },
+    { name: '蚀骨魔将', realm: 2, power: 320 },
+    { name: '炼魂鬼修', realm: 3, power: 550 },
+    { name: '血河魔尊', realm: 4, power: 900 },
+  ],
+  beast: [
+    { name: '赤眼狼群', realm: 0, power: 60 },
+    { name: '铁甲巨蟒', realm: 1, power: 140 },
+    { name: '玄铁背熊', realm: 2, power: 260 },
+    { name: '三尾妖狐', realm: 3, power: 480 },
+  ],
+  rogue_cultivator: [
+    { name: '邪修散人', realm: 1, power: 200 },
+    { name: '逐出师门叛徒', realm: 2, power: 350 },
+    { name: '魔道卧底', realm: 3, power: 600 },
+    { name: '化神老怪', realm: 4, power: 950 },
+  ],
+}
+
+/**
+ * 检查派遣中的弟子是否遭遇袭击
+ * @param d 弟子
+ * @param questType 任务类型
+ * @param rng 随机数生成器
+ * @returns 遇袭事件（如发生），否则 null
+ */
+export function checkAmbush(
+  d: Disciple,
+  questType: SectQuestType,
+  rng: () => number,
+): AmbushEvent | null {
+  // 不同任务类型的遇袭概率
+  const ambushRates: Record<SectQuestType, number> = {
+    gather: 0.08,    // 采集：较低
+    patrol: 0.15,    // 巡逻：中等
+    subdue: 0.25,    // 征讨：较高
+    explore: 0.20,   // 探索：中高
+  }
+
+  const baseRate = ambushRates[questType] ?? 0.1
+
+  // 高境界弟子降低遇袭概率（敌人不敢惹）
+  const realmFactor = Math.max(0.4, 1 - d.realm * 0.1)
+  const rate = baseRate * realmFactor
+
+  if (rng() > rate) return null
+
+  // 确定敌人类型（根据任务类型加权）
+  const typeWeights: Record<SectQuestType, Record<string, number>> = {
+    gather: { beast: 4, bandit: 3, rogue_cultivator: 2, demon: 1 },
+    patrol: { bandit: 4, rogue_cultivator: 3, demon: 2, beast: 1 },
+    subdue: { demon: 4, rogue_cultivator: 3, bandit: 2, beast: 1 },
+    explore: { beast: 3, demon: 3, rogue_cultivator: 2, bandit: 2 },
+  }
+  const weights = typeWeights[questType] ?? { beast: 1, bandit: 1, demon: 1, rogue_cultivator: 1 }
+  const totalWeight = Object.values(weights).reduce((a, b) => a + b, 0)
+  let roll = rng() * totalWeight
+  let attackerType: keyof typeof AMBUSH_ENEMIES = 'bandit'
+  for (const [type, w] of Object.entries(weights)) {
+    roll -= w
+    if (roll <= 0) {
+      attackerType = type as keyof typeof AMBUSH_ENEMIES
+      break
+    }
+  }
+
+  // 选择敌人（境界接近弟子）
+  const enemies = AMBUSH_ENEMIES[attackerType]
+  const targetRealm = Math.max(0, Math.min(enemies.length - 1, d.realm + (rng() < 0.3 ? 1 : 0)))
+  const enemy = enemies[targetRealm]
+
+  // 计算弟子战力
+  const discPower = disciplePower(d)
+
+  // 战斗判定
+  const powerRatio = discPower / enemy.power
+  let result: AmbushResult
+  let damage = 0
+  let lootLost: { stone?: number; herb?: number; ore?: number } = {}
+
+  if (powerRatio >= 1.5) {
+    // 碾压：轻松获胜
+    result = 'victory'
+    damage = Math.floor(enemy.power * 0.1)
+  } else if (powerRatio >= 1.0) {
+    // 险胜：获胜但受伤
+    result = rng() < 0.6 ? 'victory' : 'injured'
+    damage = Math.floor(enemy.power * 0.3)
+  } else if (powerRatio >= 0.7) {
+    // 劣势：可能受伤或逃跑
+    result = rng() < 0.5 ? 'injured' : 'fled'
+    damage = Math.floor(enemy.power * 0.5)
+    // 逃跑会丢失部分物资
+    if (result === 'fled') {
+      lootLost = { stone: Math.floor(20 + rng() * 30) }
+    }
+  } else if (powerRatio >= 0.4) {
+    // 大劣势：重伤
+    result = 'injured'
+    damage = Math.floor(enemy.power * 0.7)
+    lootLost = { stone: Math.floor(30 + rng() * 50), herb: Math.floor(rng() * 10) }
+  } else {
+    // 极度劣势：有概率遇害
+    if (rng() < 0.35) {
+      result = 'killed'
+      damage = 9999
+      lootLost = { stone: Math.floor(50 + rng() * 100) }
+    } else {
+      result = 'injured'
+      damage = Math.floor(enemy.power * 0.8)
+      lootLost = { stone: Math.floor(40 + rng() * 60), ore: Math.floor(rng() * 10) }
+    }
+  }
+
+  return {
+    attackerName: enemy.name,
+    attackerType,
+    attackerRealm: enemy.realm,
+    attackerPower: enemy.power,
+    result,
+    damage,
+    lootLost,
+  }
+}
+
+/** 遇袭结果描述 */
+export function ambushResultName(result: AmbushResult): string {
+  switch (result) {
+    case 'victory': return '击退来敌'
+    case 'injured': return '负伤而归'
+    case 'fled': return '侥幸逃脱'
+    case 'killed': return '不幸遇害'
+  }
+}

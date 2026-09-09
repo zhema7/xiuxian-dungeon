@@ -31,8 +31,9 @@ export function checkEnemyRevenge(state: GameState): RevengeEvent | null {
 
   if (enemies.length === 0) return null
 
-  // 每日有概率触发寻仇事件
-  if (Math.random() > 0.08) return null
+  // 每日有概率触发寻仇事件（仇人越多概率越高）
+  const revengeChance = Math.min(0.25, 0.10 + enemies.length * 0.03)
+  if (Math.random() > revengeChance) return null
 
   const enemy = enemies[Math.floor(Math.random() * enemies.length)]
   const rel = state.playerNpcRelations[enemy.id]

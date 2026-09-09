@@ -120,7 +120,7 @@ export const XIAN_ENEMIES: XianEnemyDef[] = [
     attackMode: 'sword_array', artMode: 'dageng',
     setId: 'set_lei',
     ai: 'xian_boss', range: 40, cd: 900,
-    isBoss: true, scale: 0.95,
+    isBoss: true, scale: 1.3,
   },
 ]
 
