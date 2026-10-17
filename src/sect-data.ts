@@ -59,8 +59,6 @@ export interface SectData {
   /** 宗门在地图上的位置 */
   mapX: number
   mapY: number
-  /** 弟子列表 */
-  disciples: Disciple[]
   /** 招募冷却（ms 时间戳） */
   recruitCooldown: number
   /** 宗门科技等级 */
@@ -192,7 +190,6 @@ export function createNewSect(name: string, foundedTime: WorldTime, mapX: number
     productionTimer: 0,
     mapX,
     mapY,
-    disciples: [],
     recruitCooldown: 0,
     techs: {},
     farmSlots: [null, null, null],
@@ -205,7 +202,14 @@ export function createNewSect(name: string, foundedTime: WorldTime, mapX: number
   }
 }
 
-/** 计算建筑升级费用 */
+/**
+ * 计算建筑升级费用（纯成本表）。
+ *
+ * 注意：运行时实际升级请使用 `../sect-building-v2` 的
+ * `getBuildingUpgradeCost` / `canUpgradeBuilding` / `upgradeBuilding`，
+ * 那一套还含解锁条件校验、检 gold 资源、状态同步。
+ * 本函数仅保留给 sect-system 单测验证成本表。
+ */
 export function buildingUpgradeCost(id: BuildingId, currentLevel: number): SectResources {
   const def = BUILDINGS[id]
   const lv = currentLevel + 1
@@ -220,7 +224,12 @@ export function buildingUpgradeCost(id: BuildingId, currentLevel: number): SectR
   }
 }
 
-/** 判断建筑是否可建造/升级 */
+/**
+ * 判断建筑是否可建造/升级（粗筛：仅检查主殿门槛与封顶）。
+ *
+ * 运行时实际升级请使用 `../sect-building-v2.canUpgradeBuilding(state, id)`，
+ * 那一套还查资源 / 解锁。本函数是单测用的精简版。
+ */
 export function canUpgradeBuilding(sect: SectData, id: BuildingId): boolean {
   const def = BUILDINGS[id]
   const currentLv = sect.buildings[id] ?? 0

@@ -3,6 +3,19 @@
 import type { WorldTime } from './world-time'
 import type { EquipItem } from './core'
 import type { DaoPath, Background, LifeGoal, Profession, PersonalityTrait, Physique, Gender } from './procedural-npc'
+import { initDiscipleGear, initDiscipleSkills, skillPowerAt } from './npc-progression'
+import { SKILLS } from './data'
+
+// ---------- 弟子 uid 生成（修复 B19：原用 Date.now() 同毫秒会撞号） ----------
+// 同一进程内由模块级自增 + 短随机保证唯一，不依赖墙钟毫秒，
+// 便于存档回放 + 批量招募不互相覆盖。
+let discipleUidSeq = 0
+
+function nextDiscipleUid(rng: () => number): string {
+  const seq = (discipleUidSeq++).toString(36).padStart(3, '0')
+  const tail = Math.floor(rng() * 0xffff).toString(36).padStart(3, '0')
+  return `d_${seq}_${tail}`
+}
 
 /** 灵根类型 */
 export type SpiritRoot =
@@ -63,6 +76,41 @@ export interface SectQuest {
   rewards: { stone: number; herb: number; ore: number; wood: number; insight: number; prestige: number; exp: number }
   /** 成功率基础值（0~1） */
   baseSuccess: number
+}
+
+/** 培养特长（决定产出倾向与贡献系数） */
+export type DiscipleSpecialty =
+  | 'combat' | 'alchemy' | 'crafting' | 'talisman' | 'management' | 'intelligence'
+
+/** 培养侧重（决定修炼速度与成长方向） */
+export type TrainingFocus =
+  | 'cultivation' | 'combat' | 'alchemy' | 'crafting' | 'talisman' | 'balanced'
+
+export const SPECIALTY_NAMES: Record<DiscipleSpecialty, string> = {
+  combat: '战斗型',
+  alchemy: '丹道型',
+  crafting: '器道型',
+  talisman: '符道型',
+  management: '管理型',
+  intelligence: '情报型',
+}
+
+export const SPECIALTY_DESC: Record<DiscipleSpecialty, string> = {
+  combat: '擅长战斗，可随师出战秘境',
+  alchemy: '擅长炼丹，管理药园，提供丹药',
+  crafting: '擅长炼器，管理矿场，打造装备',
+  talisman: '擅长画符，提供符箓支援',
+  management: '擅长经营，管理产业，打理灵石',
+  intelligence: '擅长搜集情报，打探消息',
+}
+
+export const TRAINING_FOCUS_NAMES: Record<TrainingFocus, string> = {
+  cultivation: '闭关修炼',
+  combat: '战斗训练',
+  alchemy: '丹道研习',
+  crafting: '器道研习',
+  talisman: '符道研习',
+  balanced: '均衡培养',
 }
 
 /** 弟子数据 */
@@ -142,6 +190,27 @@ export interface Disciple {
   targetY?: number
   /** 弟子当前活动描述（显示用） */
   currentActivity?: string
+  // ---------- 培养线字段（原 DiscipleData 独有，合轨后并入本实体）----------
+  /** 来源世界 NPC ID；宗门自行招录的弟子为空串 */
+  npcId?: string
+  /** 境界内细分等级（0~9，满 10 触发突破判定） */
+  level?: number
+  /** 培养特长 */
+  specialty?: DiscipleSpecialty
+  /** 培养侧重 */
+  trainingFocus?: TrainingFocus
+  /** 已投入的培养资源 */
+  resourcesAllocated?: { gold: number; pills: number; materials: number }
+  /** 心情 0-100，影响忠诚变化与贡献系数 */
+  mood?: number
+  /** 派遣历练中的任务（培养线，区别于宗门任务 questId） */
+  onMission?: string | null
+  /** 派遣结束时间（ms 时间戳） */
+  missionEndTime?: number
+  /** 每周上交贡献（灵石） */
+  weeklyContribution?: number
+  /** 上次结算贡献的时间 */
+  lastContributionTime?: number
 }
 
 /** 灵根配置 */
@@ -266,8 +335,7 @@ export function expToNextRealm(realm: DiscipleRealm): number {
 }
 
 /** 生成新弟子 */
-export function generateDisciple(rng: () => number, sectLevel: number): Disciple {
-  const { root, tier } = randomRoot(rng)
+export function generateDisciple(rng: () => number, sectLevel: number): Disciple {  const { root, tier } = randomRoot(rng)
   const talents = randomTalents(rng)
   const stats = calcStats(0, root, tier, talents)
   const sectBuffs = generateSectBuffs(rng, talents)
@@ -293,8 +361,8 @@ export function generateDisciple(rng: () => number, sectLevel: number): Disciple
   }
   const appearanceSeed = Math.floor(rng() * 0xffffffff)
 
-  return {
-    uid: 'd_' + Date.now().toString(36) + '_' + Math.floor(rng() * 9999).toString(36),
+  const disciple: Disciple = {
+    uid: nextDiscipleUid(rng),
     name: randomName(rng),
     gender,
     daoPath,
@@ -326,7 +394,22 @@ export function generateDisciple(rng: () => number, sectLevel: number): Disciple
     ...stats,
     equipment: { weapon: null, head: null, armor: null, boots: null, charm: null },
     sectBuffs,
+    npcId: '',
+    level: 0,
+    specialty: 'combat',
+    trainingFocus: 'balanced',
+    resourcesAllocated: { gold: 0, pills: 0, materials: 0 },
+    mood: 70,
+    onMission: null,
+    missionEndTime: 0,
+    weeklyContribution: 0,
+    lastContributionTime: Date.now(),
   }
+
+  // 修为档案下沉：装备四件与功法按「修为 + 出身 + 职业 + 道途」生成，不再是空白
+  initDiscipleGear(disciple)
+  initDiscipleSkills(disciple)
+  return disciple
 }
 
 /** 根据天赋生成宗门经营 buff */
@@ -369,6 +452,104 @@ function generateSectBuffs(rng: () => number, talents: TalentId[]): Disciple['se
     ;(buffs as Record<string, number>)[key] = ((buffs as Record<string, number>)[key] ?? 0) + Math.floor(3 + rng() * 7)
   }
   return Object.keys(buffs).length > 0 ? buffs : undefined
+}
+
+function numOf(v: unknown, fallback = 0): number {
+  return typeof v === 'number' && Number.isFinite(v) ? v : fallback
+}
+
+/**
+ * 就地补齐弟子实体的必填字段。
+ * 用于：旧档迁移（v13 弟子合轨）、以及各处精简构造的弟子（如宗门战里的玩家角色）。
+ * 只补不覆盖已存在的值，幂等。
+ */
+export function healDiscipleShape(input: unknown): void {
+  const d = input as Partial<Disciple> & Record<string, unknown>
+  const now = Date.now()
+  const realm = Math.max(0, Math.min(6, Math.trunc(numOf(d.realm)))) as DiscipleRealm
+  if (typeof d.uid !== 'string' || !d.uid) {
+    d.uid = 'd_' + now.toString(36) + '_' + Math.floor(Math.random() * 9999).toString(36)
+  }
+  if (typeof d.name !== 'string' || !d.name) d.name = '无名'
+  if (d.gender !== 'male' && d.gender !== 'female') d.gender = 'male'
+  if (!d.daoPath) d.daoPath = '剑道'
+  if (!d.background) d.background = '寒门子弟'
+  if (!d.physique) d.physique = '普通'
+  if (!d.lifeGoal) d.lifeGoal = '飞升长生'
+  if (!d.profession) d.profession = '宗门弟子'
+  if (!Array.isArray(d.personality) || d.personality.length === 0) d.personality = ['淡泊']
+  if (typeof d.appearanceSeed !== 'number') d.appearanceSeed = Math.floor(Math.random() * 0xffffffff)
+  if (!d.root) d.root = 'gold'
+  if (!d.rootTier) d.rootTier = 'common'
+  d.realm = realm
+  d.exp = numOf(d.exp)
+  d.expToNext = numOf(d.expToNext) || expToNextRealm(realm)
+  if (!Array.isArray(d.talents)) d.talents = []
+  d.loyalty = numOf(d.loyalty, 60)
+  d.affection = numOf(d.affection, 30)
+  if (!Array.isArray(d.skills)) d.skills = []
+  if (!d.status) d.status = 'idle'
+  if (d.questId === undefined) d.questId = null
+  d.questStartTime = numOf(d.questStartTime)
+  d.retreatEndTime = numOf(d.retreatEndTime)
+  d.guidanceCooldown = numOf(d.guidanceCooldown)
+  d.sparCooldown = numOf(d.sparCooldown)
+  d.cultivateStartTime = numOf(d.cultivateStartTime)
+  d.fatigue = numOf(d.fatigue)
+  d.atk = numOf(d.atk) || Math.floor(30 + realm * 25)
+  d.def = numOf(d.def) || Math.floor(15 + realm * 12)
+  d.maxHp = numOf(d.maxHp) || Math.floor(200 + realm * 150)
+  d.crit = numOf(d.crit, 5)
+  const eq = (d.equipment ?? {}) as Partial<Disciple['equipment']>
+  d.equipment = {
+    weapon: eq.weapon ?? null,
+    head: eq.head ?? null,
+    armor: eq.armor ?? null,
+    boots: eq.boots ?? null,
+    charm: eq.charm ?? null,
+  }
+  d.rank = numOf(d.rank)
+  if (d.role === undefined) d.role = null
+}
+
+/**
+ * 培养线字段补齐后的弟子类型。
+ * `Disciple` 上这些字段是可选的（宗门战里有精简构造的玩家角色），
+ * 经 `ensureCultivation()` 后即满足本类型，后续逻辑可安全直取。
+ */
+export type CultivatedDisciple = Disciple & Required<Pick<Disciple,
+  'npcId' | 'level' | 'specialty' | 'trainingFocus' | 'resourcesAllocated' |
+  'mood' | 'onMission' | 'missionEndTime' | 'weeklyContribution' | 'lastContributionTime'>>
+
+/** 补齐培养线字段默认值（旧档与精简构造的弟子缺少这些字段）；幂等 */
+export function ensureCultivation(d: Disciple): asserts d is CultivatedDisciple {
+  if (typeof d.npcId !== 'string') d.npcId = ''
+  if (typeof d.level !== 'number') d.level = 0
+  if (!d.specialty) d.specialty = 'combat'
+  if (!d.trainingFocus) d.trainingFocus = 'balanced'
+  if (!d.resourcesAllocated) d.resourcesAllocated = { gold: 0, pills: 0, materials: 0 }
+  if (typeof d.mood !== 'number') d.mood = 70
+  if (d.onMission === undefined) d.onMission = null
+  if (typeof d.missionEndTime !== 'number') d.missionEndTime = 0
+  if (typeof d.weeklyContribution !== 'number') d.weeklyContribution = 0
+  if (typeof d.lastContributionTime !== 'number') d.lastContributionTime = Date.now()
+}
+
+/**
+ * 弟子战力折算系数。
+ * 修为档案给出的是绝对战力（练气约 600、化神约 12000），而宗门评估原本按
+ * 「等级×10」量级（约 30/人）。乘此系数后回到同一量级，避免宗门战力暴涨破坏平衡。
+ */
+export const DISCIPLE_POWER_SCALE = 0.03
+
+/**
+ * 宗门评估用的弟子战力贡献 —— 全项目唯一口径。
+ * 各处（宗门战 / 年度大典 / 外交 / 成就）都调它，杜绝「一边数人数、一边算战力」。
+ */
+export function sectDisciplePower(disciples: Disciple[]): number {
+  let sum = 0
+  for (const d of disciples) sum += disciplePower(d)
+  return Math.floor(sum * DISCIPLE_POWER_SCALE)
 }
 
 /** 汇总弟子宗门经营 buff */
@@ -446,10 +627,18 @@ export function effectiveStats(d: Disciple): { atk: number; def: number; maxHp: 
   return { atk, def, maxHp, crit }
 }
 
-/** 计算弟子综合战力（用于切磋和排序） */
+/**
+ * 计算弟子综合战力（切磋、排序与宗门评估共用同一口径）。
+ * 修为档案下沉后：属性含真实装备加成，功法按威力计入（与 NPC 修为档案同口径）。
+ */
 export function disciplePower(d: Disciple): number {
   const eff = effectiveStats(d)
-  return Math.floor(eff.atk * 3 + eff.def * 2 + eff.maxHp * 0.5 + eff.crit * 10 + d.realm * 100)
+  let power = eff.atk * 3 + eff.def * 2 + eff.maxHp * 0.5 + eff.crit * 10 + d.realm * 100
+  for (const id of d.skills ?? []) {
+    const def = SKILLS.get(id)
+    if (def) power += skillPowerAt(def, 1) * 90
+  }
+  return Math.floor(power)
 }
 
 /** 切磋结果 */

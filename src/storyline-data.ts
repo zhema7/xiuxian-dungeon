@@ -298,7 +298,7 @@ export const MAIN_QUESTS: MainQuestDef[] = [
     objective: '擂台胜场达到 3 次',
     objectiveType: 'win_arena',
     objectiveTarget: '3',
-    hint: '在天枢城擂台挑战NPC，获胜3场。',
+    hint: '在天枢城擂台挑战修士，获胜3场。',
     completion: [
       '雷震拍了拍你的肩膀：「好身手！从今日起，你在天枢城也算有头有脸了。」',
       '「对了，城主萧天衡有请——似乎有什么要事相商。」',
@@ -353,14 +353,14 @@ export const MAIN_QUESTS: MainQuestDef[] = [
     title: '外交初体验',
     narrator: '旁白',
     intro: [
-      '回到宗门，你发现周边已有数个AI势力崛起。',
+      '回到宗门，你发现周边已有数个他方势力崛起。',
       '修仙界弱肉强食，你需要通过外交手段维护宗门利益。',
       '「派遣使者改善关系，或以武力争夺资源点——宗主的抉择在你手中。」',
     ],
     objective: '完成一次外交行动',
     objectiveType: 'talk_npc',
     objectiveTarget: 'diplomacy',
-    hint: '在宗门场景点击「外交」按钮，选择一个AI势力进行交涉。',
+    hint: '在宗门场景点击「外交」按钮，选择一个他方势力进行交涉。',
     completion: [
       '外交行动完成。你对修仙界的势力格局有了更深的理解。',
       '然而，就在你忙于外交之际，一个不速之客来到了宗门前……',
@@ -506,10 +506,10 @@ export const MAIN_QUESTS: MainQuestDef[] = [
       '萧天衡、冷无缺、无名老叟等强者纷纷响应号召。',
       '「决战之前，你需要确保宗门后方稳固——在宗门战争中取得一场决定性胜利。」',
     ],
-    objective: '在宗门战争中击败一个 AI 宗门',
+    objective: '在宗门战争中击败一个他方宗门',
     objectiveType: 'defeat_boss',
     objectiveTarget: 'ai_sect_war',
-    hint: '在宗门外交面板对一个AI势力宣战，并发动宗门决战。',
+    hint: '在宗门外交面板对一个他方势力宣战，并发动宗门决战。',
     completion: [
       '宗门决战大获全胜！敌方宗门覆灭，你的威名传遍五域。',
       '联军士气大振，各宗门纷纷表示追随你征讨黑袍人。',

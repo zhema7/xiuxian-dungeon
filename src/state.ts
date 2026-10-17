@@ -1,4 +1,4 @@
-// ---------- 全局游戏状态 + 存档（SAVE_VERSION=11，含迁移链 + 大地图 + 主线剧情 + 多槽位） ----------
+// ---------- 全局游戏状态 + 存档（SAVE_VERSION=14，含迁移链 + 大地图 + 主线剧情 + 多槽位 + NPC 修为档案 + 弟子合轨 + 五职业天赋树） ----------
 
 import { expNeed, normalizeItem, type EquipItem } from './core'
 import { normalizeDynamicSetRecords, registerDynamicContent, type DynamicSetRecord } from './lore'
@@ -14,9 +14,11 @@ import { type MerchantData } from './merchant-system'
 import { type TribulationRecord, ascensionBonus } from './tribulation-data'
 import { type ProceduralNpc, type NpcRelationEntry, type PlayerNpcRelation } from './procedural-npc'
 import { type KarmaEntry } from './karma'
-import { type DiscipleData } from './disciple-system'
+import { ensureCultivation, healDiscipleShape, type Disciple } from './disciple-data'
 import { type ArtifactInstance } from './artifact-data'
 import type { SecretRealmDef } from './secret-realm'
+import { normalizeParty, partyFromLegacy, type PartyMember } from './party'
+import { ensureNpcProgression } from './npc-progression'
 export interface SkillSlots {
   style: string | null
   minds: [string | null, string | null]
@@ -45,7 +47,6 @@ export interface GameState {
   hp: number               // 当前气血（-1 = 满血）
   realm: number            // 境界索引（REALMS）
   materials: Record<string, number>  // 突破石等材料
-  companion: boolean       // 道友是否入队
   progress: { qmCleared: boolean; ymCleared: boolean }   // 地区进度：青冥/幽冥已通关
   favor: Record<string, number>      // NPC 好感度
   quests: Record<string, 'active' | 'done'>  // 任务状态
@@ -55,6 +56,7 @@ export interface GameState {
   skills: Record<string, number>   // 已习得功法 id → 等级
   skillSlots: SkillSlots
   talents: Record<string, number>  // 天赋节点 id → 点数
+  talentPresets?: Array<{ name: string; points: Record<string, number> }>  // 天赋加点方案（最多 3 套）
   presets: Array<BuildPreset | null>  // 配装方案 ×6
   activePreset: number             // 当前启用的方案（-1 = 未启用）
   syCheckpoint: number             // 无尽妖域存档点：下次进入的起始层（默认 7）
@@ -106,7 +108,6 @@ export interface GameState {
   dailyQuestDate: string                  // 日常任务日期（YYYY-MM-DD）
   // 灵兽驯养系统
   beasts: Beast[]                         // 灵兽列表
-  activePetUid: string | null             // 出战灵兽 UID
   activeMountUid: string | null           // 坐骑灵兽 UID
   // 阵法部署系统
   formations: string[]                   // 已学阵法 ID 列表
@@ -134,8 +135,10 @@ export interface GameState {
   // ===== Phase 3: 战斗与招募 =====
   karma: number                           // 业力值（正=善业，负=恶业）
   karmaLog: KarmaEntry[]                  // 业力事件日志
-  disciples: DiscipleData[]               // 已收弟子列表
-  activeCompanionNpcId: string | null     // 当前组队NPC ID
+  /** 已收弟子列表（唯一真源；v13 起 sect.disciples 已并入此处） */
+  disciples: Disciple[]
+  /** 队伍系统唯一真源（v13 起：旧三字段 companion / activeCompanionNpcId / activePetUid 已彻底移除） */
+  party: PartyMember[]
   // ===== Phase 4: 秘境系统 =====
   discoveredRealms: string[]              // 已发现的秘境ID
   discoveredRealmDefs: SecretRealmDef[]   // 已发现的秘境完整定义（用于场景恢复时渲染入口）
@@ -186,7 +189,7 @@ export interface PlayerLogEntry {
 }
 
 const SAVE_KEY = 'xiuxian_save_v1'
-export const SAVE_VERSION = 11
+export const SAVE_VERSION = 14
 
 // ---------- 多角色存档系统 ----------
 const SAVE_SLOTS_META_KEY = 'xiuxian_save_slots_meta'
@@ -310,7 +313,6 @@ export function newGame(): GameState {
     hp: -1,
     realm: 0,
     materials: { tupo: 0 },
-    companion: false,
     progress: { qmCleared: false, ymCleared: false },
     favor: {},
     quests: {},
@@ -320,6 +322,7 @@ export function newGame(): GameState {
     skills: { sk_sanlian: 1 },
     skillSlots: { style: 'sk_sanlian', minds: [null, null], art: null },
     talents: {},
+    talentPresets: [],
     presets: [null, null, null, null, null, null],
     activePreset: -1,
     syCheckpoint: 7,
@@ -361,7 +364,6 @@ export function newGame(): GameState {
     dailyQuests: [],
     dailyQuestDate: '',
     beasts: [],
-    activePetUid: null,
     activeMountUid: null,
     formations: [],
     formationLastUse: 0,
@@ -387,7 +389,7 @@ export function newGame(): GameState {
     karma: 0,
     karmaLog: [],
     disciples: [],
-    activeCompanionNpcId: null,
+    party: [],
     // Phase 4
     discoveredRealms: [],
     discoveredRealmDefs: [],
@@ -449,6 +451,59 @@ export function applyPreset(s: GameState, p: BuildPreset) {
 }
 
 /** 旧版本迁移至当前存档格式（包含 v2/v3 程序随机套装规范化，不重掷已落盘结果）。 */
+/**
+ * v13 弟子合轨迁移。
+ * 旧档同时存在两份弟子：`sect.disciples`（宗门实体，字段全）与 `disciples`（培养线，字段少），
+ * 双写且删除不同步。合轨后唯一真源是 `state.disciples: Disciple[]`：
+ * 以宗门实体为主，培养线数据按 npcId / uid 合并上去，只在培养线出现的记录补成合法实体并入。
+ */
+function mergeLegacyDisciples(raw: Record<string, unknown>): Disciple[] {
+  type RawDisciple = Partial<Disciple> & Record<string, unknown>
+  const legacyCultivation = Array.isArray(raw.disciples) ? raw.disciples as RawDisciple[] : []
+  const rawSect = raw.sect as { disciples?: unknown } | undefined
+  const legacySect = rawSect && Array.isArray(rawSect.disciples) ? rawSect.disciples as RawDisciple[] : []
+
+  const keyOf = (input: unknown): string => {
+    const d = input as RawDisciple
+    return (typeof d.npcId === 'string' && d.npcId ? 'n:' + d.npcId : '') ||
+      (typeof d.uid === 'string' && d.uid ? 'u:' + d.uid : '') ||
+      'x:' + String(d.name ?? '')
+  }
+
+  const merged: Disciple[] = []
+
+  // 1. 宗门实体优先（字段最全）
+  for (const item of legacySect) {
+    const d = item as Disciple
+    healDiscipleShape(d)
+    merged.push(d)
+  }
+
+  // 2. 培养线数据：能匹配就合并培养字段，否则补成实体并入
+  for (const c of legacyCultivation) {
+    const hit = merged.find(x => keyOf(x) === keyOf(c))
+    if (hit) {
+      if (typeof c.level === 'number') hit.level = c.level
+      if (c.specialty) hit.specialty = c.specialty as Disciple['specialty']
+      if (c.trainingFocus) hit.trainingFocus = c.trainingFocus as Disciple['trainingFocus']
+      if (c.resourcesAllocated) hit.resourcesAllocated = c.resourcesAllocated as Disciple['resourcesAllocated']
+      if (typeof c.mood === 'number') hit.mood = c.mood
+      if (c.onMission !== undefined) hit.onMission = c.onMission as string | null
+      if (typeof c.missionEndTime === 'number') hit.missionEndTime = c.missionEndTime
+      if (typeof c.weeklyContribution === 'number') hit.weeklyContribution = c.weeklyContribution
+      if (typeof c.lastContributionTime === 'number') hit.lastContributionTime = c.lastContributionTime
+      if (typeof c.npcId === 'string') hit.npcId = c.npcId
+    } else {
+      const d = c as Disciple
+      healDiscipleShape(d)
+      merged.push(d)
+    }
+  }
+
+  for (const d of merged) ensureCultivation(d)
+  return merged
+}
+
 function migrate(raw: Record<string, unknown>): GameState {
   const s = newGame()
   s.level = Number(raw.level) || 1
@@ -465,7 +520,6 @@ function migrate(raw: Record<string, unknown>): GameState {
   s.classId = String(raw.classId ?? 'sword')
   s.heroName = String(raw.heroName ?? s.heroName)
   s.realm = Number(raw.realm ?? 0) || 0
-  s.companion = Boolean(raw.companion)
   const eq = (raw.equipment ?? {}) as Record<string, EquipItem | null>
   // Only declared slot keys may enter the runtime equipment record. Preserve the
   // historical singular charm migration for charm1, but discard all other unknown keys.
@@ -480,7 +534,9 @@ function migrate(raw: Record<string, unknown>): GameState {
   if (Object.keys(sk).length > 0) s.skills = { ...sk }
   const slots = raw.skillSlots as SkillSlots | undefined
   if (slots) s.skillSlots = { style: slots.style ?? null, minds: slots.minds ?? [null, null], art: slots.art ?? null }
-  s.talents = { ...((raw.talents ?? {}) as Record<string, number>) }
+  // v14：天赋树从「全局 9 节点」改为「五职业各 18 节点」，旧加点一律清空并免费重置
+  s.talents = {}
+  s.talentPresets = []
   s.progress = {
     qmCleared: Boolean((raw.progress as { qmCleared?: boolean } | undefined)?.qmCleared),
     ymCleared: Boolean((raw.progress as { ymCleared?: boolean } | undefined)?.ymCleared),
@@ -539,7 +595,6 @@ function migrate(raw: Record<string, unknown>): GameState {
   s.dailyQuests = Array.isArray(raw.dailyQuests) ? raw.dailyQuests as DailyQuest[] : []
   s.dailyQuestDate = typeof raw.dailyQuestDate === 'string' ? raw.dailyQuestDate : ''
   s.beasts = Array.isArray(raw.beasts) ? raw.beasts as Beast[] : []
-  s.activePetUid = typeof raw.activePetUid === 'string' ? raw.activePetUid : null
   s.activeMountUid = typeof raw.activeMountUid === 'string' ? raw.activeMountUid : null
   s.formations = Array.isArray(raw.formations) ? raw.formations as string[] : []
   s.formationLastUse = Number(raw.formationLastUse ?? 0) || 0
@@ -564,8 +619,10 @@ function migrate(raw: Record<string, unknown>): GameState {
   // Phase 3
   s.karma = Number(raw.karma ?? 0) || 0
   s.karmaLog = Array.isArray(raw.karmaLog) ? raw.karmaLog as KarmaEntry[] : []
-  s.disciples = Array.isArray(raw.disciples) ? raw.disciples as DiscipleData[] : []
-  s.activeCompanionNpcId = typeof raw.activeCompanionNpcId === 'string' ? raw.activeCompanionNpcId : null
+  // 弟子合轨（v13）：双轨并入唯一真源 state.disciples
+  s.disciples = mergeLegacyDisciples(raw)
+  // 队伍系统：由旧档的 companion / activeCompanionNpcId / activePetUid 三份状态合成唯一真源 party
+  s.party = partyFromLegacy(raw)
   // Phase 4
   s.discoveredRealms = Array.isArray(raw.discoveredRealms) ? raw.discoveredRealms as string[] : []
   s.discoveredRealmDefs = Array.isArray(raw.discoveredRealmDefs) ? raw.discoveredRealmDefs as SecretRealmDef[] : []
@@ -614,6 +671,7 @@ function normalizeGameState(parsed: Record<string, unknown>): GameState {
     s.skillSlots = s.skillSlots ?? { style: null, minds: [null, null], art: null }
     s.skillSlots.minds = s.skillSlots.minds ?? [null, null]
     s.talents = s.talents ?? {}
+    s.talentPresets = Array.isArray(s.talentPresets) ? s.talentPresets : []
     s.syCheckpoint = s.syCheckpoint ?? 7
     s.syMaxDepth = s.syMaxDepth ?? 0
     s.xianMaxDepth = s.xianMaxDepth ?? 0
@@ -642,29 +700,10 @@ function normalizeGameState(parsed: Record<string, unknown>): GameState {
     s.sect = s.sect ?? null
     s.customBuildingPos = s.customBuildingPos ?? undefined
     s.customNpcPos = s.customNpcPos ?? undefined
-    if (s.sect && Array.isArray(s.sect.disciples)) {
-      for (const d of s.sect.disciples) {
-        if (!d.equipment) {
-          d.equipment = { weapon: null, head: null, armor: null, boots: null, charm: null }
-        }
-        if (d.sparCooldown === undefined) d.sparCooldown = 0
-        if (d.cultivateStartTime === undefined) d.cultivateStartTime = 0
-        if (d.fatigue === undefined) d.fatigue = 0
-        if (d.rank === undefined) d.rank = 0
-        if (d.role === undefined) d.role = null
-        // v0.6 新增字段：NPC级别信息 + 程序化贴图
-        if (d.gender === undefined) d.gender = Math.random() < 0.5 ? 'male' : 'female'
-        if (d.daoPath === undefined) d.daoPath = '剑道'
-        if (d.background === undefined) d.background = '寒门子弟'
-        if (d.physique === undefined) d.physique = '普通'
-        if (d.lifeGoal === undefined) d.lifeGoal = '飞升长生'
-        if (d.profession === undefined) d.profession = '宗门弟子'
-        if (!Array.isArray(d.personality)) d.personality = ['淡泊']
-        if (d.appearanceSeed === undefined) d.appearanceSeed = Math.floor(Math.random() * 0xffffffff)
-        if (d.sectX === undefined) d.sectX = undefined
-        if (d.sectY === undefined) d.sectY = undefined
-        if (d.currentActivity === undefined) d.currentActivity = undefined
-      }
+    // 弟子合轨：字段补齐统一在唯一真源 state.disciples 上做（旧 sect.disciples 已由迁移并入）
+    for (const d of s.disciples) {
+      healDiscipleShape(d)
+      ensureCultivation(d)
     }
     if (s.sect) {
       if (!Array.isArray((s.sect as any).discipleEvents)) (s.sect as any).discipleEvents = []
@@ -695,7 +734,6 @@ function normalizeGameState(parsed: Record<string, unknown>): GameState {
     s.dailyQuests = Array.isArray(s.dailyQuests) ? s.dailyQuests : []
     s.dailyQuestDate = typeof s.dailyQuestDate === 'string' ? s.dailyQuestDate : ''
     s.beasts = Array.isArray(s.beasts) ? s.beasts : []
-    s.activePetUid = typeof s.activePetUid === 'string' ? s.activePetUid : null
     s.activeMountUid = typeof s.activeMountUid === 'string' ? s.activeMountUid : null
     s.formations = Array.isArray(s.formations) ? s.formations : []
     s.formationLastUse = s.formationLastUse ?? 0
@@ -714,6 +752,7 @@ function normalizeGameState(parsed: Record<string, unknown>): GameState {
     s.worldFogData = s.worldFogData ?? {}
     // Phase 2
     s.proceduralNpcs = Array.isArray(s.proceduralNpcs) ? s.proceduralNpcs : []
+    s.proceduralNpcs.forEach(ensureNpcProgression)
     s.npcRelationNet = Array.isArray(s.npcRelationNet) ? s.npcRelationNet : []
     s.playerNpcRelations = s.playerNpcRelations ?? {}
     s.divineSenseLevel = s.divineSenseLevel ?? 0
@@ -721,7 +760,14 @@ function normalizeGameState(parsed: Record<string, unknown>): GameState {
     s.karma = s.karma ?? 0
     s.karmaLog = Array.isArray(s.karmaLog) ? s.karmaLog : []
     s.disciples = Array.isArray(s.disciples) ? s.disciples : []
-    s.activeCompanionNpcId = typeof s.activeCompanionNpcId === 'string' ? s.activeCompanionNpcId : null
+    for (const d of s.disciples) {
+      healDiscipleShape(d)
+      ensureCultivation(d)
+    }
+    // party 为真源；旧档缺字段时由 partyFromLegacy 惰性回填，保证读老槽位不丢队伍
+    s.party = Array.isArray(s.party) && s.party.length > 0
+      ? normalizeParty(s.party)
+      : partyFromLegacy(s as unknown as Record<string, unknown>)
     // Phase 4
     s.discoveredRealms = Array.isArray(s.discoveredRealms) ? s.discoveredRealms : []
     s.discoveredRealmDefs = Array.isArray(s.discoveredRealmDefs) ? s.discoveredRealmDefs : []

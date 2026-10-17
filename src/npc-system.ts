@@ -9,6 +9,8 @@ import {
 } from './npc-data'
 import { GIFTS, giftFavor } from './favor'
 import { makeRng } from './core'
+import { powerFromStats, sectNpcProfile } from './npc-progression'
+import { calcStats } from './effects'
 import { toast, showDialog } from './ui'
 import { sfx } from './audio'
 import { input } from './input'
@@ -50,10 +52,17 @@ export function syncNpcStoryAvailability(state: GameState): void {
   }
 }
 
-/** 更新所有 NPC 的修炼成长（基于经过的分钟数） */
-export function updateNpcGrowth(state: GameState, deltaMinutes: number): string[] {
+/** 更新所有 NPC 的修炼成长（基于经过的分钟数）
+ *
+ * 修复 B25：原版用 `Math.floor(Date.now() / 60000)` 做 RNG 种子，结果依赖墙钟分钟边界，
+ * 全量测试偶发失败、存档回放不可重现。现改为基于 `state.worldTime.elapsed` 的游戏内
+ * 累计秒数，与墙钟脱钩；测试也可传 `rngSeed` 注入固定种子。
+ */
+export function updateNpcGrowth(state: GameState, deltaMinutes: number, rngSeed?: number): string[] {
   if (!state.npcStates) return []
-  const rng = makeRng(Math.floor(Date.now() / 60000))
+  const elapsedSec = state.worldTime?.elapsed ?? 0
+  const seed = rngSeed ?? Math.floor(elapsedSec / 60)
+  const rng = makeRng(seed)
   const breakthroughs: string[] = []
 
   for (const def of NPC_DEFS) {
@@ -67,8 +76,9 @@ export function updateNpcGrowth(state: GameState, deltaMinutes: number): string[
     } else if (result === 'breakfail') {
       breakthroughs.push(`${def.name} 冲击 ${NPC_REALM_NAMES[Math.min(ns.realm + 1, 7)]}境失败，修为折损…`)
     }
-    // 随机事件：兵解/叛逃/奇遇（仅宗门NPC）
-    if (def.location === 'sect' && ns.alive) {
+    // 随机事件：仅宗门 NPC + deltaMinutes > 0 时才 roll。
+    // 0 分钟调用保持确定性（避免存档回放、回归测试偶发命中奇遇/兵解）
+    if (def.location === 'sect' && ns.alive && deltaMinutes > 0) {
       const event = rollNpcEvent(ns, def, rng)
       if (event) breakthroughs.push(event)
     }
@@ -116,11 +126,23 @@ export async function talkToNpc(state: GameState, npcId: string): Promise<void> 
     const dialogues = useHighFavor ? def.highFavorDialogues : def.dialogues
     const line = dialogues[Math.floor(Math.random() * dialogues.length)] ?? '……'
 
+    // 修为档案：按角色/道途/体质派生法器与功法（不入库，纯派生）
+    const prof = sectNpcProfile({
+      id: def.id,
+      realm: ns.realm,
+      level: ns.level,
+      physique: ns.procPhysique ?? null,
+      daoPath: ns.procDaoPath ?? null,
+      role: def.role,
+    })
     const lines = [
       `${def.name}（${def.title}）`,
       `关系：${relation.name}  境界：${NPC_REALM_NAMES[ns.realm]}${ns.level}级`,
+      `战力：${prof.stats.power}`,
+      prof.gearSummary.length > 0 ? `法器：${prof.gearSummary.join('、')}` : '',
+      prof.skillSummary.length > 0 ? `功法：${prof.skillSummary.join('、')}` : '',
       `"${line}"`,
-    ]
+    ].filter(Boolean)
 
     const options: { label: string; value: string }[] = [
       { label: '送礼', value: 'gift' },
@@ -181,9 +203,16 @@ async function sparWithNpc(state: GameState, npcId: string): Promise<void> {
     input.clearQueues()
     return
   }
-  // 战力：玩家等级+境界 vs NPC 境界+级别+底子
-  const playerStr = state.level + state.realm * 12
-  const npcStr = ns.realm * 12 + ns.level + def.baseRealm
+  // 战力：玩家真实属性（含装备/心法/天赋）vs NPC 修为档案派生的战力评分
+  const playerStr = powerFromStats(calcStats(state))
+  const npcStr = sectNpcProfile({
+    id: def.id,
+    realm: ns.realm,
+    level: ns.level,
+    physique: ns.procPhysique ?? null,
+    daoPath: ns.procDaoPath ?? null,
+    role: def.role,
+  }).stats.power
   const pRoll = Math.random() * playerStr
   const nRoll = Math.random() * npcStr
   changeFavor(ns, -2) // 切磋消耗少许好感，避免无限刷

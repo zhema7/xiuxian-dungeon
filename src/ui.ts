@@ -2,7 +2,7 @@
 
 import {
   CLASSES, ITEM_BASES, MOD_LABELS, QUALITY_NAMES, REALMS, REALM_STAT_BONUS, SETS, SKILLS, SKILL_TYPE_NAMES,
-  SLOT_KEYS, SLOT_NAMES, TALENT_BRANCHES, type SlotKey,
+  SLOT_KEYS, SLOT_NAMES, CAPSTONE_REQ, type SlotKey,
 } from './data'
 import { calcStats, currentHp, equippedSetIds, isSetBonusActive, setPieceCount, SPIRIT_ORIFICES, orificeSuccessRate, orificeBonuses } from './effects'
 import { expNeed, recordCodexItem, saveGame, applyPreset, snapshotPreset, PRESET_COUNT, type GameState, pushPlayerLog } from './state'
@@ -11,7 +11,11 @@ import {
   mindModsAt, skillPowerAt,
 } from './skills'
 import { genDynamicSetFromSeed, genDynamicSkill, nextDynamicSetSequence, registerDynamicContent } from './lore'
-import { addPoint, availablePoints, respec, RESPEC_COST, spentPoints } from './talents'
+import {
+  addPoint, autoAssignBranch, availablePoints, branchSpent, branchesOf, canAddPoint,
+  deletePreset, presetsOf, respec, savePreset, applyPreset as applyTalentPreset,
+  RESPEC_COST, MAX_TALENT_PRESETS, spentPoints,
+} from './talents'
 import { ENH_MAX, enhanceCost, makeItem, type EquipItem } from './core'
 import { ARTIFACTS, artifactStats, artifactBuffValue, refineCost, totalArtifactStats, getArtifactBuff, SECT_RELIC_SLOTS, type ArtifactInstance } from './artifact-data'
 import { V4_KIT_SETS } from './v4/kit-data'
@@ -25,6 +29,12 @@ import { needsTribulation, getTribulation, canAscend, performAscension, ascensio
 import { getDomainDef, type DomainId } from './world-map'
 import { getMainQuest } from './storyline-data'
 import { QUESTS } from './favor'
+import {
+  countActive, effectiveMaxHp, equipMemberItem, getMemberSkillSlot,
+  MEMBER_SKILL_SLOTS, MEMBER_SLOT_KEYS, MEMBER_SLOT_NAMES, memberEquipBonus, PARTY_RULES, setMemberSkillSlot,
+  sortParty, toggleMemberInState, unequipMemberSlot, type PartyMember,
+} from './party'
+import { isNpcOwnedItem } from './npc-progression'
 
 export interface SettingsCallbacks {
   onLoadSave?: (slotIndex: number) => void
@@ -54,10 +64,14 @@ function el<T extends HTMLElement = HTMLElement>(id: string) {
 let state: GameState
 let floorText = ''
 let onPanelToggle: ((open: boolean) => void) | null = null
-type Tab = 'equip' | 'skill' | 'talent' | 'artifact' | 'codex' | 'contacts' | 'log'
+type Tab = 'equip' | 'skill' | 'party' | 'talent' | 'artifact' | 'codex' | 'contacts' | 'log'
 type SkillFilter = 'all' | 'style' | 'art' | 'mind'
 let skillFilter: SkillFilter = 'all'
 type InvFilter = 'all' | 'weapon' | 'armor' | 'accessory'
+/** 队伍面板：当前选中的成员 uid */
+let partySelected: string | null = null
+/** 队伍面板右侧分页：装备 / 功法 */
+let partyPane: 'equip' | 'skill' = 'equip'
 
 /** 背包筛选：当前选中的分类标签 */
 let invFilter: InvFilter = 'all'
@@ -222,7 +236,7 @@ export function openGmPanel() {
     if (!state.sect) { toast('尚未建立宗门', '#f87171'); return }
     const kind = (e.target as HTMLElement).getAttribute('data-gm-disciple')!
     const cap = discipleCapacity(state.sect.buildings.disciple_room ?? 0)
-    if (state.sect.disciples.length >= cap && cap > 0) {
+    if (state.disciples.length >= cap && cap > 0) {
       toast('弟子数量已达上限', '#f87171')
       return
     }
@@ -247,7 +261,7 @@ export function openGmPanel() {
       d.def = Math.floor(d.def * 1.5)
       d.maxHp = Math.floor(d.maxHp * 1.5)
     }
-    state.sect.disciples.push(d)
+    state.disciples.push(d)
     sfx('sfx_levelup')
     after(`已招募弟子「${d.name}」（${kind === 'normal' ? '普通' : kind === 'elite' ? '精英' : '大师兄/姐'}）`)
   }))
@@ -1020,9 +1034,10 @@ export function openPanel(tab: Tab) {
   delete panel.dataset.modal
   onPanelToggle?.(true)
   sfx('sfx_open', 0.5)
-  let html = `<div class="card${tab === 'equip' || tab === 'skill' ? ' wide' : ''}"><div class="tabs">
+  let html = `<div class="card${tab === 'equip' || tab === 'skill' || tab === 'party' ? ' wide' : ''}"><div class="tabs">
     <button data-tab="equip" class="${tab === 'equip' ? 'active' : ''}">装备</button>
     <button data-tab="skill" class="${tab === 'skill' ? 'active' : ''}">功法</button>
+    <button data-tab="party" class="${tab === 'party' ? 'active' : ''}">队伍</button>
     <button data-tab="talent" class="${tab === 'talent' ? 'active' : ''}">天赋</button>
     <button data-tab="artifact" class="${tab === 'artifact' ? 'active' : ''}">法宝</button>
     <button data-tab="codex" class="${tab === 'codex' ? 'active' : ''}">图鉴</button>
@@ -1043,6 +1058,7 @@ function refresh(tab: Tab) { saveGame(state); updateHUD(); renderTab(tab) }
 function renderTab(tab: Tab) {
   if (tab === 'equip') renderEquipTab()
   else if (tab === 'skill') renderSkillTab()
+  else if (tab === 'party') renderPartyTab()
   else if (tab === 'artifact') renderArtifactTab()
   else if (tab === 'codex') renderCodexTab()
   else if (tab === 'contacts') renderContactsTab()
@@ -1524,21 +1540,288 @@ function renderSkillTab() {
   }))
 }
 
+// ---------- 队伍页（常驻）：队员 / 独立装备页 / 功法槽 ----------
+
+const PARTY_STATUS_TEXT: Record<string, string> = { active: '出战', reserve: '待命', downed: '重伤' }
+
+function memberKindTag(m: PartyMember): string {
+  if (m.kind === 'beast') return '<span class="q4">灵兽</span>'
+  return m.source === 'sectSibling' ? '<span class="q2">道友</span>' : '<span class="q1">同伴</span>'
+}
+
+/** 队员气血条：复用 HUD 血条的配色分档，宽度压缩以适配面板 */
+function memberHpBar(m: PartyMember): string {
+  const max = effectiveMaxHp(m)
+  const hp = Math.max(0, Math.min(max, Math.round(m.hp)))
+  const pct = max > 0 ? Math.round((hp / max) * 100) : 0
+  const color = pct > 50 ? '#58d68d' : pct > 20 ? '#f0d98c' : '#ff6b6b'
+  return `<span class="sub">气血 ${hp}/${max}<span style="display:inline-block;width:46px;height:5px;background:#1c2230;border:1px solid var(--line);vertical-align:middle;margin-left:4px"><i style="display:block;height:100%;width:${pct}%;background:${color}"></i></span></span>`
+}
+
+function selectedMember(): PartyMember | null {
+  if (!partySelected) return null
+  return state.party.find(m => m.uid === partySelected) ?? null
+}
+
+function isMemberSkillEquipped(m: PartyMember, id: string): boolean {
+  const s = m.skillSlots
+  if (!s) return false
+  return s.style === id || s.art === id || s.minds?.[0] === id || s.minds?.[1] === id
+}
+
+function renderPartyTab() {
+  const party = sortParty(state.party ?? [])
+  const activeN = countActive(party)
+  const cultN = countActive(party, 'cultivator')
+  const beastN = countActive(party, 'beast')
+  // 选中项失效（离队/换档）时回退到首个成员，避免渲染空白详情
+  if (!partySelected || !party.some(m => m.uid === partySelected)) partySelected = party[0]?.uid ?? null
+  const sel = selectedMember()
+
+  let html = `<p class="dim">队伍 ${party.length} 人 · 出战 ${activeN}/${PARTY_RULES.maxActive}
+    （修士 ${cultN}/${PARTY_RULES.maxCultivator} · 灵兽 ${beastN}/${PARTY_RULES.maxBeast}）
+    <span class="sub">队员装备从你的行囊授予，卸下即退回行囊</span></p>`
+
+  html += `<div class="compare-grid">`
+
+  // ===== 左列：队员列表 =====
+  html += `<div class="compare-col"><h5>队员</h5><div class="compare-col-scroll">`
+  if (party.length === 0) {
+    html += `<p class="dim" style="font-size:11px">尚无同伴。可在洞府「结伴同行」，或在大世界邀修士入队。</p>`
+  }
+  for (const m of party) {
+    const selected = m.uid === partySelected
+    const bonus = memberEquipBonus(m)
+    const eqN = MEMBER_SLOT_KEYS.filter(s => m.equipment?.[s]).length
+    const skN = MEMBER_SKILL_SLOTS.filter(s => getMemberSkillSlot(m, s.key)).length
+    const stCls = m.status === 'active' ? 'q1' : m.status === 'downed' ? 'q3' : 'dim'
+    html += `<div class="compare-item${selected ? ' selected' : ''}" data-pm="${m.uid}">
+      <span>${memberKindTag(m)} <span class="q3">${m.displayName}</span> Lv.${m.level}
+        <span class="${stCls}">【${PARTY_STATUS_TEXT[m.status]}】</span></span>
+      ${m.kind === 'beast' ? memberHpBar(m) : ''}
+      <span class="sub">战力 ${m.power > 0 ? m.power : '—'} · 伤害 ×${m.attackMult.toFixed(2)} · 承伤 ${m.damageTakenRatio > 0 ? `×${m.damageTakenRatio.toFixed(2)}` : '免疫（灵体护体）'}</span>
+      ${m.kind === 'beast'
+        ? `<span class="sub">灵兽不设装备页与功法槽</span>`
+        : `<span class="sub">装备 ${eqN}/${MEMBER_SLOT_KEYS.length} · 功法 ${skN}/${MEMBER_SKILL_SLOTS.length}${bonus.atk || bonus.def || bonus.maxHp ? ` · 加成 攻${bonus.atk} 防${bonus.def} 血${bonus.maxHp}` : ''}</span>`}
+      <span class="sub"><button data-ptoggle="${m.refId}" style="font-size:10px;padding:2px 6px">${m.status === 'active' ? '转为待命' : '设为出战'}</button></span>
+    </div>`
+  }
+  html += `</div></div>`
+
+  // ===== 右列：选中成员详情 =====
+  html += `<div class="compare-col"><h5>${sel ? sel.displayName : '详情'}</h5>`
+  if (!sel) {
+    html += `<p class="dim" style="font-size:11px">选择左侧队员查看其装备与功法</p>`
+    html += `</div></div>`
+    body().innerHTML = html
+    // 仍须绑定，否则左列成员点不动，面板等于卡死
+    wirePartyEvents()
+    return
+  }
+  if (sel.kind === 'beast') {
+    html += `<div class="compare-item"><span class="q4">${sel.displayName}
+      <span class="sub">灵兽走自身驯养数值（攻/防/体/速），不占用装备与功法槽</span></span></div>`
+    html += `</div></div>`
+    body().innerHTML = html
+    wirePartyEvents()
+    return
+  }
+
+  html += `<div style="display:flex;gap:2px;margin-bottom:4px;flex-wrap:wrap">
+    <button data-ppane="equip" class="${partyPane === 'equip' ? 'q3' : 'dim'}" style="padding:2px 6px;font-size:10px;border:1px solid var(--line)">装备</button>
+    <button data-ppane="skill" class="${partyPane === 'skill' ? 'q3' : 'dim'}" style="padding:2px 6px;font-size:10px;border:1px solid var(--line)">功法</button>
+  </div><div class="compare-col-scroll">`
+
+  if (partyPane === 'equip') {
+    // ---- 已装配四槽 ----
+    for (const slot of MEMBER_SLOT_KEYS) {
+      const it = sel.equipment?.[slot] ?? null
+      if (it) {
+        const enhTag = (it.enh ?? 0) > 0 ? ` <span class="q3">+${it.enh}</span>` : ''
+        html += `<div class="compare-item">
+          <span class="q${it.quality}">【${MEMBER_SLOT_NAMES[slot]}】${it.name}${enhTag} <span class="sub" style="display:inline">Lv.${it.itemLevel ?? 1}</span></span>
+          <span class="sub">${itemStatsBrief(it)}</span>
+          <span class="sub"><button data-punequip="${slot}" style="font-size:10px;padding:2px 6px">卸下</button></span>
+        </div>`
+      } else {
+        html += `<div class="compare-item"><span class="dim">【${MEMBER_SLOT_NAMES[slot]}】——</span></div>`
+      }
+    }
+    // ---- 行囊可授予清单 ----
+    html += `<div class="compare-item"><span class="q3">行囊可授予</span></div>`
+    let any = false
+    state.inventory.forEach((it, idx) => {
+      if (!(MEMBER_SLOT_KEYS as readonly string[]).includes(it.slot)) return
+      const slot = it.slot as typeof MEMBER_SLOT_KEYS[number]
+      any = true
+      const enhTag = (it.enh ?? 0) > 0 ? ` <span class="q3">+${it.enh}</span>` : ''
+      html += `<div class="compare-item">
+        <span class="q${it.quality}">${it.name}${enhTag} <span class="sub" style="display:inline">${MEMBER_SLOT_NAMES[slot]} Lv.${it.itemLevel ?? 1}</span></span>
+        <span class="sub">${itemStatsBrief(it)}</span>
+        <span class="sub"><button data-pgive="${idx}" style="font-size:10px;padding:2px 6px">授予</button></span>
+      </div>`
+    })
+    if (!any) html += `<p class="dim" style="font-size:11px">行囊中暂无可授予的武器/防具</p>`
+  } else {
+    // ---- 功法四槽 ----
+    for (const s of MEMBER_SKILL_SLOTS) {
+      const id = getMemberSkillSlot(sel, s.key)
+      const def = id ? SKILLS.get(id) : null
+      html += `<div class="compare-item">
+        <span class="${def ? 'q1' : 'dim'}">【${s.label}】${def ? `《${def.name}》` : '——'}</span>
+        ${def ? `<span class="sub">${def.desc}</span>` : ''}
+        ${def ? `<span class="sub"><button data-punskill="${s.key}" style="font-size:10px;padding:2px 6px">卸下</button></span>` : ''}
+      </div>`
+    }
+    // ---- 可装配的已习得功法 ----
+    html += `<div class="compare-item"><span class="q3">已习得功法（与玩家共享，不独占）</span></div>`
+    const learned = Object.keys(state.skills).filter(id => SKILLS.has(id))
+    if (learned.length === 0) html += `<p class="dim" style="font-size:11px">尚未习得功法</p>`
+    for (const id of learned) {
+      const def = SKILLS.get(id)!
+      const equipped = isMemberSkillEquipped(sel, id)
+      const slots = MEMBER_SKILL_SLOTS.filter(s => s.accept === def.type)
+      html += `<div class="compare-item${equipped ? ' selected' : ''}">
+        <span class="${equipped ? 'q1' : ''}">《${def.name}》 ${SKILL_TYPE_NAMES[def.type]} Lv.${state.skills[id]}${equipped ? ' <span class="equipped-tag">已装</span>' : ''}
+        <span class="sub">${def.desc}</span></span>
+        <span class="sub">${slots.map(s => `<button data-psetskill="${id}" data-pslot="${s.key}" style="font-size:10px;padding:2px 6px">装${s.label}</button>`).join(' ')}</span>
+      </div>`
+    }
+  }
+
+  html += `</div></div></div>`
+  body().innerHTML = html
+  wirePartyEvents()
+}
+
+/** 队伍页交互：选中 / 出战切换 / 分页 / 授予与卸下 / 功法装配 */
+function wirePartyEvents() {
+  const stop = (e: Event) => e.stopPropagation()
+  body().querySelectorAll('[data-pm]').forEach((b) => b.addEventListener('click', (e) => {
+    const el = (e.target as HTMLElement).closest('[data-pm]') as HTMLElement | null
+    if (!el) return
+    partySelected = el.getAttribute('data-pm')
+    sfx('sfx_open', 0.3)
+    renderTab('party')
+  }))
+
+  body().querySelectorAll('[data-ptoggle]').forEach((b) => b.addEventListener('click', (e) => {
+    stop(e)
+    const ref = (e.target as HTMLElement).getAttribute('data-ptoggle')!
+    const res = toggleMemberInState(state, ref)
+    if (!res.ok) { toast(res.reason, '#ff8a65'); return }
+    sfx('sfx_skill', 0.45)
+    refresh('party')
+  }))
+
+  body().querySelectorAll('[data-ppane]').forEach((b) => b.addEventListener('click', (e) => {
+    partyPane = (e.target as HTMLElement).getAttribute('data-ppane') === 'skill' ? 'skill' : 'equip'
+    renderTab('party')
+  }))
+
+  body().querySelectorAll('[data-punequip]').forEach((b) => b.addEventListener('click', (e) => {
+    stop(e)
+    const m = selectedMember()
+    if (!m) return
+    const slot = (e.target as HTMLElement).getAttribute('data-punequip')! as typeof MEMBER_SLOT_KEYS[number]
+    const old = unequipMemberSlot(m, slot)
+    if (old) {
+      // NPC 随身法器不进玩家行囊（避免生成物污染背包与掉落池）
+      if (isNpcOwnedItem(old)) toast(`${old.name}（${m.displayName}随身法器）已归还`, '#a3e4d7')
+      else state.inventory.push(old)
+    }
+    sfx('sfx_skill', 0.4)
+    refresh('party')
+  }))
+
+  body().querySelectorAll('[data-pgive]').forEach((b) => b.addEventListener('click', (e) => {
+    stop(e)
+    const m = selectedMember()
+    if (!m) return
+    const idx = Number((e.target as HTMLElement).getAttribute('data-pgive'))
+    const it = state.inventory[idx]
+    if (!it || !(MEMBER_SLOT_KEYS as readonly string[]).includes(it.slot)) return
+    const slot = it.slot as typeof MEMBER_SLOT_KEYS[number]
+    const replaced = equipMemberItem(m, slot, it)
+    state.inventory.splice(idx, 1)
+    if (replaced) state.inventory.push(replaced)
+    sfx('sfx_equip', 0.5)
+    toast(`${it.name} 已授予 ${m.displayName}`, '#a3e4d7')
+    refresh('party')
+  }))
+
+  body().querySelectorAll('[data-punskill]').forEach((b) => b.addEventListener('click', (e) => {
+    stop(e)
+    const m = selectedMember()
+    if (!m) return
+    const key = (e.target as HTMLElement).getAttribute('data-punskill')! as Parameters<typeof setMemberSkillSlot>[1]
+    setMemberSkillSlot(m, key, null)
+    sfx('sfx_skill', 0.4)
+    refresh('party')
+  }))
+
+  body().querySelectorAll('[data-psetskill]').forEach((b) => b.addEventListener('click', (e) => {
+    stop(e)
+    const m = selectedMember()
+    if (!m) return
+    const t = e.target as HTMLElement
+    const id = t.getAttribute('data-psetskill')!
+    const key = t.getAttribute('data-pslot')! as Parameters<typeof setMemberSkillSlot>[1]
+    // 同一功法不得同时占两个槽：先清掉其它槽位的旧引用
+    for (const s of MEMBER_SKILL_SLOTS) {
+      if (s.key !== key && getMemberSkillSlot(m, s.key) === id) setMemberSkillSlot(m, s.key, null)
+    }
+    setMemberSkillSlot(m, key, id)
+    sfx('sfx_skill', 0.45)
+    toast(`${m.displayName} 装配《${SKILLS.get(id)?.name ?? '未知功法'}》`, '#a3e4d7')
+    refresh('party')
+  }))
+}
+
 // ---------- 天赋页 ----------
 function renderTalentTab() {
   const avail = availablePoints(state)
-  let html = `<p class="dim">可用天赋点 ${avail}（每升 1 级获得 1 点，已投入 ${spentPoints(state)}）</p>`
-  for (const br of TALENT_BRANCHES) {
-    html += `<div class="tbranch"><h4>${br.name}</h4>`
+  const clsName = CLASSES[state.classId]?.name ?? '修士'
+  const branches = branchesOf(state)
+  let html = `<p class="dim">${clsName}天赋 · 可用 ${avail} 点（每升 1 级 1 点，已投入 ${spentPoints(state)}）</p>`
+  for (const br of branches) {
+    const spent = branchSpent(state, br)
+    const total = br.nodes.reduce((a, n) => a + n.max, 0)
+    const full = br.nodes.every((n) => (state.talents[n.id] ?? 0) >= n.max)
+    html += `<div class="tbranch">
+      <h4>${br.name} · <span style="color:#ffd54a">${br.style}</span>
+        <span class="sub">${br.desc}</span>
+        <span class="dim" style="font-size:10px">本分支 ${spent}/${total}</span></h4>
+      <div style="margin:2px 0 5px"><button data-t-auto="${br.id}" ${avail > 0 && !full ? '' : 'disabled'}>一键点满「${br.style}」</button></div>`
     for (const n of br.nodes) {
       const pts = state.talents[n.id] ?? 0
+      const capLock = n.tier === 3 && spent < CAPSTONE_REQ
       const pips = '●'.repeat(pts) + '○'.repeat(n.max - pts)
-      html += `<div class="tnode"><span>${n.name} <span class="pips">${pips}</span><span class="sub">${n.desc}</span></span>
-        <button data-talent="${n.id}" ${avail > 0 && pts < n.max ? '' : 'disabled'}>+</button></div>`
+      const prefix = n.tier === 3 ? '<span style="color:#ffd54a">【顶点】</span>' : n.tier === 2 ? '<span style="color:#a78bfa">【进阶】</span>' : ''
+      const tip = capLock
+        ? `<span class="sub" style="color:#f87171">本分支投满 ${CAPSTONE_REQ} 点解锁（当前 ${spent}）</span>`
+        : ''
+      html += `<div class="tnode"><span>${prefix}${n.name} <span class="pips">${pips}</span><span class="sub">${n.desc}</span>${tip}</span>
+        <button data-talent="${n.id}" ${canAddPoint(state, n.id) ? '' : 'disabled'}>+</button></div>`
     }
     html += `</div>`
   }
-  html += `<div style="margin-top:8px"><button data-respec ${state.gold >= RESPEC_COST && spentPoints(state) > 0 ? '' : 'disabled'}>洗点（${RESPEC_COST} 灵石）</button></div>`
+  // 加点方案（最多 3 套）+ 洗点
+  const plist = presetsOf(state)
+  const canSave = spentPoints(state) > 0 && plist.length < MAX_TALENT_PRESETS
+  html += `<div style="margin-top:8px">
+    <button data-respec ${state.gold >= RESPEC_COST && spentPoints(state) > 0 ? '' : 'disabled'}>洗点（${RESPEC_COST} 灵石）</button>
+    <button data-psave ${canSave ? '' : 'disabled'}>存为方案</button>
+  </div>`
+  if (plist.length > 0) {
+    html += `<div class="tbranch" style="margin-top:6px"><h4>加点方案 <span class="dim" style="font-size:10px">${plist.length}/${MAX_TALENT_PRESETS}</span></h4>`
+    plist.forEach((p, i) => {
+      const pts = Object.values(p.points).reduce((a, b) => a + b, 0)
+      html += `<div class="tnode"><span>${p.name}<span class="sub">共 ${pts} 点</span></span>
+        <span><button data-papply="${i}">套用</button> <button data-pdel="${i}">删除</button></span></div>`
+    })
+    html += `</div>`
+  }
 
   // 后天灵窍系统（金丹期解锁）
   if (state.realm >= 2) {
@@ -1574,10 +1857,34 @@ function renderTalentTab() {
     if (addPoint(state, id)) { sfx('sfx_click'); toast('天赋 +1', '#5dade2') }
     refresh('talent')
   }))
+  body().querySelectorAll('[data-t-auto]').forEach((b) => b.addEventListener('click', (e) => {
+    const brId = (e.target as HTMLElement).getAttribute('data-t-auto')!
+    const n = autoAssignBranch(state, brId)
+    if (n > 0) { sfx('sfx_click'); toast(`一键投入 ${n} 点`, '#5dade2'); saveGame(state) }
+    else toast('没有可分配的天赋点', '#f87171')
+    refresh('talent')
+  }))
   body().querySelector('[data-respec]')?.addEventListener('click', () => {
     if (respec(state)) { sfx('sfx_skill'); toast('已洗点，返还全部天赋点', '#5dade2') }
     refresh('talent')
   })
+  body().querySelector('[data-psave]')?.addEventListener('click', () => {
+    const used = new Set(presetsOf(state).map((p) => p.name))
+    const name = ['方案一', '方案二', '方案三'].find((n) => !used.has(n)) ?? '方案'
+    if (savePreset(state, name)) { sfx('sfx_click'); toast(`已保存「${name}」`, '#5dade2'); saveGame(state) }
+    else toast('无法保存方案', '#f87171')
+    refresh('talent')
+  })
+  body().querySelectorAll('[data-papply]').forEach((b) => b.addEventListener('click', (e) => {
+    const idx = Number((e.target as HTMLElement).getAttribute('data-papply'))
+    if (applyTalentPreset(state, idx)) { sfx('sfx_skill'); toast('已套用加点方案', '#5dade2'); saveGame(state) }
+    refresh('talent')
+  }))
+  body().querySelectorAll('[data-pdel]').forEach((b) => b.addEventListener('click', (e) => {
+    const idx = Number((e.target as HTMLElement).getAttribute('data-pdel'))
+    if (deletePreset(state, idx)) { sfx('sfx_click'); toast('已删除方案', '#5dade2'); saveGame(state) }
+    refresh('talent')
+  }))
   body().querySelector('[data-orifice]')?.addEventListener('click', () => {
     const idx = state.spiritOrifices
     if (idx >= SPIRIT_ORIFICES.length) return
@@ -1631,7 +1938,7 @@ function renderArtifactTab() {
         <span style="color:${def.tier === 'mythic' ? '#fbbf24' : def.tier === 'legendary' ? '#c4b5fd' : '#a5b4fc'}">${def.name} <span class="dim">+${a.refineLevel}</span>
         <span class="sub">攻+${s.atk} 防+${s.def} 体+${s.maxHp} 暴+${(s.crit * 100).toFixed(0)}% 速+${s.speed}</span>
         <span class="sub" style="color:#fbbf24">${buffDesc}</span>
-        ${def.classId ? `<span class="sub">(${CLASSES[def.classId]?.name ?? def.classId}专属)</span>` : '<span class="sub">(全职业)</span>'}
+        ${def.classId ? `<span class="sub">(${CLASSES[def.classId]?.name ?? '本职业'}专属)</span>` : '<span class="sub">(全职业)</span>'}
         </span>
         <button data-refine="${a.defId}" ${canRefine ? '' : 'disabled'}>精炼(${rCost.toLocaleString()})</button>
       </div>`
@@ -1655,7 +1962,7 @@ function renderArtifactTab() {
         <span style="color:${locked ? '#6b7280' : '#e5e7eb'}">${def.name}
         <span class="sub">${def.desc}</span>
         <span class="sub">攻+${def.stats.atk} 防+${def.stats.def} 体+${def.stats.maxHp}</span>
-        ${def.classId ? `<span class="sub">(${CLASSES[def.classId]?.name ?? def.classId}专属)</span>` : ''}
+        ${def.classId ? `<span class="sub">(${CLASSES[def.classId]?.name ?? '本职业'}专属)</span>` : ''}
         <span class="sub">消耗 ${def.craftCost.toLocaleString()} 灵石${def.craftRealm > 2 ? ` · 需${REALMS[def.craftRealm].name}期` : ''}</span>
         </span>
         <button data-craft="${def.id}" ${realmOk && goldOk ? '' : 'disabled'}>${locked ? '未解锁' : '炼制'}</button>
@@ -1818,7 +2125,7 @@ function renderContactsTab() {
   let html = ''
 
   if (npcIds.length === 0) {
-    html = `<p class="dim" style="text-align:center;padding:20px 0">尚未结识任何修士<br><span style="font-size:11px">在大地图上与NPC互动以建立人脉</span></p>`
+    html = `<p class="dim" style="text-align:center;padding:20px 0">尚未结识任何修士<br><span style="font-size:11px">在大地图上与其互动以建立人脉</span></p>`
     body().innerHTML = html
     return
   }

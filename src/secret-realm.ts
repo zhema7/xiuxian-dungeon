@@ -3,6 +3,12 @@
 
 import type { GameState } from './state'
 import { generateProceduralNpc, type ProceduralNpc } from './procedural-npc'
+import {
+  activeCompanionRef, addMemberToState, findMemberByRef, makeCultivatorMember, npcAttackMult, PARTY_RULES, pickNpcClass,
+  removeMemberFromState, countActive, normalizeMemberEquipment, normalizeMemberSkillSlots, type PartyMember,
+} from './party'
+import { buildNpcStats, npcPowerMult, ensureNpcProgression } from './npc-progression'
+import { calcStats } from './effects'
 
 export type RealmLayerType = 'outer' | 'middle' | 'core' | 'forbidden' | 'inheritance'
 
@@ -102,6 +108,123 @@ export const REALM_TYPES: RealmTypeDef[] = [
   { key: 'sl', baseName: '试炼秘境', regionId: 'rl_sl', description: '宗门设置的试炼场，用于弟子考核，有排名奖励。' },
 ]
 
+// ===== 程序化描述生成 =====
+
+const REALM_ATMOSPHERE: string[] = [
+  '空气中弥漫着{element}的气息，{detail}',
+  '四周{detail}，隐约传来{sound}',
+  '{element}环绕四周，{detail}',
+  '入目皆是{detail}，{element}扑面而来',
+  '天地间{element}与{element2}交织，{detail}',
+]
+
+const ELEMENTS: Record<string, string[]> = {
+  south: ['青翠灵气', '温润云雾', '淡金灵光', '碧色烟霞'],
+  central: ['玄黄之气', '紫金灵光', '太虚清气', '九霄罡风'],
+  east: ['碧海潮音', '沧溟水汽', '蓬莱仙气', '龙涎异香'],
+  west: ['赤焰余温', '黄沙铁气', '大荒煞气', '落日余晖'],
+  north: ['玄冰寒气', '极夜幽光', '霜雪寒芒', '幽冥阴气'],
+}
+
+const DETAILS: string[] = [
+  '残破的石碑上刻着上古符文',
+  '断裂的阵法纹路仍在微微发光',
+  '地面上散落着不知名的骨骼',
+  '远处有微弱的光芒时隐时现',
+  '岩壁上布满了深浅不一的爪痕',
+  '空气中飘浮着细碎的灵光碎片',
+  '脚下传来隐约的震动',
+  '头顶的岩缝中渗出奇异的液体',
+  '墙角处生着几株散发幽光的灵草',
+  '前方道路分岔，各有异象',
+]
+
+const SOUNDS: string[] = [
+  '低沉的嘶吼',
+  '金属碰撞的脆响',
+  '空灵的吟唱',
+  '石块碎裂的声音',
+  '风穿过缝隙的呜咽',
+  '不知名生物的脚步声',
+  '阵法运转的嗡鸣',
+  '水流冲击岩壁的回声',
+]
+
+const LAYER_DESC_PREFIX: string[] = [
+  '前方道路愈发狭窄，',
+  '灵气浓度骤然变化，',
+  '脚下的石板开始出现裂纹，',
+  '四周的壁画风格突变，',
+  '空气中多了一丝腐朽的味道，',
+  '头顶的光源变得昏暗，',
+  '脚边的碎石开始增多，',
+  '远处传来若有若无的气息，',
+]
+
+const LAYER_DESC_SUFFIX: string[] = [
+  '隐约能感知到前方有强大的气息。',
+  '地面上有着大量战斗痕迹。',
+  '岩壁上的符文开始变得密集。',
+  '能感受到一股压迫感。',
+  '似乎已接近核心区域。',
+  '禁制的痕迹越来越明显。',
+  '前方传来不祥的气息。',
+  '整个空间都在微微震动。',
+]
+
+function pick<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)] }
+
+function generateAtmosphere(domain: string): string {
+  const elems = ELEMENTS[domain] || ELEMENTS.south
+  const element = pick(elems)
+  const element2 = pick(elems)
+  const detail = pick(DETAILS)
+  const sound = pick(SOUNDS)
+  return pick(REALM_ATMOSPHERE)
+    .replace('{element}', element)
+    .replace('{element2}', element2 !== element ? element2 : pick(elems))
+    .replace('{detail}', detail)
+    .replace('{sound}', sound)
+}
+
+function generateLayerDesc(domain: string, layerIndex: number): string {
+  const prefix = pick(LAYER_DESC_PREFIX)
+  const suffix = pick(LAYER_DESC_SUFFIX)
+  return `${prefix}${suffix}`
+}
+
+/** 程序化生成秘境描述 */
+function generateRealmDescription(domain: string, typeDef: RealmTypeDef): string {
+  const atmos = generateAtmosphere(domain)
+  return `${typeDef.description}${atmos}。`
+}
+
+/** 程序化生成层级（怪物等级随玩家等级浮动） */
+function generateLayers(
+  layerCount: number,
+  playerLevel: number,
+  domain: string,
+): RealmLayer[] {
+  const baseTypes: RealmLayerType[] = ['outer', 'middle', 'core', 'forbidden', 'inheritance']
+  const types = baseTypes.slice(0, layerCount)
+  return types.map((lt, i) => {
+    const base = REALM_LAYERS[lt]
+    // 怪物等级：基础值与玩家等级挂钩，逐层递增
+    const baseLevel = Math.max(5, Math.floor(playerLevel * 0.6) + i * Math.max(5, Math.floor(playerLevel * 0.15)))
+    const monsterLevel = Math.max(base.monsterLevel, baseLevel)
+    // 随机化NPC类型
+    const npcShuffled = [...base.npcTypes].sort(() => Math.random() - 0.5)
+    // 程序化生成层级描述
+    const layerDesc = `${base.description}${generateLayerDesc(domain, i)}`
+    return {
+      ...base,
+      description: layerDesc,
+      monsterLevel,
+      npcTypes: npcShuffled,
+    }
+  })
+}
+
 // ===== 独特命名系统 =====
 // 域前缀词：根据所在域选择氛围词
 const DOMAIN_PREFIXES: Record<string, string[]> = {
@@ -139,23 +262,28 @@ export function generateSecretRealm(
   x: number,
   y: number,
   realmType?: string,
+  playerLevel?: number,
 ): SecretRealmDef {
   const typeDef = REALM_TYPES.find(t => t.key === realmType) || REALM_TYPES[Math.floor(Math.random() * REALM_TYPES.length)]
   const id = `realm_${Date.now()}_${Math.floor(Math.random() * 10000)}`
   const name = generateRealmName(domain, typeDef.key)
 
-  // 根据类型决定层数
-  const layerCount = typeDef.key === 'sl' ? 3 : typeDef.key === 'mx' ? 5 : 4
-  const layerTypes: RealmLayerType[] = (['outer', 'middle', 'core', 'forbidden', 'inheritance'] as RealmLayerType[]).slice(0, layerCount)
+  // 根据类型决定层数（加入随机波动）
+  const baseLayerCount = typeDef.key === 'sl' ? 3 : typeDef.key === 'mx' ? 5 : 4
+  const layerCount = Math.max(2, baseLayerCount + (Math.random() < 0.3 ? (Math.random() < 0.5 ? -1 : 1) : 0))
+
+  // 程序化生成描述和层级
+  const description = generateRealmDescription(domain, typeDef)
+  const layers = generateLayers(layerCount, playerLevel || 1, domain)
 
   return {
     id,
     name,
-    description: typeDef.description,
+    description,
     domain,
     entranceX: x,
     entranceY: y,
-    layers: layerTypes.map(lt => REALM_LAYERS[lt]),
+    layers,
     isTimeLimited: typeDef.key === 'sl',
     discovered: true,
     clearedLayers: [],
@@ -201,16 +329,50 @@ export function generateRealmNpcs(
   return npcs
 }
 
-// 带NPC下秘境
+// ---------- 队伍：统一由 state.party 承载（取代旧的 activeCompanionNpcId 单字段） ----------
+
+/**
+ * 世界 NPC → 队伍成员。
+ * v12：不再只按等级比插值，而是把 NPC 的修为档案（装备四件 / 功法四门 / 属性 / 战力）
+ * 整份带入队员，伤害倍率由战力评分相对玩家换算（上限 2.2）。
+ */
+export function npcToPartyMember(state: GameState, npc: ProceduralNpc): PartyMember {
+  ensureNpcProgression(npc)
+  const stats = buildNpcStats(npc)
+  // 以玩家真实属性（含装备/心法/天赋）为基准换算，比按等级估算更准
+  const ps = calcStats(state)
+  const m = makeCultivatorMember({
+    source: 'worldNpc',
+    refId: npc.id,
+    displayName: npc.name,
+    classId: pickNpcClass(state.classId, state.party, npc.seed),
+    level: npc.level,
+    realm: npc.realm,
+    maxHp: stats.maxHp,
+    // 战力换算为主，等级比作为保守兜底取较高者，避免弱 NPC 反而更低
+    attackMult: Math.max(npcAttackMult(npc.level, state.level), npcPowerMult(stats.power, state.level, ps)),
+    damageTakenRatio: 1,
+    power: stats.power,
+    joinedAt: Date.now(),
+  })
+  m.equipment = normalizeMemberEquipment(npc.gear ?? {})
+  m.skillSlots = normalizeMemberSkillSlots(npc.loadout ?? {})
+  return m
+}
+
+/** 是否还能再带一名修士（出战名额见 PARTY_RULES） */
 export function canBringNpcToRealm(
   state: GameState,
   npcId: string,
 ): { ok: boolean; reason: string } {
   const npc = state.proceduralNpcs.find(n => n.id === npcId)
-  if (!npc || !npc.alive) return { ok: false, reason: 'NPC不存在或已陨落' }
+  if (!npc || !npc.alive) return { ok: false, reason: '该修士不存在或已陨落' }
+  if (findMemberByRef(state.party, npcId)) return { ok: false, reason: '该道友已在队伍中' }
+  if (countActive(state.party, 'cultivator') >= PARTY_RULES.maxCultivator) {
+    return { ok: false, reason: `出战道友已达上限（${PARTY_RULES.maxCultivator} 名）` }
+  }
   const rel = state.playerNpcRelations[npcId]
   if (!rel || rel.favor < 50) return { ok: false, reason: '好感度不足，需达到友好以上' }
-  if (state.activeCompanionNpcId) return { ok: false, reason: '已有组队NPC' }
   return { ok: true, reason: '' }
 }
 
@@ -220,12 +382,21 @@ export function bringNpcToRealm(
 ): { ok: boolean; message: string } {
   const check = canBringNpcToRealm(state, npcId)
   if (!check.ok) return { ok: false, message: check.reason }
-  state.activeCompanionNpcId = npcId
-  return { ok: true, message: 'NPC已加入队伍，一同进入秘境' }
+  const npc = state.proceduralNpcs.find(n => n.id === npcId)!
+  const res = addMemberToState(state, npcToPartyMember(state, npc))
+  if (!res.ok) return { ok: false, message: res.reason }
+  return { ok: true, message: `${npc.name}已加入队伍，一同进入秘境` }
 }
 
-export function dismissCompanion(state: GameState): void {
-  state.activeCompanionNpcId = null
+/** 让指定道友离队（此前为无人调用的死函数，现已由 WorldScene 接入） */
+export function dismissCompanion(state: GameState, npcId?: string): void {
+  const target = npcId ?? activeCompanionRef(state.party)
+  if (!target) {
+    const first = state.party.find(m => m.source === 'worldNpc')
+    if (first) removeMemberFromState(state, first.refId)
+    return
+  }
+  removeMemberFromState(state, target)
 }
 
 // 秘境层层数据

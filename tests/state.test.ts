@@ -89,7 +89,8 @@ describe('旧版本存档迁移', () => {
     expect(s.skills).toMatchObject({ sk_sanlian: 2, sk_taiyi: 1 })
     expect(s.skillSlots.style).toBe('sk_sanlian')
     expect(s.skillSlots.minds).toEqual(['sk_taiyi', null])
-    expect(s.talents).toEqual({ t_jifeng: 2 })
+    // v14 起天赋改为「五职业各 18 节点」，旧全局 9 节点不兼容 → 迁移时清空并免费重置
+    expect(s.talents).toEqual({})
     expect(s.progress.qmCleared).toBe(true)
     expect(s.progress.ymCleared).toBe(false)
     expect(s.favor.elder).toBe(15)

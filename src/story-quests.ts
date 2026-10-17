@@ -3,6 +3,7 @@
 
 import type { GameState } from './state'
 import type { ProceduralNpc } from './procedural-npc'
+import { materialLabel } from './labels'
 
 // ===== 剧情NPC立绘纹理映射 =====
 export const STORY_NPC_TEXTURES: Record<StoryLineId, string> = {
@@ -500,7 +501,7 @@ export function completeChapter(state: GameState, lineId: StoryLineId, chapterIn
   if (r.items) {
     for (const [k, v] of Object.entries(r.items)) {
       state.materials[k] = (state.materials[k] || 0) + v
-      messages.push(`${k}+${v}`)
+      messages.push(`${materialLabel(k)}+${v}`)
     }
   }
   if (r.favorGain) {

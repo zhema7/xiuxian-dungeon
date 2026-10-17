@@ -1,9 +1,9 @@
 import Phaser from 'phaser'
-import { Enemy, Player, Ally, applyEliteAffix, rollEliteAffix, ELITE_AFFIX_NAMES, type CombatCtx } from '../entities'
+import { Enemy, Player, Ally, applyEliteAffix, rollEliteAffix, ELITE_AFFIX_NAMES, type AllyConfig, type CombatCtx } from '../entities'
 import { input } from '../input'
 import { calcDamage, makeItem, makeRng, randInt, rollDrop, rollEquip, rollSetPiece, type EquipItem } from '../core'
 import { ART_MODE_NAMES, CLASSES, controlledHitLinkageById, difficultyById, MONSTERS, QUALITY_COLORS, QUALITY_NAMES, regionOfFloor, getRegionById, SKILLS, spawnTableFor, spawnTableForRegion, V4_KIT_WHITELIST, V4_KIT_ABILITY_MAP, type ControlledHitLinkage, type ControlledHitLinkageRecipeId, type DifficultyDef, type RegionDef } from '../data'
-import { calcStats, controlledHitLinkageSourceFingerprint, currentHp, resolveArtPaletteV1, resolveAttackMode, resolveAttackPaletteV1, resolveProceduralArtVfx, resolveProceduralAttackVfx, resolveSetArtOverride, resolveSetEffectRuntime, resolveSetHitLinkageSource, stylePower, type SetEffectRuntime, type Stats } from '../effects'
+import { DOT_DPS_RATE, DOT_DURATION, calcStats, controlledHitLinkageSourceFingerprint, currentHp, resolveArtPaletteV1, resolveAttackMode, resolveAttackPaletteV1, resolveProceduralArtVfx, resolveProceduralAttackVfx, resolveSetArtOverride, resolveSetEffectRuntime, resolveSetHitLinkageSource, stylePower, type SetEffectRuntime, type Stats } from '../effects'
 import { resolveEffectiveArtCast } from '../art-cast'
 import {
   COLS, generateArena, generateLevel, isEdgeRockTile, isSolidPixel, isWalkable, OX, OY,
@@ -15,6 +15,11 @@ import {
   XIAN_START_FLOOR, XIAN_ENEMY_MAP, xianEnemyStats, recordXianDepth, type XianEnemyDef,
 } from '../xian-realm'
 import { gainExp, recordCodexItem, saveGame, loadSaveSlot, type GameState } from '../state'
+import { updateRealmProgress } from '../secret-realm'
+import {
+  activeBeastRef, effectiveMaxHp, effectiveSpeedMult, findMemberByRef, getActiveMembers,
+  grantMemberExp, memberEquipBonus, PARTY_RULES, reviveDowned,
+} from '../party'
 import { artCooldown, learnSkill, skillPowerAt, unlearnedSkills } from '../skills'
 import { genDynamicSetFromSeed, genDynamicSkill, nextDynamicSetSequence, registerDynamicContent } from '../lore'
 import { BGM_DUNGEON, BGM_SWAMP, BGM_XIAN, BGM_SY1, BGM_SY2, BGM_ARENA, BGM_LADDER, BGM_HUANGLONG, BGM_WANYAO, BGM_TIANJIAN, BGM_HAISHI, BGM_GUZHAN, BGM_LOULAN, BGM_BINGYUAN, BGM_SOUTH_ALT, playBgm, sfx, stopBgm } from '../audio'
@@ -22,7 +27,7 @@ import { closePanel, dialogOpen, modalPanel, openInventory, openSettings, panelO
 import { isSwordProjAnim } from './anim-guard'
 import { checkAchievements } from '../achievement-system'
 import { updateDailyProgress } from '../daily-quest'
-import { BEAST_SPECIES, BEAST_SPECIES_MAP, beastCombatStats, beastCapacity, captureRate, generateBeast, randomBeastEncounter, RARITY_NAMES, RARITY_COLORS, ELEMENT_NAMES, type Beast } from '../beast-data'
+import { BEAST_SPECIES, BEAST_SPECIES_MAP, beastCapacity, captureRate, generateBeast, randomBeastEncounter, RARITY_NAMES, RARITY_COLORS, ELEMENT_NAMES, type Beast } from '../beast-data'
 import { FORMATION_MAP, createFormationEffect } from '../formation-data'
 import { getArtifactBuff, type ArtifactInstance } from '../artifact-data'
 import { advanceControlledHitLinkageEpoch, arrayMineExpired, controlledHitLinkageCooldownKey, createArrayMineEyes, createControlledHitLinkageAuthorization, delayedBurstParams, fireBurstParams, matchesControlledHitLinkageProjectileKind, orderedControlledHitCandidates, playModularOnce, swordSplitParams, triggerArrayMineEye, tryTriggerControlledHitLinkage, type ArrayMineEye, type ControlledHitLinkageAuthorizationSnapshot } from '../fx/modularFx'
@@ -37,6 +42,7 @@ import { DungeonLightSystem } from '../dungeon-light'
 import { generateTerrainTextures } from '../terrain-textures'
 import { getOrCreateNpcTexture } from '../npc-sprite-gen'
 import { getNpcEquipName, getNpcSkillName, getNpcItemName, getRealmName } from '../procedural-npc'
+import { daoYearsOf, npcGearSummary, npcSkillSummary } from '../npc-progression'
 import { executeKitNormal, executeKitArt, type KitCombatContext } from '../v4/executor'
 import { executeV4NormalInScene, executeV4ArtInScene, type V4SceneContext } from '../v4/scene-adapter'
 import { ladderDifficulty, ladderReward, LADDER } from '../tribulation-data'
@@ -148,13 +154,12 @@ export class DungeonScene extends Phaser.Scene {
   private runItems: string[] = []
   private bgRt: Phaser.GameObjects.RenderTexture | null = null
   private artReadyAt = 0
-  private ally: Ally | null = null
+  /** 出战 AI 队友：uid → Ally。取代 v0.7 的单值 this.ally（上限见 PARTY_RULES.maxCultivator） */
+  private allies: Map<string, Ally> = new Map()
+  /** 队员头顶名牌（跟随移动），与 allies 同生命周期 */
+  private allyTags: Map<string, Phaser.GameObjects.Text> = new Map()
   private buffAtkPct = 0   // 祭坛增益：本层攻击加成
-  // 灵兽宠物
-  private petSprite: Phaser.GameObjects.Sprite | null = null
-  private petBeast: Beast | null = null
-  private petAtk = 0
-  private petCdUntil = 0
+  // 灵兽：v13 起并入 allies（uid → Ally），不再单独持有 petSprite
   // 阵法效果
   private formationAtkBonus = 0
   private formationDmgReduce = 0
@@ -365,7 +370,7 @@ export class DungeonScene extends Phaser.Scene {
     this.pprojs = []
     this.portal = null
     this.artReadyAt = 0
-    this.ally = null
+    this.clearAllies()
     this.swordArrayOn = false
     this.swordBlades = []
     this.swordRing = null
@@ -380,6 +385,11 @@ export class DungeonScene extends Phaser.Scene {
     this.shieldHp = 0
     this.shieldReadyAt = 0
     this.shieldRing = null
+    // 天赋树：护盾（每层开始时获得 气血上限 × shieldPct 的护盾）
+    {
+      const sp = calcStats(this.state).shieldPct
+      if (sp > 0) this.shieldHp = Math.round(calcStats(this.state).maxHp * sp)
+    }
     this.xianEnemyRuntime.clear()
     this.xianMaxFloor = this.xianMode ? 1 : 0
     this.fogSystem = null
@@ -415,35 +425,9 @@ export class DungeonScene extends Phaser.Scene {
     this.physics.add.collider(this.enemyGroup, this.enemyGroup)
     this.physics.add.collider(this.player.sprite, this.enemyGroup)
 
-    // 道友（AI 队友，职业为玩家对立面）
-    if (this.state.companion) {
-      const allyCls = this.state.classId === 'sword' ? 'fairy' : 'sword'
-      this.ally = new Ally(this, this.level.spawn.x - 20, this.level.spawn.y + 10, allyCls)
-      this.physics.add.collider(this.ally.sprite, this.walls)
-      this.physics.add.collider(this.ally.sprite, this.enemyGroup)
-    }
-
-    // 灵兽宠物
-    if (this.state.activePetUid) {
-      const beast = this.state.beasts.find(b => b.uid === this.state.activePetUid)
-      if (beast) {
-        this.petBeast = beast
-        const stats = beastCombatStats(beast)
-        this.petAtk = stats.atk
-        const atlasKey = `beast_${beast.species}_atlas`
-        const animKey = `beast_${beast.species}_idle`
-        const frame0 = `beast_${beast.species}_idle_00`
-        this.petSprite = this.add.sprite(this.level.spawn.x + 20, this.level.spawn.y, atlasKey, frame0)
-          .setDepth(9)
-          .setScale(0.07)
-        if (this.anims.exists(animKey)) {
-          this.petSprite.play(animKey)
-        }
-        this.add.text(this.level.spawn.x, this.level.spawn.y - 18, beast.name, {
-          fontSize: '7px', color: '#c084fc', stroke: '#000', strokeThickness: 2,
-        }).setOrigin(0.5).setDepth(10)
-      }
-    }
+    // AI 队友：统一由 state.party 驱动（取代原 companion 单值 + 硬编码职业取反）
+    // 出战队员（含灵兽）统一由 state.party 驱动成军
+    this.spawnPartyAllies()
 
     // 阵法效果部署
     if (this.state.activeFormation) {
@@ -617,8 +601,8 @@ export class DungeonScene extends Phaser.Scene {
       const rankName = RANK_NAMES[this.arenaRank]
       const left = this.enemies.filter((e) => e.alive).length
       const waveText = this.arenaSubMode === '1v1'
-        ? `1v1 单挑`
-        : `1vN 第${this.arenaWave}/${this.arenaTotalWaves}波`
+        ? `单挑`
+        : `群战 第${this.arenaWave}/${this.arenaTotalWaves}波`
       setFloorText(left > 0 ? `擂台 · ${rankName} · ${waveText} · 余 ${left}` : `擂台 · ${rankName} · ${waveText}`)
       return
     }
@@ -641,7 +625,7 @@ export class DungeonScene extends Phaser.Scene {
     }
     if (this.ladderMode) {
       const left = this.enemies.filter((e) => e.alive).length
-      const bossTag = this.floor % LADDER.bossInterval === 0 ? ' · ☯ 守关BOSS' : ''
+      const bossTag = this.floor % LADDER.bossInterval === 0 ? ' · ☯ 守关首领' : ''
       setFloorText(left > 0 ? `天梯 · 第 ${this.floor} 层${bossTag} · 余 ${left}` : `天梯 · 第 ${this.floor} 层${bossTag}`)
       return
     }
@@ -707,6 +691,20 @@ export class DungeonScene extends Phaser.Scene {
       if (tex) texKey = tex.key
     }
 
+    // NPC 敌人：从技能列表中选取神通模式和招式模式
+    let npcArtMode: string | undefined
+    let npcStyleMode: string | undefined
+    const npcForSkills = this.state.proceduralNpcs.find(n => n.id === combatData.npcId)
+    const npcSkills = npcForSkills?.skills ?? combatData.skills ?? []
+    for (const sid of npcSkills) {
+      const def = SKILLS.get(sid)
+      if (def?.artMode && !npcArtMode) npcArtMode = def.artMode
+      if (def?.attackMode && !npcStyleMode) npcStyleMode = def.attackMode
+    }
+
+    // 根据招式模式决定AI类型和射程
+    const isRanged = npcStyleMode && ['flying_sword', 'flying_sword_burst', 'flying_sword_split', 'magic_bolt', 'bolt_fire', 'bolt_needle', 'bolt_dart', 'thunder_chain', 'thunder_net', 'frost_nova', 'frost_nova_burst', 'light_beam', 'soul_flame', 'crystal_shard', 'spirit_chain', 'star_barrage', 'sword_array'].includes(npcStyleMode)
+
     const enemyCfg = {
       id: combatData.npcId,
       name: combatData.npcName,
@@ -717,12 +715,16 @@ export class DungeonScene extends Phaser.Scene {
       speed: 60,
       exp: combatData.npcRealm * 30 + 20,
       gold: [combatData.npcRealm * 15, combatData.npcRealm * 15 + 10] as [number, number],
-      ai: 'melee' as const,
-      range: 40,
+      ai: (isRanged ? 'ranged' : 'melee') as 'ranged' | 'melee',
+      range: isRanged ? 150 : 40,
     }
     const e = new Enemy(this, enemyCfg as any, pt.x, pt.y, 1)
     e.elite = combatData.npcRealm >= 3
     e.isBoss = combatData.mode === 'attack'
+    // NPC 敌人装备神通模式（复用仙界怪物神通系统）
+    if (npcArtMode) { e.setArtMode(npcArtMode) }
+    // NPC 敌人装备招式模式（用于 spawnProj 中的普攻特效）
+    if (npcStyleMode) { e.styleMode = npcStyleMode }
     this.enemies.push(e)
 
     // 显示NPC详细信息
@@ -735,13 +737,23 @@ export class DungeonScene extends Phaser.Scene {
     ]
     if (combatData.background) infoLines.push(`出身：${combatData.background}`)
     if (combatData.daoPath) infoLines.push(`道途：${combatData.daoPath}`)
-    if (combatData.skills && combatData.skills.length > 0) infoLines.push(`功法：${combatData.skills.map(s => getNpcSkillName(s)).join('、')}`)
-    if (combatData.equipment) {
-      const eqParts: string[] = []
-      if (combatData.equipment.weapon) eqParts.push(getNpcEquipName(combatData.equipment.weapon))
-      if (combatData.equipment.armor) eqParts.push(getNpcEquipName(combatData.equipment.armor))
-      if (combatData.equipment.accessory) eqParts.push(getNpcEquipName(combatData.equipment.accessory))
-      if (eqParts.length > 0) infoLines.push(`装备：${eqParts.join('、')}`)
+    // 修为档案：优先读活体 NPC（带功法修炼等级、法器品质与强化、道行与战力）
+    const npcRef = this.state.proceduralNpcs.find(n => n.id === combatData.npcId) ?? null
+    if (npcRef) {
+      if (npcRef.power > 0) infoLines.push(`战力：${npcRef.power} · 道行 ${daoYearsOf(npcRef)} 年`)
+      const skl = npcSkillSummary(npcRef)
+      if (skl.length > 0) infoLines.push(`功法：${skl.join('、')}`)
+      const gs = npcGearSummary(npcRef)
+      if (gs.length > 0) infoLines.push(`法器：${gs.join('、')}`)
+    } else {
+      if (combatData.skills && combatData.skills.length > 0) infoLines.push(`功法：${combatData.skills.map(s => getNpcSkillName(s)).join('、')}`)
+      if (combatData.equipment) {
+        const eqParts: string[] = []
+        if (combatData.equipment.weapon) eqParts.push(getNpcEquipName(combatData.equipment.weapon))
+        if (combatData.equipment.armor) eqParts.push(getNpcEquipName(combatData.equipment.armor))
+        if (combatData.equipment.accessory) eqParts.push(getNpcEquipName(combatData.equipment.accessory))
+        if (eqParts.length > 0) infoLines.push(`装备：${eqParts.join('、')}`)
+      }
     }
     if (combatData.inventory) {
       const items = Object.entries(combatData.inventory).map(([k, v]) => `${getNpcItemName(k)}×${v}`).join('、')
@@ -1004,21 +1016,22 @@ export class DungeonScene extends Phaser.Scene {
     const powerFactor = equipFactor * realmBonus * skillBonus * setBonus
 
     // 不同模式的反制强度：
-    // - normal: 40%，保留爽感但有压力
-    // - endless: 65%，无尽妖域需要持续挑战性
-    // - xian: 75%，仙界仙人战力应与玩家同阶
-    // - arena: 85%，擂台必须势均力敌才有竞技感
+    // - normal: 75%，保留爽感但敌人有足够威胁
+    // - endless: 80%，无尽妖域需要持续挑战性
+    // - xian: 85%，仙界仙人战力应与玩家同阶
+    // - arena: 88%，擂台必须势均力敌才有竞技感
     const counterRates: Record<string, number> = {
-      normal: 0.40,
-      endless: 0.65,
-      xian: 0.75,
-      arena: 0.85,
+      normal: 0.75,
+      endless: 0.80,
+      xian: 0.85,
+      arena: 0.88,
     }
-    const counterRate = counterRates[mode] ?? 0.40
+    const counterRate = counterRates[mode] ?? 0.75
 
-    // 最低倍率限制，防止前期敌人太弱
+    // v1.0 难度调整：提高反制下限，确保敌人始终有威胁
+    const minCounter = mode === 'normal' ? 1.15 : mode === 'endless' ? 1.25 : 1.3
     const result = 1 + Math.max(0, powerFactor - 1) * counterRate
-    return Math.max(1, result)
+    return Math.max(minCounter, result)
   }
 
   private spawnFloor() {
@@ -1040,15 +1053,15 @@ export class DungeonScene extends Phaser.Scene {
       // 域特色秘境：按相对楼层缩放，难度由 startFloor 决定基础
       const relFloor = this.getRegionFloor()
       const diffFactor = this.regionStartFloor / 5
-      baseScale = (1 + relFloor * 0.4 + diffFactor * 0.5) + this.state.level * 0.15
+      baseScale = (1 + relFloor * 0.4 + diffFactor * 0.5) + this.state.level * 0.18
     } else if (!isEndless) {
-      baseScale = 1 + (this.floor - 1) * 0.35 + this.state.level * 0.15
+      baseScale = 1 + (this.floor - 1) * 0.35 + this.state.level * 0.18
     } else {
       const depth = this.floor - 6
       // 无尽妖域：基础成长 + 深度加速曲线
       // 深度1: ~1.4x, 深度5: ~2.5x, 深度10: ~4.5x, 深度20: ~10x
       const depthScale = 1 + depth * 0.35 + Math.pow(depth, 1.35) * 0.04
-      baseScale = depthScale + this.state.level * 0.18
+      baseScale = depthScale + this.state.level * 0.20
     }
     const scale = baseScale * dynScale
     for (const [id, min, max] of table) {
@@ -1337,7 +1350,7 @@ export class DungeonScene extends Phaser.Scene {
     if (this.getRegion().id !== 'sy') return
     const depth = this.floor - 6
     if (depth % 3 !== 0 || !this.portal) {
-      toast('需通关 Boss 层（每 3 层一处）方可存档撤离', '#ff8888')
+      toast('需通关首领层（每 3 层一处）方可存档撤离', '#ff8888')
       return
     }
     this.player.halt()
@@ -1647,7 +1660,7 @@ export class DungeonScene extends Phaser.Scene {
       e.sprite.setScale((e.cfg.scale ?? 1) * 1.6)
       this.enemies.push(e)
       this.enemyGroup.add(e.sprite)
-      toast(`天梯第 ${this.floor} 层 · 守关BOSS现身！`, '#ff6464')
+      toast(`天梯第 ${this.floor} 层 · 守关首领现身！`, '#ff6464')
     } else {
       const table = spawnTableFor(this.floor)
       for (const [id, min, max] of table) {
@@ -1995,9 +2008,17 @@ export class DungeonScene extends Phaser.Scene {
   }
 
   // ---------- 玩家伤害结算（含吸血） ----------
-  private dealDamage(e: Enemy, mult: number, stats: Stats, isSkill: boolean, fromX?: number, fromY?: number) {
+  private dealDamage(e: Enemy, mult: number, stats: Stats, isSkill: boolean, fromX?: number, fromY?: number, flatAtk = 0) {
     const finalMult = mult * (isSkill ? 1 + stats.skillPct : 1)
-    const { dmg, crit } = calcDamage(stats.atk * (1 + this.buffAtkPct + this.formationAtkBonus), finalMult, stats.crit, e.def, this.rng)
+    const { dmg, crit } = calcDamage(stats.atk * (1 + this.buffAtkPct + this.formationAtkBonus) + flatAtk, finalMult, stats.crit, e.def, this.rng, stats.critDmg)
+    // 天赋树：斩杀（目标残血到斩杀线直接伏诛，首领免疫）
+    if (stats.execute > 0 && !e.isBoss && e.hp <= e.maxHp * stats.execute) {
+      e.hp = 1
+      const slain = e.takeDamage(Math.max(dmg, 9999), fromX ?? this.player.sprite.x, fromY ?? this.player.sprite.y)
+      this.floatText(e.x, e.y - 26, '斩杀', '#ff6b6b', 11)
+      if (slain) this.onEnemyKilled(e)
+      return
+    }
     const killed = e.takeDamage(dmg, fromX ?? this.player.sprite.x, fromY ?? this.player.sprite.y)
     // 打击感：顿帧 + 受击闪白 + 粒子迸发 + 震屏 + 音效
     this.hitStopUntil = this.time.now + (crit ? 70 : 40)
@@ -2009,6 +2030,10 @@ export class DungeonScene extends Phaser.Scene {
     if (crit) sfx('sfx_critical_hit', 0.5)
     else if (isSkill) sfx('sfx_magic_hit', 0.35)
     else sfx('sfx_sword_hit', 0.3)
+    // 天赋树：持续伤害（灼烧 / 剧毒）——命中即挂载，强度更高则覆盖
+    if (stats.dotPct > 0 && e.alive) {
+      e.applyDot(stats.atk * stats.dotPct * DOT_DPS_RATE, DOT_DURATION, this.time.now)
+    }
     if (stats.lifesteal > 0) {
       const heal = Math.max(1, Math.round(dmg * stats.lifesteal))
       this.state.hp = Math.min(stats.maxHp, currentHp(this.state) + heal)
@@ -3643,6 +3668,7 @@ export class DungeonScene extends Phaser.Scene {
     this.deathFx(e.x, e.y, e.elite ?? false)
     // 经验与升级
     const ups = gainExp(this.state, e.exp)
+    this.grantPartyExp(e.exp)
     this.floatText(e.x, e.y - 24, `+${e.exp} 经验`, '#9b59b6', 9)
     if (ups > 0) {
       const st = calcStats(this.state)
@@ -3679,7 +3705,7 @@ export class DungeonScene extends Phaser.Scene {
       toast(`击败守关魔将！悟道 +10，突破石 +${stones}`, '#e8c86a')
       if (v4KitId) {
         const kit = V4_KIT_ABILITY_MAP.get(v4KitId)
-        toast(`天机降临！【${kit?.name ?? v4KitId}】现世`, '#ffd54a')
+        toast(`天机降临！【${kit?.name ?? '未知天机'}】现世`, '#ffd54a')
       }
     }
     // 普通掉落
@@ -3797,10 +3823,38 @@ export class DungeonScene extends Phaser.Scene {
     this.drops.push({ spr, kind, gold, item, skillId, bornAt: this.time.now })
   }
 
+  /** 最近的存活敌人（用于反伤选取目标），超出射程返回 null */
+  private nearestAliveEnemy(x: number, y: number, range: number): Enemy | null {
+    let best: Enemy | null = null
+    let bestD = range
+    for (const e of this.enemies) {
+      if (!e.alive) continue
+      const d = Phaser.Math.Distance.Between(x, y, e.x, e.y)
+      if (d < bestD) { bestD = d; best = e }
+    }
+    return best
+  }
+
   private damagePlayer(rawAtk: number, fromX: number, fromY: number) {
     if (this.over || this.time.now < this.player.hurtUntil) return
     const stats = calcStats(this.state)
-    let dmg = Math.max(1, Math.round(rawAtk * (0.9 + this.rng() * 0.2) * (1 - this.formationDmgReduce) - stats.def * 0.7))
+    // 天赋树：闪避（完全免伤，含短暂无敌帧避免连续判定）
+    if (stats.dodge > 0 && this.rng() < stats.dodge) {
+      this.player.hurtUntil = this.time.now + 300
+      this.floatText(this.player.sprite.x, this.player.sprite.y - 14, '闪避', '#a3e4d7', 10)
+      sfx('sfx_hit', 0.25)
+      return
+    }
+    let dmg = Math.max(1, Math.round(rawAtk * (0.9 + this.rng() * 0.2) * (1 - this.formationDmgReduce) - stats.def * 0.5))
+    // 天赋树：反伤（把本次受到伤害按比例弹给最近敌人）
+    if (stats.thorns > 0) {
+      const target = this.nearestAliveEnemy(this.player.sprite.x, this.player.sprite.y, 240)
+      if (target) {
+        const back = Math.max(1, Math.round(dmg * stats.thorns))
+        this.floatText(target.x, target.y - 22, String(back), '#ffd54a', 9)
+        if (target.takeDamage(back, this.player.sprite.x, this.player.sprite.y)) this.onEnemyKilled(target)
+      }
+    }
     // 黄龙山金雷护盾：优先吸收伤害
     if (this.shieldHp > 0) {
       const absorbed = Math.min(this.shieldHp, dmg)
@@ -3827,6 +3881,177 @@ export class DungeonScene extends Phaser.Scene {
     if (this.state.hp <= 0) this.onDeath()
   }
 
+  // ---------- 队伍系统：AI 队友生成 / 结算（统一 src/party.ts） ----------
+
+  private clearAllies(): void {
+    this.allies.forEach(a => a.destroy())
+    this.allies.clear()
+    this.allyTags.forEach(t => t.destroy())
+    this.allyTags.clear()
+  }
+
+  /**
+   * 由 state.party 生成全部出战单位（修士 + 灵兽统一走 Ally 管线）。
+   * 名额与排序由 party.ts 的 enforceRules 保证，此处只负责实例化。
+   */
+  private spawnPartyAllies(): void {
+    this.clearAllies()
+    const members = getActiveMembers(this.state.party)
+    members.forEach((m, i) => {
+      const slots = PARTY_RULES.slotOffsets
+      const off = slots[i] ?? slots[slots.length - 1]
+      const x = this.level.spawn.x + off.dx
+      const y = this.level.spawn.y + off.dy
+      const bonus = memberEquipBonus(m)
+      // 从技能槽提取招式/神通数据
+      const styleDef = m.skillSlots?.style ? SKILLS.get(m.skillSlots.style) : undefined
+      const artDef = m.skillSlots?.art ? SKILLS.get(m.skillSlots.art) : undefined
+      const base: AllyConfig = {
+        uid: m.uid,
+        refId: m.refId,
+        displayName: m.displayName,
+        maxHp: effectiveMaxHp(m),
+        hp: m.hp,
+        attackMult: m.attackMult,
+        damageTakenRatio: m.damageTakenRatio,
+        speedMult: effectiveSpeedMult(m),
+        def: bonus.def,
+        flatAtk: bonus.atk,
+        styleMode: styleDef?.attackMode,
+        stylePower: styleDef?.power ?? 1,
+        artMode: artDef?.artMode,
+        artPower: artDef?.power ?? 1,
+        artCd: artDef?.cd ?? 8000,
+      }
+
+      let ally: Ally
+      if (m.kind === 'beast') {
+        const beast = this.state.beasts.find(b => b.uid === m.refId) ?? null
+        const species = beast?.species || m.classId || 'wolf'
+        ally = new Ally(this, x, y, species, {
+          ...base,
+          kind: 'beast',
+          atlasKey: `beast_${species}_atlas`,
+          animKey: `beast_${species}_idle`,
+          frame0: `beast_${species}_idle_00`,
+          spriteScale: 0.07,
+        })
+      } else {
+        ally = new Ally(this, x, y, m.classId, base)
+      }
+      ally.downed = m.status === 'downed'
+      this.physics.add.collider(ally.sprite, this.walls)
+      this.physics.add.collider(ally.sprite, this.enemyGroup)
+      this.allies.set(m.uid, ally)
+
+      // 头顶名牌：沿用原灵兽名牌规格（7px + 描边），跟随移动便于区分同屏队友
+      const tag = this.add.text(ally.x, ally.y - 18, m.displayName, {
+        fontSize: '7px',
+        color: m.kind === 'beast' ? '#c084fc' : '#a3e4d7',
+        stroke: '#000',
+        strokeThickness: 2,
+      }).setOrigin(0.5).setDepth(10)
+      this.allyTags.set(m.uid, tag)
+    })
+  }
+
+  /** 当前出战灵兽对应的队伍成员（无则 null，用于取统一战力倍率） */
+  private petPartyMember() {
+    const ref = activeBeastRef(this.state.party)
+    return ref ? findMemberByRef(this.state.party, ref) ?? null : null
+  }
+
+  /** 溅射承伤：敌人不主动索敌队友，但以打击点为中心的范围伤害会波及（见设计 §5.2） */
+  private splashAllies(rawAtk: number, fromX: number, fromY: number): void {
+    const RADIUS = 64
+    const RATIO = 0.5
+    if (this.allies.size === 0) return
+    this.allies.forEach(ally => {
+      if (ally.downed || !ally.damageable) return
+      if (Phaser.Math.Distance.Between(ally.x, ally.y, fromX, fromY) > RADIUS) return
+      const amount = Math.max(1, Math.round(rawAtk * RATIO))
+      const downed = ally.takeDamage(amount)
+      this.floatText(ally.x, ally.y - 14, downed ? '力竭' : `-${amount}`, '#ffa726', 10)
+      if (downed) this.onAllyDowned(ally)
+    })
+  }
+
+  /**
+   * 敌人主动索敌：默认锁定玩家；当某个「可承伤」队员明显更近时转向该队员。
+   * - 玩家享 15% 距离加权（只有队员近出 15% 以上才改锁），避免目标在两者间抖动
+   * - damageTakenRatio=0 的灵体护体队员（如陆青鸢）不可被锁定：敌人无从下手
+   */
+  private applyEnemyTarget(ctx: CombatCtx, e: Enemy): void {
+    ctx.damageTarget = undefined
+    ctx.px = this.player.sprite.x
+    ctx.py = this.player.sprite.y
+    if (this.allies.size === 0) return
+
+    const playerDist = Phaser.Math.Distance.Between(e.x, e.y, ctx.px, ctx.py)
+    const MAX_LOCK = 260
+    let bestScore = playerDist * 0.85
+    let best: Ally | null = null
+    for (const ally of this.allies.values()) {
+      if (ally.downed || !ally.damageable) continue
+      const d = Phaser.Math.Distance.Between(e.x, e.y, ally.x, ally.y)
+      if (d > MAX_LOCK || d >= bestScore) continue
+      bestScore = d
+      best = ally
+    }
+    if (!best) return
+    const ally = best
+    ctx.px = ally.x
+    ctx.py = ally.y
+    ctx.damageTarget = (dmg, fx, fy) => this.damageAlly(ally, dmg, fx, fy)
+  }
+
+  /** 队员承伤（敌人主动索敌命中时调用） */
+  private damageAlly(ally: Ally, dmg: number, fromX: number, fromY: number): void {
+    if (ally.downed || !ally.damageable) return
+    const downed = ally.takeDamage(dmg)
+    this.floatText(ally.x, ally.y - 14, downed ? '力竭' : `-${dmg}`, '#ffa726', 10)
+    if (downed) this.onAllyDowned(ally)
+  }
+
+  private onAllyDowned(ally: Ally): void {
+    const member = findMemberByRef(this.state.party, ally.refId)
+    if (member) { member.status = 'downed'; member.hp = 0 }
+    this.floatText(ally.x, ally.y - 28, `${ally.displayName} 力竭退场`, '#ff8a65', 11)
+    ally.destroy()
+    this.allies.delete(ally.uid)
+    this.allyTags.get(ally.uid)?.destroy()
+    this.allyTags.delete(ally.uid)
+    saveGame(this.state)
+  }
+
+  /** 本局结束结算：写回气血，重伤队员退为待命并按 PARTY_RULES.downedReviveRatio 复原 */
+  private settlePartyAfterRun(): void {
+    this.allies.forEach(a => {
+      const m = findMemberByRef(this.state.party, a.refId)
+      if (m) { m.hp = a.hp; if (a.downed) m.status = 'downed' }
+    })
+    // 灵兽气血回写 beasts 列表，保证宗门/洞府面板与本局结果一致
+    const petRef = activeBeastRef(this.state.party)
+    if (petRef) {
+      const beast = this.state.beasts.find(b => b.uid === petRef)
+      const m = findMemberByRef(this.state.party, petRef)
+      if (beast && m) beast.hp = Math.max(0, Math.round(m.hp))
+    }
+    this.clearAllies()
+    // 灵兽本局力竭则自动归队，避免玩家每局都要重设出战；玩家主动收回（待命）不受影响
+    const beastDowned = this.state.party.some(m => m.kind === 'beast' && m.status === 'downed')
+    this.state.party = reviveDowned(this.state.party)
+    if (beastDowned) {
+      const b = this.state.party.find(m => m.kind === 'beast')
+      if (b) b.status = 'active'
+    }
+  }
+
+  /** 出战队员分享本局经验 */
+  private grantPartyExp(exp: number): void {
+    for (const m of getActiveMembers(this.state.party)) grantMemberExp(m, exp)
+  }
+
   private spawnProj(x: number, y: number, angle: number, atk: number) {
     // proj.png 默认朝下方（尖朝下），需 +90° 使其朝右，与动画版对齐
     const rotOffset = this.hasCompleteSequenceAnimationPlayback('proj_fly') ? 0 : Math.PI / 2
@@ -3840,6 +4065,515 @@ export class DungeonScene extends Phaser.Scene {
     body.setSize(8, 8)  // 锁定判定体积：动画帧 48×48 的 body 缩回静态 proj 的 8×8（spec §4.7）
     body.setVelocity(Math.cos(angle) * v, Math.sin(angle) * v)
     this.projs.push({ spr, atk, bornAt: this.time.now })
+  }
+
+  /** 队友释放神通（复用 spawnEnemyArt 效果，但目标为敌人） */
+  private spawnAllyArt(x: number, y: number, artMode: string, atk: number, tx: number, ty: number, power: number) {
+    const angleToTarget = Phaser.Math.Angle.Between(x, y, tx, ty)
+    const artPower = atk * power * 0.8
+
+    switch (artMode) {
+      case 'sword_fan': {
+        const count = 5
+        const spread = Math.PI / 3
+        for (let i = 0; i < count; i++) {
+          const ang = angleToTarget + (i - (count - 1) / 2) * (spread / (count - 1))
+          this.spawnAllyProj(x, y, ang, artPower, 'flying_sword')
+        }
+        this.burstFx('fx_ring', x, y, { depth: 12, peakScale: 1.2, alpha: 0.5, tint: 0xccddee }, { scale: 0.3, toScale: 1.0, duration: 250 })
+        break
+      }
+      case 'fire_rain': {
+        const count = 6
+        for (let i = 0; i < count; i++) {
+          const offsetX = (Math.random() - 0.5) * 80
+          const offsetY = (Math.random() - 0.5) * 60
+          const startX = tx + offsetX
+          const startY = ty - 120 - Math.random() * 40
+          const ang = Phaser.Math.Angle.Between(startX, startY, tx + offsetX, ty + offsetY)
+          this.spawnAllyProj(startX, startY, ang, artPower * 0.7, 'magic_bolt')
+        }
+        this.burstFx('fx_splash', x, y, { depth: 12, peakScale: 1.0, alpha: 0.6, tint: 0xff6622 }, { scale: 0.3, toScale: 1.2, duration: 300 })
+        break
+      }
+      case 'thunder_strike': {
+        const strikeX = tx + (Math.random() - 0.5) * 30
+        const strikeY = ty
+        if (this.anims.exists('thunder_prison_anim')) {
+          const lightning = this.add.sprite(strikeX, strikeY - 20, 'thunder_prison_1')
+            .setDepth(13).setScale(0.8).play('thunder_prison_anim')
+          this.time.delayedCall(400, () => lightning.destroy())
+        }
+        this.burstFx('fx_splash', strikeX, strikeY, { depth: 14, peakScale: 1.3, alpha: 0.7, tint: 0xb39dff }, { scale: 0.3, toScale: 1.3, duration: 250 })
+        this.emitParticles(strikeX, strikeY, 8, 0xb39dff, 25, 14, 2, 300)
+        this.cameras.main.shake(100, 0.002)
+        // 范围伤害敌人
+        for (const e of this.enemies) {
+          if (!e.alive) continue
+          const dist = Phaser.Math.Distance.Between(strikeX, strikeY, e.x, e.y)
+          if (dist < 50) e.takeDamage(artPower, x, y)
+        }
+        break
+      }
+      case 'dageng': {
+        const count = 4
+        for (let i = 0; i < count; i++) {
+          const startAngle = angleToTarget + (i / count) * Math.PI * 2
+          const startDist = 40
+          const sx = x + Math.cos(startAngle) * startDist
+          const sy = y + Math.sin(startAngle) * startDist
+          this.time.delayedCall(i * 100, () => {
+            const nearest = this.nearestAliveEnemy(sx, sy, 300)
+            if (nearest) {
+              const ang = Phaser.Math.Angle.Between(sx, sy, nearest.x, nearest.y)
+              this.spawnAllyProj(sx, sy, ang, artPower * 0.9, 'giant_sword')
+            }
+          })
+        }
+        this.burstFx('fx_ring', x, y, { depth: 12, peakScale: 1.5, alpha: 0.5, tint: 0xffd54a }, { scale: 0.3, toScale: 1.5, duration: 400 })
+        break
+      }
+      case 'sword_storm': {
+        const count = 8
+        for (let i = 0; i < count; i++) {
+          const ang = (i / count) * Math.PI * 2
+          this.spawnAllyProj(x, y, ang, artPower * 0.6, 'flying_sword')
+        }
+        this.burstFx('fx_ring', x, y, { depth: 12, peakScale: 1.8, alpha: 0.5, tint: 0xeeeeff }, { scale: 0.3, toScale: 1.8, duration: 400 })
+        break
+      }
+      case 'thunder_prison': {
+        // 万雷天牢：7道雷柱围困
+        for (let i = 0; i < 7; i++) {
+          const ang = (i / 7) * Math.PI * 2
+          const r = 80
+          const lx = x + Math.cos(ang) * r
+          const ly = y + Math.sin(ang) * r
+          this.lightningFx(lx, ly - 200, lx, ly)
+          this.burstFx('fx_splash', lx, ly, { depth: 14, peakScale: 1.2, alpha: 0.7, tint: 0xb39dff }, { scale: 0.25, toScale: 1.1, duration: 220 })
+          this.emitParticles(lx, ly, 4, 0xb39dff, 18, 14, 2, 200)
+          for (const e of this.enemies) {
+            if (!e.alive) continue
+            const dist = Phaser.Math.Distance.Between(lx, ly, e.x, e.y)
+            if (dist < 50) { e.takeDamage(artPower * 0.85, x, y); e.applySlow(3000, this.time.now) }
+          }
+        }
+        this.emitRing(x, y, 0xb39dff, 50, 13, 0.4, 350)
+        this.cameras.main.shake(90, 0.005)
+        break
+      }
+      case 'meteor_storm': {
+        // 陨石天降：5颗陨石轰击
+        const inRange = this.enemies.filter(e => e.alive && Phaser.Math.Distance.Between(x, y, e.x, e.y) < 280)
+        const targets: { x: number, y: number, e: Enemy | undefined }[] = inRange.slice(0, 5).map(e => ({ x: e.x, y: e.y, e }))
+        while (targets.length < 5) { targets.push({ x: x + (Math.random() - 0.5) * 240, y: y + (Math.random() - 0.5) * 240, e: undefined }) }
+        for (const t of targets) {
+          this.burstFx('fx_splash', t.x, t.y, { depth: 15, peakScale: 1.5, alpha: 0.85, tint: 0xff6622 }, { scale: 0.3, toScale: 1.4, duration: 300 })
+          this.emitParticles(t.x, t.y, 6, 0xff6622, 25, 15, 2.5, 250)
+          if (t.e) t.e.takeDamage(artPower, x, y)
+        }
+        this.cameras.main.shake(100, 0.007)
+        this.emitRing(x, y, 0xff8c32, 55, 13, 0.4, 300)
+        break
+      }
+      case 'void_rift': {
+        // 虚空裂隙：暗紫范围伤害
+        this.burstFx('fx_splash', x, y, { depth: 14, peakScale: 2.0, alpha: 0.7, tint: 0x3c0050 }, { scale: 0.3, toScale: 2.2, duration: 500 })
+        for (const e of this.enemies) {
+          if (!e.alive) continue
+          const dist = Phaser.Math.Distance.Between(x, y, e.x, e.y)
+          if (dist < 160) e.takeDamage(artPower, x, y)
+        }
+        this.emitParticles(x, y, 8, 0x3c0050, 40, 14, 2.5, 300)
+        this.emitRing(x, y, 0x3c0050, 50, 13, 0.4, 350)
+        this.cameras.main.shake(80, 0.005)
+        break
+      }
+      case 'blood_domain': {
+        // 血域降临：范围生命汲取
+        this.burstFx('fx_splash', x, y, { depth: 13, peakScale: 2.2, alpha: 0.7, tint: 0xa01428 }, { scale: 0.3, toScale: 2.5, duration: 500 })
+        for (const e of this.enemies) {
+          if (!e.alive) continue
+          const dist = Phaser.Math.Distance.Between(x, y, e.x, e.y)
+          if (dist < 150) e.takeDamage(artPower * 0.8, x, y)
+        }
+        this.emitParticles(x, y, 8, 0xa01428, 35, 14, 2.5, 300)
+        this.emitRing(x, y, 0xa01428, 45, 13, 0.4, 300)
+        this.cameras.main.shake(60, 0.004)
+        break
+      }
+      case 'light_pillar': {
+        // 圣光审判：4道光柱
+        const inRange = this.enemies.filter(e => e.alive && Phaser.Math.Distance.Between(x, y, e.x, e.y) < 240)
+        const targets: { x: number, y: number, e: Enemy | undefined }[] = inRange.slice(0, 4).map(e => ({ x: e.x, y: e.y, e }))
+        while (targets.length < 4) { targets.push({ x: x + (Math.random() - 0.5) * 200, y: y + (Math.random() - 0.5) * 200, e: undefined }) }
+        for (const t of targets) {
+          this.burstFx('fx_splash', t.x, t.y, { depth: 14, peakScale: 1.5, alpha: 0.85, tint: 0xffe678 }, { scale: 0.25, toScale: 1.4, duration: 400 })
+          this.emitParticles(t.x, t.y, 5, 0xffe678, 20, 15, 2, 200)
+          if (t.e) t.e.takeDamage(artPower, x, y)
+        }
+        break
+      }
+      case 'shadow_swarm': {
+        // 百魅夜行：5个暗影分身群攻
+        const inRange = this.enemies.filter(e => e.alive && Phaser.Math.Distance.Between(x, y, e.x, e.y) < 220)
+        const targets: { x: number, y: number, e: Enemy | undefined }[] = inRange.slice(0, 5).map(e => ({ x: e.x, y: e.y, e }))
+        while (targets.length < 5) { targets.push({ x: x + (Math.random() - 0.5) * 180, y: y + (Math.random() - 0.5) * 180, e: undefined }) }
+        for (const t of targets) {
+          this.burstFx('fx_spark', t.x, t.y, { depth: 15, peakScale: 0.8, alpha: 0.7, tint: 0xd8a8ff }, { scale: 0.2, toScale: 0.75, duration: 180 })
+          this.emitParticles(t.x, t.y, 4, 0xd8a8ff, 16, 16, 1.5, 180)
+          if (t.e) t.e.takeDamage(artPower * 0.5, x, y)
+        }
+        this.emitRing(x, y, 0x6a3c88, 45, 13, 0.4, 300)
+        break
+      }
+      case 'ice_thunder': {
+        // 冰雷双生：5道冰雷
+        const inRange = this.enemies.filter(e => e.alive && Phaser.Math.Distance.Between(x, y, e.x, e.y) < 240)
+        const targets: { x: number, y: number, e: Enemy | undefined }[] = inRange.slice(0, 5).map(e => ({ x: e.x, y: e.y, e }))
+        while (targets.length < 5) { targets.push({ x: x + (Math.random() - 0.5) * 200, y: y + (Math.random() - 0.5) * 200, e: undefined }) }
+        for (const t of targets) {
+          this.lightningFx(t.x, t.y - 170, t.x, t.y)
+          this.burstFx('fx_splash', t.x, t.y, { depth: 15, peakScale: 1.3, alpha: 0.85, tint: 0x9fd8ff }, { scale: 0.25, toScale: 1.25, duration: 240 })
+          this.emitParticles(t.x, t.y, 4, 0x9fd8ff, 18, 15, 2, 200)
+          if (t.e) { t.e.takeDamage(artPower, x, y); t.e.applySlow(2500, this.time.now) }
+        }
+        this.emitRing(x, y, 0x9fd8ff, 45, 13, 0.4, 300)
+        break
+      }
+      case 'fire_phoenix': {
+        // 浴火重生：火凤凰俯冲 + 散射火弹
+        for (const off of [-0.35, -0.12, 0.12, 0.35]) {
+          this.spawnAllyProj(x, y, angleToTarget + off, artPower * 0.5, 'magic_bolt')
+        }
+        for (const e of this.enemies) {
+          if (!e.alive) continue
+          const dist = Phaser.Math.Distance.Between(x, y, e.x, e.y)
+          if (dist < 140) e.takeDamage(artPower * 0.4, x, y)
+        }
+        this.burstFx('fx_splash', x, y, { depth: 15, peakScale: 2.0, alpha: 0.85, tint: 0xff8844 }, { scale: 0.3, toScale: 1.9, duration: 300 })
+        this.emitParticles(x, y, 8, 0xff6622, 35, 14, 2.5, 250)
+        break
+      }
+      case 'mountain_seal': {
+        // 五岳镇域：领域压制 + 5个符文
+        const sealRadius = 110
+        for (let i = 0; i < 5; i++) {
+          const a = (i / 5) * Math.PI * 2
+          const sx = x + Math.cos(a) * sealRadius
+          const sy = y + Math.sin(a) * sealRadius
+          this.burstFx('fx_spark', sx, sy, { depth: 14, peakScale: 0.8, alpha: 0.7, tint: 0xddcc88 }, { scale: 0.2, toScale: 0.7, duration: 300 })
+          this.emitParticles(sx, sy, 3, 0xddcc88, 15, 14, 1.5, 200)
+        }
+        for (const e of this.enemies) {
+          if (!e.alive) continue
+          const dist = Phaser.Math.Distance.Between(x, y, e.x, e.y)
+          if (dist < sealRadius) { e.takeDamage(artPower, x, y); e.applySlow(2000, this.time.now) }
+        }
+        this.emitRing(x, y, 0xddcc88, 55, 13, 0.4, 350)
+        this.cameras.main.shake(70, 0.005)
+        break
+      }
+      case 'blade_orbit': {
+        // 剑气环绕：6柄飞剑环绕
+        for (let i = 0; i < 6; i++) {
+          const ang = (i / 6) * Math.PI * 2
+          this.spawnAllyProj(x + Math.cos(ang) * 30, y + Math.sin(ang) * 30, ang + Math.PI / 2, artPower * 0.5, 'flying_sword')
+        }
+        this.burstFx('fx_ring', x, y, { depth: 12, peakScale: 1.2, alpha: 0.5, tint: 0xccddff }, { scale: 0.3, toScale: 1.2, duration: 300 })
+        break
+      }
+      case 'poison_cloud': {
+        // 毒雾弥漫：范围持续伤害
+        this.burstFx('fx_splash', x, y, { depth: 13, peakScale: 2.0, alpha: 0.6, tint: 0x44aa44 }, { scale: 0.3, toScale: 2.2, duration: 600 })
+        for (const e of this.enemies) {
+          if (!e.alive) continue
+          const dist = Phaser.Math.Distance.Between(x, y, e.x, e.y)
+          if (dist < 130) { e.takeDamage(artPower * 0.6, x, y); e.applySlow(2000, this.time.now) }
+        }
+        this.emitParticles(x, y, 10, 0x44aa44, 35, 12, 2, 400)
+        this.emitRing(x, y, 0x44aa44, 45, 13, 0.3, 350)
+        break
+      }
+      case 'spirit_vortex': {
+        // 灵气漩涡：吸引+伤害
+        this.burstFx('fx_splash', x, y, { depth: 13, peakScale: 2.5, alpha: 0.7, tint: 0x88ccff }, { scale: 0.3, toScale: 2.5, duration: 500 })
+        for (const e of this.enemies) {
+          if (!e.alive) continue
+          const dist = Phaser.Math.Distance.Between(x, y, e.x, e.y)
+          if (dist < 150) {
+            e.takeDamage(artPower * 0.7, x, y)
+            // 吸引效果：向中心移动
+            const pullAng = Phaser.Math.Angle.Between(e.x, e.y, x, y)
+            e.sprite.x += Math.cos(pullAng) * 20
+            e.sprite.y += Math.sin(pullAng) * 20
+          }
+        }
+        this.emitParticles(x, y, 12, 0x88ccff, 40, 14, 2.5, 350)
+        break
+      }
+      case 'frozen_domain': {
+        // 冰封领域：大范围冰冻
+        this.burstFx('fx_splash', x, y, { depth: 13, peakScale: 2.5, alpha: 0.7, tint: 0x9fd8ff }, { scale: 0.3, toScale: 2.5, duration: 600 })
+        for (const e of this.enemies) {
+          if (!e.alive) continue
+          const dist = Phaser.Math.Distance.Between(x, y, e.x, e.y)
+          if (dist < 160) { e.takeDamage(artPower * 0.8, x, y); e.applySlow(4000, this.time.now) }
+        }
+        this.emitParticles(x, y, 12, 0x9fd8ff, 40, 14, 2.5, 350)
+        this.emitRing(x, y, 0x9fd8ff, 60, 13, 0.5, 400)
+        this.cameras.main.shake(60, 0.004)
+        break
+      }
+      case 'gravity_crush': {
+        // 重力碾压：大范围压制
+        this.burstFx('fx_splash', x, y, { depth: 14, peakScale: 3.0, alpha: 0.8, tint: 0x884466 }, { scale: 0.3, toScale: 3.0, duration: 500 })
+        for (const e of this.enemies) {
+          if (!e.alive) continue
+          const dist = Phaser.Math.Distance.Between(x, y, e.x, e.y)
+          if (dist < 180) { e.takeDamage(artPower, x, y); e.applySlow(3000, this.time.now) }
+        }
+        this.emitParticles(x, y, 15, 0x884466, 45, 15, 3, 350)
+        this.emitRing(x, y, 0x884466, 70, 12, 0.5, 450)
+        this.cameras.main.shake(100, 0.008)
+        break
+      }
+      case 'phoenix_rebirth': {
+        // 凤凰涅槃：大范围复活级火焰
+        this.burstFx('fx_splash', x, y, { depth: 15, peakScale: 3.5, alpha: 0.9, tint: 0xff4400 }, { scale: 0.3, toScale: 3.5, duration: 600 })
+        for (const e of this.enemies) {
+          if (!e.alive) continue
+          const dist = Phaser.Math.Distance.Between(x, y, e.x, e.y)
+          if (dist < 200) e.takeDamage(artPower, x, y)
+        }
+        this.emitParticles(x, y, 20, 0xff4400, 50, 16, 3.5, 450)
+        this.emitRing(x, y, 0xff4400, 80, 12, 0.6, 500)
+        this.emitRing(x, y, 0xffe678, 50, 13, 0.4, 400)
+        this.cameras.main.shake(120, 0.01)
+        break
+      }
+      default: {
+        this.spawnAllyProj(x, y, angleToTarget, artPower, 'magic_bolt')
+        break
+      }
+    }
+  }
+
+  /** 队友投射物（命中敌人） */
+  private spawnAllyProj(x: number, y: number, angle: number, power: number, attackMode: string) {
+    let tex = 'sword_proj'
+    let scale = 0.5
+    let speed = 200
+
+    switch (attackMode) {
+      case 'flying_sword':
+      case 'flying_sword_burst':
+        tex = this.textures.exists('sword_proj_3') ? 'sword_proj_3' : 'sword_proj'
+        scale = 0.5
+        speed = 240
+        break
+      case 'magic_bolt':
+        tex = this.textures.exists('bolt_fly_1') ? 'bolt_fly_1' : 'bolt'
+        scale = 0.4
+        speed = 200
+        break
+      case 'frost_nova':
+      case 'frost_nova_burst':
+        tex = this.textures.exists('bolt_fly_1') ? 'bolt_fly_1' : 'bolt'
+        scale = 0.35
+        speed = 160
+        break
+      case 'thunder_chain':
+        tex = this.textures.exists('bolt_fly_1') ? 'bolt_fly_1' : 'bolt'
+        scale = 0.4
+        speed = 220
+        break
+      default:
+        tex = 'sword_proj'
+        scale = 0.5
+        speed = 200
+        break
+    }
+
+    const spr = this.add.image(x, y, tex).setDepth(12).setRotation(angle).setScale(scale)
+    this.pprojs.push({
+      spr, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed,
+      power, kind: 'bolt', bornAt: this.time.now, hits: new Set(),
+      split: false, derived: false, creationOrder: this.projectileCreationSequence++,
+    })
+  }
+
+  /** 队友招式效果（按 attackMode 分支） */
+  private spawnAllyStyle(
+    x: number, y: number, angle: number, mode: string,
+    power: number, stats: Stats, flatAtk: number, target: Enemy,
+  ) {
+    const atk = stats.atk * power + flatAtk
+    switch (mode) {
+      case 'flying_sword':
+      case 'flying_sword_burst':
+        this.spawnAllyProj(x, y, angle, atk, 'flying_sword')
+        break
+      case 'flying_sword_split':
+        this.spawnAllyProj(x, y, angle, atk, 'flying_sword')
+        this.spawnAllyProj(x, y, angle - 0.2, atk * 0.7, 'flying_sword')
+        this.spawnAllyProj(x, y, angle + 0.2, atk * 0.7, 'flying_sword')
+        break
+      case 'magic_bolt':
+      case 'bolt_fire':
+      case 'bolt_needle':
+      case 'bolt_dart':
+        this.spawnAllyProj(x, y, angle, atk, 'magic_bolt')
+        break
+      case 'thunder_chain':
+      case 'thunder_net':
+        this.spawnAllyProj(x, y, angle, atk, 'thunder_chain')
+        break
+      case 'frost_nova':
+      case 'frost_nova_burst':
+        for (let i = 0; i < 6; i++) {
+          const ang = (i / 6) * Math.PI * 2
+          this.spawnAllyProj(x, y, ang, atk * 0.6, 'frost_nova')
+        }
+        break
+      case 'melee_arc':
+      case 'slash_pierce': {
+        this.slashFx(x, y, angle, 1)
+        this.dealDamage(target, power / (stats.atk || 1), stats, false, x, y, flatAtk)
+        break
+      }
+      case 'whirlwind': {
+        this.slashFx(x, y, angle, 1.5)
+        this.slashFx(x, y, angle + Math.PI / 2, 1.2)
+        this.slashFx(x, y, angle + Math.PI, 1.0)
+        this.slashFx(x, y, angle - Math.PI / 2, 1.2)
+        for (const e of this.enemies) {
+          if (!e.alive) continue
+          const dist = Phaser.Math.Distance.Between(x, y, e.x, e.y)
+          if (dist < 50) this.dealDamage(e, power / (stats.atk || 1), stats, false, x, y, flatAtk)
+        }
+        this.emitParticles(x, y, 5, 0xccddff, 20, 12, 1.5, 200)
+        break
+      }
+      case 'flame_slash': {
+        this.slashFx(x, y, angle, 1.2)
+        this.emitParticles(x + Math.cos(angle) * 20, y + Math.sin(angle) * 20, 5, 0xff6622, 20, 12, 1.5, 200)
+        this.dealDamage(target, power / (stats.atk || 1), stats, false, x, y, flatAtk)
+        break
+      }
+      case 'slash_heavy': {
+        this.slashFx(x, y, angle, 2.0)
+        this.cameras.main.shake(50, 0.003)
+        this.dealDamage(target, power / (stats.atk || 1), stats, false, x, y, flatAtk)
+        this.emitParticles(target.x, target.y, 4, 0xddaa44, 15, 13, 1.5, 200)
+        break
+      }
+      case 'slash_ice': {
+        this.slashFx(x, y, angle, 1.0)
+        this.emitParticles(x + Math.cos(angle) * 20, y + Math.sin(angle) * 20, 4, 0x9fd8ff, 18, 12, 1.5, 200)
+        this.dealDamage(target, power / (stats.atk || 1), stats, false, x, y, flatAtk)
+        target.applySlow(1500, this.time.now)
+        break
+      }
+      case 'wind_slash': {
+        this.slashFx(x, y, angle, 0.8)
+        this.slashFx(x, y, angle + 0.3, 0.7)
+        this.slashFx(x, y, angle - 0.3, 0.7)
+        this.dealDamage(target, power / (stats.atk || 1), stats, false, x, y, flatAtk)
+        this.emitParticles(x, y, 3, 0xaaffcc, 15, 11, 1.2, 150)
+        break
+      }
+      case 'shadow_blade': {
+        this.slashFx(x, y, angle, 1.0)
+        this.emitParticles(target.x, target.y, 5, 0x6a3c88, 16, 14, 1.5, 200)
+        this.dealDamage(target, power / (stats.atk || 1), stats, false, x, y, flatAtk)
+        break
+      }
+      case 'blood_scythe': {
+        this.slashFx(x, y, angle, 1.5)
+        this.emitParticles(target.x, target.y, 6, 0xa01428, 18, 14, 2, 250)
+        this.dealDamage(target, power / (stats.atk || 1), stats, false, x, y, flatAtk)
+        break
+      }
+      case 'star_barrage': {
+        for (let i = 0; i < 5; i++) {
+          const off = (i - 2) * 0.15
+          this.spawnAllyProj(x, y, angle + off, atk * 0.4, 'magic_bolt')
+        }
+        break
+      }
+      case 'venom_claw': {
+        this.slashFx(x, y, angle, 1.0)
+        this.emitParticles(target.x, target.y, 4, 0x44aa44, 15, 12, 1.5, 200)
+        this.dealDamage(target, power / (stats.atk || 1), stats, false, x, y, flatAtk)
+        target.applySlow(1000, this.time.now)
+        break
+      }
+      case 'light_beam': {
+        const beamLen = 120
+        const bx = x + Math.cos(angle) * beamLen / 2
+        const by = y + Math.sin(angle) * beamLen / 2
+        const beam = this.add.rectangle(bx, by, beamLen, 8, 0xffe678, 0.6).setDepth(12).setRotation(angle)
+        this.tweens.add({ targets: beam, alpha: 0, duration: 200, onComplete: () => beam.destroy() })
+        for (const e of this.enemies) {
+          if (!e.alive) continue
+          const dist = Phaser.Math.Distance.Between(x, y, e.x, e.y)
+          if (dist < beamLen) {
+            const eAng = Phaser.Math.Angle.Between(x, y, e.x, e.y)
+            if (Math.abs(Phaser.Math.Angle.Normalize(eAng) - Phaser.Math.Angle.Normalize(angle)) < 0.3) {
+              this.dealDamage(e, power / (stats.atk || 1), stats, false, x, y, flatAtk)
+            }
+          }
+        }
+        break
+      }
+      case 'soul_flame': {
+        this.spawnAllyProj(x, y, angle, atk, 'magic_bolt')
+        this.emitParticles(x, y, 3, 0x88ff44, 15, 12, 1.5, 200)
+        break
+      }
+      case 'crystal_shard': {
+        for (let i = 0; i < 3; i++) {
+          const off = (i - 1) * 0.2
+          this.spawnAllyProj(x, y, angle + off, atk * 0.5, 'frost_nova')
+        }
+        this.emitParticles(x, y, 4, 0x9fd8ff, 15, 12, 1.5, 200)
+        break
+      }
+      case 'spirit_chain': {
+        const chainTargets = this.enemies.filter(e => e.alive && Phaser.Math.Distance.Between(x, y, e.x, e.y) < 200).slice(0, 3)
+        let prevX = x, prevY = y
+        for (const e of chainTargets) {
+          this.lightningFx(prevX, prevY, e.x, e.y)
+          this.dealDamage(e, power / (stats.atk || 1) * 0.8, stats, false, x, y, flatAtk)
+          prevX = e.x; prevY = e.y
+        }
+        break
+      }
+      case 'stone_spike': {
+        const spikeX = x + Math.cos(angle) * 40
+        const spikeY = y + Math.sin(angle) * 40
+        this.burstFx('fx_splash', spikeX, spikeY, { depth: 12, peakScale: 1.0, alpha: 0.7, tint: 0x886644 }, { scale: 0.3, toScale: 1.0, duration: 250 })
+        this.emitParticles(spikeX, spikeY, 4, 0x886644, 15, 12, 1.5, 200)
+        this.dealDamage(target, power / (stats.atk || 1), stats, false, x, y, flatAtk)
+        this.cameras.main.shake(30, 0.002)
+        break
+      }
+      case 'sword_array': {
+        for (let i = 0; i < 3; i++) {
+          const offsetAngle = angle + (i - 1) * 0.15
+          this.spawnAllyProj(x, y, offsetAngle, atk * 0.7, 'flying_sword')
+        }
+        break
+      }
+      case 'giant_sword':
+        this.spawnAllyProj(x, y, angle, atk, 'flying_sword')
+        break
+      default:
+        this.slashFx(x, y, angle, 1)
+        this.dealDamage(target, power / (stats.atk || 1), stats, false, x, y, flatAtk)
+        break
+    }
   }
 
   /** 敌人释放神通（仙界敌人复用玩家招式/神通效果） */
@@ -3962,6 +4696,177 @@ export class DungeonScene extends Phaser.Scene {
         this.burstFx('fx_spark', x, y, { depth: 12, peakScale: 1.0, alpha: 0.6, tint: 0xaa88ff }, { scale: 0.3, toScale: 1.0, duration: 250 })
         break
       }
+      case 'thunder_prison': {
+        // 万雷天牢：7道雷柱围困玩家
+        for (let i = 0; i < 7; i++) {
+          const ang = (i / 7) * Math.PI * 2
+          const r = 80
+          const lx = tx + Math.cos(ang) * r
+          const ly = ty + Math.sin(ang) * r
+          this.lightningFx(lx, ly - 200, lx, ly)
+          this.burstFx('fx_splash', lx, ly, { depth: 14, peakScale: 1.2, alpha: 0.7, tint: 0xb39dff }, { scale: 0.25, toScale: 1.1, duration: 220 })
+          this.emitParticles(lx, ly, 4, 0xb39dff, 18, 14, 2, 200)
+          const dist = Phaser.Math.Distance.Between(lx, ly, this.player.sprite.x, this.player.sprite.y)
+          if (dist < 50) this.damagePlayer(artPower * 0.85, x, y)
+        }
+        this.emitRing(x, y, 0xb39dff, 50, 13, 0.4, 350)
+        this.cameras.main.shake(90, 0.005)
+        break
+      }
+      case 'meteor_storm': {
+        // 陨石天降：5颗陨石轰击
+        for (let i = 0; i < 5; i++) {
+          const mx = tx + (Math.random() - 0.5) * 240
+          const my = ty + (Math.random() - 0.5) * 240
+          this.burstFx('fx_splash', mx, my, { depth: 15, peakScale: 1.5, alpha: 0.85, tint: 0xff6622 }, { scale: 0.3, toScale: 1.4, duration: 300 })
+          this.emitParticles(mx, my, 6, 0xff6622, 25, 15, 2.5, 250)
+          const dist = Phaser.Math.Distance.Between(mx, my, this.player.sprite.x, this.player.sprite.y)
+          if (dist < 50) this.damagePlayer(artPower, x, y)
+        }
+        this.cameras.main.shake(100, 0.007)
+        break
+      }
+      case 'void_rift': {
+        // 虚空裂隙：暗紫范围伤害
+        this.burstFx('fx_splash', x, y, { depth: 14, peakScale: 2.0, alpha: 0.7, tint: 0x3c0050 }, { scale: 0.3, toScale: 2.2, duration: 500 })
+        const dist = Phaser.Math.Distance.Between(x, y, this.player.sprite.x, this.player.sprite.y)
+        if (dist < 160) this.damagePlayer(artPower, x, y)
+        this.emitParticles(x, y, 8, 0x3c0050, 40, 14, 2.5, 300)
+        this.emitRing(x, y, 0x3c0050, 50, 13, 0.4, 350)
+        this.cameras.main.shake(80, 0.005)
+        break
+      }
+      case 'blood_domain': {
+        // 血域降临
+        this.burstFx('fx_splash', x, y, { depth: 13, peakScale: 2.2, alpha: 0.7, tint: 0xa01428 }, { scale: 0.3, toScale: 2.5, duration: 500 })
+        const dist = Phaser.Math.Distance.Between(x, y, this.player.sprite.x, this.player.sprite.y)
+        if (dist < 150) this.damagePlayer(artPower * 0.8, x, y)
+        this.emitParticles(x, y, 8, 0xa01428, 35, 14, 2.5, 300)
+        this.emitRing(x, y, 0xa01428, 45, 13, 0.4, 300)
+        break
+      }
+      case 'light_pillar': {
+        // 圣光审判：4道光柱
+        for (let i = 0; i < 4; i++) {
+          const px = tx + (Math.random() - 0.5) * 200
+          const py = ty + (Math.random() - 0.5) * 200
+          this.burstFx('fx_splash', px, py, { depth: 14, peakScale: 1.5, alpha: 0.85, tint: 0xffe678 }, { scale: 0.25, toScale: 1.4, duration: 400 })
+          this.emitParticles(px, py, 5, 0xffe678, 20, 15, 2, 200)
+          const dist = Phaser.Math.Distance.Between(px, py, this.player.sprite.x, this.player.sprite.y)
+          if (dist < 50) this.damagePlayer(artPower, x, y)
+        }
+        break
+      }
+      case 'shadow_swarm': {
+        // 百魅夜行：5个暗影分身
+        for (let i = 0; i < 5; i++) {
+          const sx = tx + (Math.random() - 0.5) * 180
+          const sy = ty + (Math.random() - 0.5) * 180
+          this.burstFx('fx_spark', sx, sy, { depth: 15, peakScale: 0.8, alpha: 0.7, tint: 0xd8a8ff }, { scale: 0.2, toScale: 0.75, duration: 180 })
+          this.emitParticles(sx, sy, 4, 0xd8a8ff, 16, 16, 1.5, 180)
+          const dist = Phaser.Math.Distance.Between(sx, sy, this.player.sprite.x, this.player.sprite.y)
+          if (dist < 40) this.damagePlayer(artPower * 0.5, x, y)
+        }
+        this.emitRing(x, y, 0x6a3c88, 45, 13, 0.4, 300)
+        break
+      }
+      case 'ice_thunder': {
+        // 冰雷双生
+        for (let i = 0; i < 5; i++) {
+          const ix = tx + (Math.random() - 0.5) * 200
+          const iy = ty + (Math.random() - 0.5) * 200
+          this.lightningFx(ix, iy - 170, ix, iy)
+          this.burstFx('fx_splash', ix, iy, { depth: 15, peakScale: 1.3, alpha: 0.85, tint: 0x9fd8ff }, { scale: 0.25, toScale: 1.25, duration: 240 })
+          this.emitParticles(ix, iy, 4, 0x9fd8ff, 18, 15, 2, 200)
+          const dist = Phaser.Math.Distance.Between(ix, iy, this.player.sprite.x, this.player.sprite.y)
+          if (dist < 50) this.damagePlayer(artPower, x, y)
+        }
+        this.emitRing(x, y, 0x9fd8ff, 45, 13, 0.4, 300)
+        break
+      }
+      case 'fire_phoenix': {
+        // 浴火重生：散射火弹
+        for (const off of [-0.35, -0.12, 0.12, 0.35]) {
+          this.spawnXianProj(x, y, angleToTarget + off, artPower * 0.5, 'magic_bolt')
+        }
+        const dist = Phaser.Math.Distance.Between(x, y, this.player.sprite.x, this.player.sprite.y)
+        if (dist < 140) this.damagePlayer(artPower * 0.4, x, y)
+        this.burstFx('fx_splash', x, y, { depth: 15, peakScale: 2.0, alpha: 0.85, tint: 0xff8844 }, { scale: 0.3, toScale: 1.9, duration: 300 })
+        break
+      }
+      case 'mountain_seal': {
+        // 五岳镇域
+        const sealRadius = 110
+        for (let i = 0; i < 5; i++) {
+          const a = (i / 5) * Math.PI * 2
+          const sx = x + Math.cos(a) * sealRadius
+          const sy = y + Math.sin(a) * sealRadius
+          this.burstFx('fx_spark', sx, sy, { depth: 14, peakScale: 0.8, alpha: 0.7, tint: 0xddcc88 }, { scale: 0.2, toScale: 0.7, duration: 300 })
+        }
+        const dist = Phaser.Math.Distance.Between(x, y, this.player.sprite.x, this.player.sprite.y)
+        if (dist < sealRadius) this.damagePlayer(artPower, x, y)
+        this.emitRing(x, y, 0xddcc88, 55, 13, 0.4, 350)
+        this.cameras.main.shake(70, 0.005)
+        break
+      }
+      case 'blade_orbit': {
+        for (let i = 0; i < 6; i++) {
+          const ang = (i / 6) * Math.PI * 2
+          this.spawnXianProj(x + Math.cos(ang) * 30, y + Math.sin(ang) * 30, ang + Math.PI / 2, artPower * 0.5, 'flying_sword')
+        }
+        this.burstFx('fx_ring', x, y, { depth: 12, peakScale: 1.2, alpha: 0.5, tint: 0xccddff }, { scale: 0.3, toScale: 1.2, duration: 300 })
+        break
+      }
+      case 'poison_cloud': {
+        this.burstFx('fx_splash', x, y, { depth: 13, peakScale: 2.0, alpha: 0.6, tint: 0x44aa44 }, { scale: 0.3, toScale: 2.2, duration: 600 })
+        const dist = Phaser.Math.Distance.Between(x, y, this.player.sprite.x, this.player.sprite.y)
+        if (dist < 130) this.damagePlayer(artPower * 0.6, x, y)
+        this.emitParticles(x, y, 10, 0x44aa44, 35, 12, 2, 400)
+        break
+      }
+      case 'spirit_vortex': {
+        this.burstFx('fx_splash', x, y, { depth: 13, peakScale: 2.5, alpha: 0.7, tint: 0x88ccff }, { scale: 0.3, toScale: 2.5, duration: 500 })
+        const dist = Phaser.Math.Distance.Between(x, y, this.player.sprite.x, this.player.sprite.y)
+        if (dist < 150) this.damagePlayer(artPower * 0.7, x, y)
+        this.emitParticles(x, y, 12, 0x88ccff, 40, 14, 2.5, 350)
+        break
+      }
+      case 'frozen_domain': {
+        this.burstFx('fx_splash', x, y, { depth: 13, peakScale: 2.5, alpha: 0.7, tint: 0x9fd8ff }, { scale: 0.3, toScale: 2.5, duration: 600 })
+        const dist = Phaser.Math.Distance.Between(x, y, this.player.sprite.x, this.player.sprite.y)
+        if (dist < 160) this.damagePlayer(artPower * 0.8, x, y)
+        this.emitParticles(x, y, 12, 0x9fd8ff, 40, 14, 2.5, 350)
+        this.emitRing(x, y, 0x9fd8ff, 60, 13, 0.5, 400)
+        break
+      }
+      case 'gravity_crush': {
+        this.burstFx('fx_splash', x, y, { depth: 14, peakScale: 3.0, alpha: 0.8, tint: 0x884466 }, { scale: 0.3, toScale: 3.0, duration: 500 })
+        const dist = Phaser.Math.Distance.Between(x, y, this.player.sprite.x, this.player.sprite.y)
+        if (dist < 180) this.damagePlayer(artPower, x, y)
+        this.emitParticles(x, y, 15, 0x884466, 45, 15, 3, 350)
+        this.emitRing(x, y, 0x884466, 70, 12, 0.5, 450)
+        this.cameras.main.shake(100, 0.008)
+        break
+      }
+      case 'phoenix_rebirth': {
+        this.burstFx('fx_splash', x, y, { depth: 15, peakScale: 3.5, alpha: 0.9, tint: 0xff4400 }, { scale: 0.3, toScale: 3.5, duration: 600 })
+        const dist = Phaser.Math.Distance.Between(x, y, this.player.sprite.x, this.player.sprite.y)
+        if (dist < 200) this.damagePlayer(artPower, x, y)
+        this.emitParticles(x, y, 20, 0xff4400, 50, 16, 3.5, 450)
+        this.emitRing(x, y, 0xff4400, 80, 12, 0.6, 500)
+        this.cameras.main.shake(120, 0.01)
+        break
+      }
+      case 'sword_storm': {
+        // 剑暴风：8方向飞剑齐射
+        const count = 8
+        for (let i = 0; i < count; i++) {
+          const ang = (i / count) * Math.PI * 2
+          this.spawnXianProj(x, y, ang, artPower * 0.6, 'flying_sword')
+        }
+        this.burstFx('fx_ring', x, y, { depth: 12, peakScale: 1.8, alpha: 0.5, tint: 0xeeeeff }, { scale: 0.3, toScale: 1.8, duration: 400 })
+        break
+      }
       default:
         // 未知神通：降级为普通投射物
         this.spawnXianProj(x, y, angleToTarget, artPower, 'magic_bolt')
@@ -4076,6 +4981,7 @@ export class DungeonScene extends Phaser.Scene {
 
   private onDeath() {
     this.over = true
+    this.settlePartyAfterRun()
     this.player.halt()
     const lost = Math.floor(this.runGold / 2)
     this.state.gold = Math.max(0, this.state.gold - lost)
@@ -4171,7 +5077,7 @@ export class DungeonScene extends Phaser.Scene {
       saveGame(this.state)
       this.portal = this.add.sprite(this.level.portal.x, this.level.portal.y, 'portal').setDepth(3)
       this.tweens.add({ targets: this.portal, alpha: 0.5, duration: 600, yoyo: true, repeat: -1 })
-      const bossTag = (this.floor + 1) % LADDER.bossInterval === 0 ? ' · ☯BOSS层' : ''
+      const bossTag = (this.floor + 1) % LADDER.bossInterval === 0 ? ' · ☯首领层' : ''
       this.add.text(this.level.portal.x, this.level.portal.y - 22, `通往第 ${this.floor + 1} 层${bossTag}`, { fontSize: '9px', color: '#c8a2ff' }).setOrigin(0.5).setDepth(3)
       toast(`天梯第 ${this.floor} 层已肃清！灵石 +${reward.gold}${reward.materials > 0 ? ` · 突破石 +${reward.materials}` : ''}`, '#c8a2ff')
       return
@@ -4180,6 +5086,17 @@ export class DungeonScene extends Phaser.Scene {
     // 域特色秘境：按相对楼层判断是否通关
     if (this.regionOverrideId && this.getRegionFloor() >= this.regionMaxFloors) {
       this.over = true
+      // 修复：随机秘境通关时更新秘境进度并标记层数已清除
+      const secretRealmData = this.registry.get('secretRealmData') as { realmId?: string } | undefined
+      if (secretRealmData?.realmId) {
+        updateRealmProgress(this.state, secretRealmData.realmId, this.getRegionFloor())
+        const realm = this.state.discoveredRealmDefs.find(r => r.id === secretRealmData.realmId)
+        if (realm) {
+          const layerIdx = this.getRegionFloor() - 1
+          if (!realm.clearedLayers.includes(layerIdx)) realm.clearedLayers.push(layerIdx)
+        }
+        this.registry.remove('secretRealmData')
+      }
       this.state.totalDungeonClears = (this.state.totalDungeonClears ?? 0) + 1
       this.state.totalGoldEarned = (this.state.totalGoldEarned ?? 0) + this.runGold
       checkAchievements(this.state)
@@ -4301,6 +5218,17 @@ export class DungeonScene extends Phaser.Scene {
     if (this.over) return
 
     const stats = calcStats(this.state)
+    // 天赋树：持续伤害每帧结算（半秒一跳）
+    if (stats.dotPct > 0) {
+      for (const e of this.enemies) {
+        if (!e.alive || e.dotDps <= 0) continue
+        const tick = e.tickDot(this.time.now)
+        if (tick > 0) {
+          this.floatText(e.x, e.y - 22, String(tick), '#a3e4d7', 9)
+          if (!e.alive) this.onEnemyKilled(e)
+        }
+      }
+    }
     // 水域减速（玩家踩水 -45% 速度）
     if (tileAtPixel(this.level, this.player.sprite.x, this.player.sprite.y) === T_WATER) {
       stats.speed = Math.round(stats.speed * 0.55)
@@ -4443,7 +5371,7 @@ export class DungeonScene extends Phaser.Scene {
       px: this.player.sprite.x,
       py: this.player.sprite.y,
       damagePlayer: (a, fx, fy) => this.damagePlayer(a, fx, fy),
-      spawnProj: (x, y, ang, a) => {
+      spawnProj: (x, y, ang, a, enemyRef?) => {
         // 仙界敌人：根据攻击模式发射不同投射物
         if (this.xianMode && ctx.enemyId) {
           const xianDef = XIAN_ENEMY_MAP.get(ctx.enemyId)
@@ -4451,6 +5379,13 @@ export class DungeonScene extends Phaser.Scene {
             this.spawnXianProj(x, y, ang, a, xianDef.attackMode)
             return
           }
+        }
+        // NPC 敌人：有招式模式时使用对应投射物
+        const ref = enemyRef || this.enemies.find(en => en.cfg.id === ctx.enemyId)
+        const styleMode = ref?.styleMode
+        if (styleMode) {
+          this.spawnXianProj(x, y, ang, a, styleMode)
+          return
         }
         this.spawnProj(x, y, ang, a)
       },
@@ -4461,7 +5396,10 @@ export class DungeonScene extends Phaser.Scene {
     // 攻击顿帧：冻结怪物 AI（玩家仍可行动，营造打击感）
     const frozen = time < this.hitStopUntil
     for (const e of this.enemies) {
-      if (!frozen) e.update(ctx)
+      if (!frozen) {
+        this.applyEnemyTarget(ctx, e)
+        e.update(ctx)
+      }
       // 越界回拉：被击退/冲撞穿墙或挤出地图时，拉回出生点（必为可行走格）
       if (e.alive && isSolidPixel(this.level, e.x, e.y)) {
         e.sprite.setPosition(e.homeX, e.homeY)
@@ -4475,8 +5413,17 @@ export class DungeonScene extends Phaser.Scene {
       const out = pr.spr.x < ARENA.x || pr.spr.x > ARENA.x + ARENA.w || pr.spr.y < ARENA.y || pr.spr.y > ARENA.y + ARENA.h
       const hitWall = isSolidPixel(this.level, pr.spr.x, pr.spr.y)
       const hitP = Phaser.Math.Distance.Between(pr.spr.x, pr.spr.y, this.player.sprite.x, this.player.sprite.y) < 12
-      if (out || hitWall || time - pr.bornAt > 3200 || hitP) {
+      // 敌人投射物同样可以命中队员：远程敌人转向队员后，弹道不会白飞
+      let hitAlly: Ally | null = null
+      if (!hitP) {
+        this.allies.forEach(ally => {
+          if (hitAlly || ally.downed || !ally.damageable) return
+          if (Phaser.Math.Distance.Between(pr.spr.x, pr.spr.y, ally.x, ally.y) < 12) hitAlly = ally
+        })
+      }
+      if (out || hitWall || time - pr.bornAt > 3200 || hitP || hitAlly) {
         if (hitP) this.damagePlayer(pr.atk, pr.spr.x, pr.spr.y)
+        else if (hitAlly) this.damageAlly(hitAlly, pr.atk, pr.spr.x, pr.spr.y)
         pr.spr.destroy()
         this.projs.splice(i, 1)
       }
@@ -4581,47 +5528,36 @@ export class DungeonScene extends Phaser.Scene {
       }
     }
 
-    // 道友 AI（剑修近战 / 仙子远程火弹）
-    if (this.ally) {
-      const target = this.ally.updateAI(time, this.player.sprite.x, this.player.sprite.y, this.enemies)
-      if (target) {
-        const ang = Phaser.Math.Angle.Between(this.ally.x, this.ally.y, target.x, target.y)
-        if (this.ally.ranged) {
-          this.spawnPlayerProj(this.ally.x, this.ally.y, ang, this.ally.attackMult, 'bolt')
-        } else {
-          this.slashFx(this.ally.x, this.ally.y, ang, 1)
-          this.dealDamage(target, this.ally.attackMult, stats, false, this.ally.x, this.ally.y)
-        }
+    // 出战队员统一 AI（修士与灵兽同管线；装备固定攻击以 flatAtk 叠加在玩家攻击之上）
+    this.allies.forEach((ally, uid) => {
+      const tag = this.allyTags.get(uid)
+      if (ally.downed) {
+        if (tag) tag.setVisible(false)
+        return
       }
-    }
+      const action = ally.updateAI(time, this.player.sprite.x, this.player.sprite.y, this.enemies)
+      if (tag) { tag.setPosition(ally.x, ally.y - 18); tag.setVisible(true) }
+      if (!action) return
+      const target = action.target
+      const ang = Phaser.Math.Angle.Between(ally.x, ally.y, target.x, target.y)
 
-    // 灵兽宠物 AI
-    if (this.petSprite && this.petBeast) {
-      const psp = this.player.sprite
-      const pdx = psp.x + 16 - this.petSprite.x
-      const pdy = psp.y + 8 - this.petSprite.y
-      const pdist = Math.hypot(pdx, pdy)
-      if (pdist > 4) {
-        const speed = 90
-        this.petSprite.x += (pdx / pdist) * speed * (delta / 1000)
-        this.petSprite.y += (pdy / pdist) * speed * (delta / 1000)
-      }
-      if (time >= this.petCdUntil) {
-        let nearest: Enemy | null = null
-        let nearestDist = 80
-        for (const e of this.enemies) {
-          if (!e.alive) continue
-          const d = Phaser.Math.Distance.Between(this.petSprite.x, this.petSprite.y, e.x, e.y)
-          if (d < nearestDist) { nearestDist = d; nearest = e }
-        }
-        if (nearest) {
-          const ang = Phaser.Math.Angle.Between(this.petSprite.x, this.petSprite.y, nearest.x, nearest.y)
-          this.slashFx(this.petSprite.x, this.petSprite.y, ang, 1)
-          this.dealDamage(nearest, 0.6, stats, false, this.petSprite.x, this.petSprite.y)
-          this.petCdUntil = time + 800
+      if (action.type === 'art' && action.artMode) {
+        // 神通：复用 spawnEnemyArt 效果（但攻击力按 ally 面板计算）
+        const artAtk = stats.atk * ally.attackMult + ally.flatAtk
+        this.spawnAllyArt(ally.x, ally.y, action.artMode, artAtk, target.x, target.y, action.power ?? 1)
+      } else {
+        // 普攻：有招式模式则用招式效果，否则降级为近战/远程
+        const mode = ally.styleMode
+        if (mode && this.textures.exists('sword_proj_3')) {
+          this.spawnAllyStyle(ally.x, ally.y, ang, mode, ally.attackMult * (ally.stylePower ?? 1), stats, ally.flatAtk, target)
+        } else if (ally.ranged) {
+          this.spawnPlayerProj(ally.x, ally.y, ang, ally.attackMult, 'bolt')
+        } else {
+          this.slashFx(ally.x, ally.y, ang, 1)
+          this.dealDamage(target, ally.attackMult, stats, false, ally.x, ally.y, ally.flatAtk)
         }
       }
-    }
+    })
 
     // 阵法效果过期清除
     if (this.formationEndTime > 0 && time >= this.formationEndTime) {
@@ -4714,7 +5650,13 @@ export class DungeonScene extends Phaser.Scene {
         recordXianDepth(this.state, xianFloorDisplay(nextFloor))
         saveGame(this.state)
       }
-      this.time.delayedCall(320, () => this.scene.start('Dungeon', { floor: nextFloor, diff: this.diff.id, mode }))
+      this.time.delayedCall(320, () => this.scene.start('Dungeon', {
+        floor: nextFloor,
+        diff: this.diff.id,
+        mode,
+        // 修复：随机秘境进入下一层时必须保留 regionOverride，否则会被误判为普通秘境
+        regionOverride: this.regionOverrideId || undefined,
+      }))
       return
     }
 

@@ -85,14 +85,20 @@ describe('灵根与天赋配置表', () => {
       expect(d.affection).toBeGreaterThanOrEqual(30)
       expect(d.affection).toBeLessThanOrEqual(44)
       expect(d.status).toBe('idle')
-      expect(d.skills).toEqual([])
+      // 修为档案下沉：新生成即带功法（1~4 门，按道途选池）
+      expect(Array.isArray(d.skills)).toBe(true)
+      expect(d.skills.length).toBeLessThanOrEqual(4)
       expect(d.rank).toBe(0)
       expect(d.role).toBeNull()
       expect(d.atk).toBeGreaterThan(0)
       expect(d.def).toBeGreaterThan(0)
       expect(d.maxHp).toBeGreaterThan(0)
       expect(d.crit).toBeGreaterThan(0)
-      expect(Object.values(d.equipment).every(x => x === null)).toBe(true)
+      // 修为档案下沉：初始装备按修为/出身铸造（低境界可能缺件），但槽位必须齐全
+      expect(Object.keys(d.equipment).sort()).toEqual(['armor', 'boots', 'charm', 'head', 'weapon'])
+      for (const it of Object.values(d.equipment)) {
+        if (it) expect(it.uid.startsWith('discgear_')).toBe(true)
+      }
     }
   })
 
@@ -123,18 +129,25 @@ describe('灵根与天赋配置表', () => {
   it('【已知缺陷 B18】generateDisciple 的 sectLevel 形参未被使用', () => {
     // 复现：generateDisciple(rng, sectLevel) 函数体完全未引用 sectLevel，
     // 宗门等级对新生弟子的属性/天赋没有任何影响。当前按现状锁定。
+    // 注：uid 字段会因为模块级自增序列而不同，这里只验证其他字段与 sectLevel 无关。
     const a = generateDisciple(makeRng(777), 1)
     const b = generateDisciple(makeRng(777), 99)
-    expect(a).toEqual(b)
+    const { uid: ua, ...aRest } = a
+    const { uid: ub, ...bRest } = b
+    expect(aRest).toEqual(bRest)
   })
 
-  it('【已知缺陷 B19】同一毫秒内相同 rng 取值会生成重复 uid', () => {
-    // 复现：uid = 'd_' + Date.now().toString(36) + '_' + floor(rng()*9999).toString(36)
-    // 无自增序号，批量招募时可能撞号，导致存档中弟子互相覆盖。
-    // 建议：uid 追加全局自增计数器或 crypto.randomUUID()。
+  it('B19 已修：generateDisciple 同一进程内多次调用保证 uid 唯一', () => {
+    // 修复前：uid = 'd_' + Date.now().toString(36) + '_' + floor(rng()*9999).toString(36)
+    // 同一毫秒 + 同一 rng 批量招募时撞号，导致存档中弟子互相覆盖。
+    // 修复后：uid = 'd_<seq>_<rand>'，seq 是模块级自增（与墙钟脱钩），
+    // 即使 rng 完全相同也保证唯一。
     const a = generateDisciple(constRng(0), 1)
     const b = generateDisciple(constRng(0), 1)
-    expect(a.uid).toBe(b.uid)
+    const c = generateDisciple(constRng(0), 1)
+    expect(a.uid).not.toBe(b.uid)
+    expect(b.uid).not.toBe(c.uid)
+    expect(a.uid).not.toBe(c.uid)
   })
 })
 

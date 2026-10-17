@@ -1,8 +1,15 @@
 // ---------- 程序化 NPC 生成系统 ----------
 // 基于确定性种子生成完整 NPC：属性/背景/性格/故事/背包/装备/关系网
+//
+// 属性 / 装备 / 功法统一由 npc-progression 的「修为档案」驱动：
+// 修为（境界·等级·突破）× 经历（体质·道途·出身·职业·心性·隐秘）× 时间（道行年数·在世历练）
 
 import type { GameState } from './state'
 import { SKILLS } from './data'
+import {
+  buildNpcLoadout, buildNpcStats, forgeNpcGear, npcEquippedSkillIds,
+  type NpcGear, type NpcLoadout, type NpcSkillLevels,
+} from './npc-progression'
 
 // ===== 类型定义 =====
 
@@ -68,8 +75,27 @@ export interface ProceduralNpc {
   secret: string
   story: { surface: string; middle: string; deep: string }
   inventory: Record<string, number>
+  /** 旧展示字段（v12 前为占位 id 串，现由 gear 派生为真实装备名；保留仅为兼容旧读点） */
   equipment: { weapon?: string; armor?: string; accessory?: string }
+  /** 旧展示字段：已装配功法 id（由 loadout 派生） */
   skills: string[]
+  // ---- 修为档案（v12 起）----
+  /** 已物化的真实装备（四槽） */
+  gear: NpcGear
+  /** 已装配功法（招式 / 心法×2 / 神通） */
+  loadout: NpcLoadout
+  /** 功法 id → 修炼等级 1~5 */
+  skillLevels: NpcSkillLevels
+  /** 累积历练值（升级消耗） */
+  cultivation: number
+  /** 在世历练天数（游戏内天） */
+  cultivationDays: number
+  /** 上次成长结算（世界时间戳，毫秒） */
+  lastGrowthAt: number
+  /** 突破次数 */
+  breakthroughs: number
+  /** 综合战力评分（buildNpcStats 缓存） */
+  power: number
   morality: number  // NPC自身道德倾向
   location: { domain: string; x: number; y: number }
   schedule: NpcSchedule | null
@@ -226,28 +252,7 @@ function ageForRealm(realm: number, rng: () => number): number {
   return rangeR(500, 2000, rng)
 }
 
-function hpForRealm(realm: number, level: number, physique: Physique): number {
-  let base = 80 + realm * 120 + level * 20
-  if (physique === '天灵根') base *= 1.1
-  if (physique === '异灵根') base *= 1.2
-  if (physique === '体修' as any) base *= 1.3
-  return Math.floor(base)
-}
-
-function atkForRealm(realm: number, level: number, physique: Physique): number {
-  let base = 12 + realm * 18 + level * 4
-  if (physique === '天灵根') base *= 1.15
-  if (physique === '异灵根') base *= 1.3
-  return Math.floor(base)
-}
-
-function defForRealm(realm: number, level: number): number {
-  return Math.floor(8 + realm * 10 + level * 2)
-}
-
-function spdForRealm(realm: number): number {
-  return 8 + realm * 2
-}
+// 属性公式已上移至 npc-progression.buildNpcStats（三维度驱动），此处不再保留旧的单参数公式。
 
 // ===== 域权重 =====
 
@@ -303,17 +308,24 @@ export function generateProceduralNpc(
   // 故事生成
   const story = generateStory(background, lifeGoal, personality, rng, { name, surname })
 
-  // 装备和技能
-  const skills = generateNpcSkills(realm, daoPath, rng)
-  const equipment = generateNpcEquipment(realm, rng)
+  // 等级（装备品质与功法数量均依赖修为，故先于装备/功法计算）
+  const level = realm * 10 + rangeR(0, 9, rng)
   const inventory = generateNpcInventory(realm, profession, rng)
 
-  // 属性
-  const level = realm * 10 + rangeR(0, 9, rng)
-  const maxHp = hpForRealm(realm, level, physique)
-  const atk = atkForRealm(realm, level, physique)
-  const def = defForRealm(realm, level)
-  const spd = spdForRealm(realm)
+  // 修为档案：装备物化 → 功法装配 → 属性合成
+  const draft = {
+    id, seed, realm, level, age, physique, profession, daoPath, background,
+    personality, secret, breakthroughs: 0, cultivationDays: 0,
+  }
+  const gear = forgeNpcGear(draft, rng)
+  const { loadout, levels: skillLevels } = buildNpcLoadout(draft, rng)
+  const stats = buildNpcStats({ ...draft, gear, loadout, skillLevels })
+  // 旧展示字段由新档案派生（getNpcEquipName / getNpcSkillName 均可直接显示）
+  const equipment = {
+    weapon: gear.weapon ? gear.weapon.name : undefined,
+    armor: gear.armor ? gear.armor.name : undefined,
+  }
+  const skills = npcEquippedSkillIds(loadout)
 
   // 道德倾向
   let morality = rangeR(-30, 30, rng)
@@ -355,6 +367,14 @@ export function generateProceduralNpc(
     inventory,
     equipment,
     skills,
+    gear,
+    loadout,
+    skillLevels,
+    cultivation: 0,
+    cultivationDays: 0,
+    lastGrowthAt: worldTimeMs,
+    breakthroughs: 0,
+    power: stats.power,
     morality: Math.max(-100, Math.min(100, morality)),
     location,
     schedule,
@@ -362,11 +382,11 @@ export function generateProceduralNpc(
     appearanceSeed: seed,
     isActive: true,
     alive: true,
-    hp: maxHp,
-    maxHp,
-    atk,
-    def,
-    spd,
+    hp: stats.maxHp,
+    maxHp: stats.maxHp,
+    atk: stats.atk,
+    def: stats.def,
+    spd: stats.spd,
     eventLog: [],
     spawnTime: worldTimeMs,
   }
@@ -413,24 +433,7 @@ function generateStory(
   return { surface, middle, deep }
 }
 
-function generateNpcSkills(realm: number, daoPath: DaoPath, rng: () => number): string[] {
-  const skills: string[] = ['sk_sanlian']
-  if (realm >= 1) skills.push('sk_chuancheng')
-  if (realm >= 2) {
-    // 高阶NPC可能有更多技能
-    if (rng() < 0.5) skills.push('sk_shanbi')
-    if (rng() < 0.3) skills.push('sk_liehuo')
-  }
-  return skills
-}
-
-function generateNpcEquipment(realm: number, rng: () => number): { weapon?: string; armor?: string; accessory?: string } {
-  const eq: { weapon?: string; armor?: string; accessory?: string } = {}
-  if (rng() < 0.7) eq.weapon = `npc_w_${realm}`
-  if (rng() < 0.5) eq.armor = `npc_a_${realm}`
-  if (rng() < 0.2) eq.accessory = `npc_acc_${realm}`
-  return eq
-}
+// 功法装配与装备物化已上移至 npc-progression（buildNpcLoadout / forgeNpcGear）。
 
 function generateNpcInventory(realm: number, profession: Profession, rng: () => number): Record<string, number> {
   const inv: Record<string, number> = {}

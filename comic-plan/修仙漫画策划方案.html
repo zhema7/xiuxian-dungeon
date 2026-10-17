@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>修仙与地下城 — 四格/六格漫画策划方案</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #0a0a12;
+    color: #d8d8e8;
+    font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+    line-height: 1.7;
+  }
+  .container { max-width: 1100px; margin: 0 auto; padding: 40px 30px; }
+  h1 {
+    font-size: 2.2em;
+    text-align: center;
+    background: linear-gradient(135deg, #c9a84c, #f0d896, #c9a84c);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 8px;
+    letter-spacing: 3px;
+  }
+  .subtitle {
+    text-align: center;
+    color: #7a7a9a;
+    font-size: 0.9em;
+    margin-bottom: 50px;
+  }
+  h2 {
+    color: #c9a84c;
+    font-size: 1.5em;
+    border-left: 4px solid #c9a84c;
+    padding-left: 16px;
+    margin: 40px 0 20px;
+  }
+  h3 {
+    color: #d0b070;
+    font-size: 1.15em;
+    margin: 24px 0 12px;
+  }
+  p { margin-bottom: 10px; }
+  .card {
+    background: linear-gradient(180deg, #14141e, #1a1a28);
+    border: 1px solid #2a2a3e;
+    border-radius: 12px;
+    padding: 24px;
+    margin: 16px 0;
+    transition: border-color 0.3s;
+  }
+  .card:hover { border-color: #c9a84c88; }
+  .episode {
+    background: linear-gradient(180deg, #14141e, #1a1a28);
+    border: 1px solid #2a2a3e;
+    border-radius: 12px;
+    padding: 28px;
+    margin: 24px 0;
+    overflow: hidden;
+  }
+  .ep-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  .ep-num {
+    width: 48px; height: 48px;
+    background: linear-gradient(135deg, #c9a84c, #8a6a2c);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.3em; font-weight: bold; color: #1a1a28;
+    flex-shrink: 0;
+  }
+  .ep-title {
+    font-size: 1.25em;
+    color: #f0d896;
+  }
+  .ep-tag {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 10px;
+    font-size: 0.75em;
+    margin-left: 8px;
+  }
+  .tag-4 { background: #2a4a3a; color: #6ad0a0; }
+  .tag-6 { background: #4a2a3a; color: #d0a0c0; }
+  .tag-gameplay { background: #2a3a5a; color: #a0c0e0; }
+  .tag-story { background: #4a3a2a; color: #e0c0a0; }
+  .panel-grid {
+    display: grid;
+    gap: 10px;
+    margin: 16px 0;
+  }
+  .grid-4 { grid-template-columns: 1fr 1fr; }
+  .grid-6 { grid-template-columns: 1fr 1fr 1fr; }
+  .panel {
+    background: #0e0e18;
+    border: 1px solid #2a2a3e;
+    border-radius: 8px;
+    padding: 14px;
+    position: relative;
+  }
+  .panel-num {
+    position: absolute;
+    top: -8px; left: -8px;
+    width: 26px; height: 26px;
+    background: #c9a84c;
+    color: #1a1a28;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.8em; font-weight: bold;
+  }
+  .panel-desc {
+    color: #9a9ab0;
+    font-size: 0.85em;
+    margin-bottom: 6px;
+    font-style: italic;
+  }
+  .panel-dialogue {
+    color: #f0d896;
+    font-size: 0.9em;
+    padding: 4px 0;
+    border-top: 1px dashed #3a3a4e;
+    padding-top: 8px;
+  }
+  .mechanic-box {
+    background: #0c0c18;
+    border: 1px solid #3a4a5a;
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin-top: 12px;
+    font-size: 0.85em;
+  }
+  .mechanic-label {
+    color: #6ad0a0;
+    font-weight: bold;
+    font-size: 0.8em;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .hook {
+    background: linear-gradient(135deg, #2a1a3a, #1a1a2a);
+    border: 1px solid #4a3a5a;
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin-top: 12px;
+    font-size: 0.85em;
+    color: #d0a0c0;
+  }
+  .char-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+    margin: 16px 0;
+  }
+  .char-card {
+    background: #14141e;
+    border: 1px solid #2a2a3e;
+    border-radius: 8px;
+    padding: 16px;
+  }
+  .char-name { color: #f0d896; font-size: 1.1em; font-weight: bold; margin-bottom: 6px; }
+  .char-desc { color: #8a8aa0; font-size: 0.85em; }
+  .char-look { color: #6a8aba; font-size: 0.8em; margin-top: 6px; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+  }
+  th, td {
+    padding: 10px 14px;
+    text-align: left;
+    border: 1px solid #2a2a3e;
+    font-size: 0.9em;
+  }
+  th {
+    background: #1a1a28;
+    color: #c9a84c;
+  }
+  td { color: #9a9ab0; }
+  .highlight { color: #f0d896; }
+  .divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #2a2a3e, transparent);
+    margin: 40px 0;
+  }
+  .footer {
+    text-align: center;
+    color: #4a4a6a;
+    font-size: 0.8em;
+    margin-top: 60px;
+    padding-top: 20px;
+    border-top: 1px solid #1a1a28;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>修仙与地下城 · 漫画策划方案</h1>
+<p class="subtitle">四格 / 六格漫画系列 — 以游戏机制与剧情为核心，吸引玩家入坑</p>
+
+<!-- ═══════════════════════════════════════ -->
+<h2>一、总体策略</h2>
+
+<div class="card">
+<h3>核心目标</h3>
+<p>用<span class="highlight">轻松幽默的四格/六格漫画</span>，把修仙与地下城的游戏机制和剧情亮点包装成碎片化内容，在小红书/TapTap/B站动态传播，让读者"看完就想玩"。</p>
+
+<h3 style="margin-top:16px;">分集规划（共12集）</h3>
+<table>
+<tr><th>集号</th><th>标题</th><th>格式</th><th>类型</th><th>展示机制</th></tr>
+<tr><td>01</td><td>选职业</td><td>4格</td><td>玩法</td><td>五大职业选择</td></tr>
+<tr><td>02</td><td>第一次下本</td><td>6格</td><td>玩法</td><td>地下城Roguelike探索</td></tr>
+<tr><td>03</td><td>突破筑基</td><td>4格</td><td>玩法</td><td>境界突破+属性成长</td></tr>
+<tr><td>04</td><td>天雷来了</td><td>6格</td><td>玩法</td><td>天劫渡劫系统</td></tr>
+<tr><td>05</td><td>玄阳剑尊</td><td>6格</td><td>剧情</td><td>NPC剧情线·剑道传承</td></tr>
+<tr><td>06</td><td>建宗门</td><td>4格</td><td>玩法</td><td>宗门建设与弟子</td></tr>
+<tr><td>07</td><td>药仙婆婆</td><td>6格</td><td>剧情</td><td>NPC剧情线·丹道大梦</td></tr>
+<tr><td>08</td><td>装备迷思</td><td>4格</td><td>玩法</td><td>装备套装系统</td></tr>
+<tr><td>09</td><td>封魔使·云清</td><td>6格</td><td>剧情</td><td>NPC剧情线·封魔者</td></tr>
+<tr><td>10</td><td>天赋树</td><td>4格</td><td>玩法</td><td>90节点天赋系统</td></tr>
+<tr><td>11</td><td>无尽妖域</td><td>6格</td><td>玩法</td><td>Endless模式+Boss战</td></tr>
+<tr><td>12</td><td>飞升</td><td>6格</td><td>剧情</td><td>终极目标·飞升渡劫</td></tr>
+</table>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<div class="divider"></div>
+<h2>二、角色设定</h2>
+
+<h3>主角组（玩家代入）</h3>
+<div class="char-grid">
+<div class="char-card">
+<div class="char-name">剑修·林霄</div>
+<div class="char-desc">均衡战士型，性格认真执着</div>
+<div class="char-look">蓝白剑袍，背一柄长剑，短发</div>
+</div>
+<div class="char-card">
+<div class="char-name">仙子·苏瑶</div>
+<div class="char-desc">高攻脆皮型，性格傲娇自信</div>
+<div class="char-look">粉色仙裙，灵力环绕，长发</div>
+</div>
+<div class="char-card">
+<div class="char-name">法修·陈符</div>
+<div class="char-desc">符箓法术型，性格沉稳书卷气</div>
+<div class="char-look">青色道袍，手持符纸，眼镜</div>
+</div>
+<div class="char-card">
+<div class="char-name">道修·赵岩</div>
+<div class="char-desc">厚血重防型，性格憨厚直率</div>
+<div class="char-look">棕色重甲道袍，体格健壮</div>
+</div>
+<div class="char-card">
+<div class="char-name">合欢·柳烟</div>
+<div class="char-desc">暴击输出型，性格妩媚狡黠</div>
+<div class="char-look">紫色轻纱裙，折扇遮面</div>
+</div>
+</div>
+
+<h3>NPC组（剧情线角色）</h3>
+<div class="char-grid">
+<div class="char-card">
+<div class="char-name">玄阳剑尊</div>
+<div class="char-desc">隐居山林的老剑修，收徒传承剑道</div>
+<div class="char-look">白发白须，灰布袍，身后古剑林立</div>
+</div>
+<div class="char-card">
+<div class="char-name">药仙婆婆</div>
+<div class="char-desc">年迈炼丹师，寻九转还魂草</div>
+<div class="char-look">佝偻老妇，背药篓，满头银发</div>
+</div>
+<div class="char-card">
+<div class="char-name">封魔使·云清</div>
+<div class="char-desc">追查百年魔修大案的神秘人</div>
+<div class="char-look">黑色风衣，面纱遮面，手握封魔印</div>
+</div>
+<div class="char-card">
+<div class="char-name">陆青鸢</div>
+<div class="char-desc">洞府道友，新手引导角色</div>
+<div class="char-look">淡蓝衣衫，温和微笑，短马尾</div>
+</div>
+</div>
+
+<h3>漫画通用元素</h3>
+<div class="card">
+<p><span class="highlight">哲码游戏</span> 水印出现在每集右下角</p>
+<p>每集结尾附「扫码/搜索：修仙与地下城」引导语</p>
+<p>统一紫金配色 + 星空修仙风格背景</p>
+<p>Q版人物比例（头身比1:2），表情夸张丰富</p>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<div class="divider"></div>
+<h2>三、分集脚本</h2>
+
+<!-- ═══ EP01 ═══ -->
+<div class="episode">
+<div class="ep-header">
+<div class="ep-num">1</div>
+<div><span class="ep-title">选职业</span><span class="ep-tag tag-4">4格</span><span class="ep-tag tag-gameplay">玩法</span></div>
+</div>
+
+<div class="panel-grid grid-4">
+<div class="panel">
+<div class="panel-num">1</div>
+<div class="panel-desc">标题画面，夜空圆月下，五个职业立绘排成一排</div>
+<div class="panel-dialogue">旁白：「修仙之路，始于择道」<br>林霄（跃跃欲试）：我选剑修！一剑破万法！</div>
+</div>
+<div class="panel">
+<div class="panel-num">2</div>
+<div class="panel-desc">切换到仙子/法修/道修/合欢，各摆一个帅气pose</div>
+<div class="panel-dialogue">苏瑶：仙子才是正道~ 灵法秒杀！<br>陈符：法修稳…符箓通玄。<br>赵岩：道修肉！打不死！<br>柳烟：合欢暴击，一刀一个~</div>
+</div>
+<div class="panel">
+<div class="panel-num">3</div>
+<div class="panel-desc">五人互相瞪，火花四溅，谁也不服谁</div>
+<div class="panel-dialogue">全员齐声：我的职业才是最强的！</div>
+</div>
+<div class="panel">
+<div class="panel-num">4</div>
+<div class="panel-desc">画面拉远，显示游戏标题和「随机结缘」按钮</div>
+<div class="panel-dialogue">旁白：修仙与地下城 · 五大职业，随心选择<br>（小字）其实选「随机」才有惊喜哦~</div>
+</div>
+</div>
+
+<div class="mechanic-box">
+<span class="mechanic-label">展示机制</span>：五大职业选择（剑修/仙子/法修/道修/合欢），每种职业有独立天赋树和战斗风格，支持随机结缘
+</div>
+<div class="hook">
+<span>钩子</span>：你的修仙之路从哪个职业开始？扫码体验→
+</div>
+</div>
+
+<!-- ═══ EP02 ═══ -->
+<div class="episode">
+<div class="ep-header">
+<div class="ep-num">2</div>
+<div><span class="ep-title">第一次下本</span><span class="ep-tag tag-6">6格</span><span class="ep-tag tag-gameplay">玩法</span></div>
+</div>
+
+<div class="panel-grid grid-6">
+<div class="panel">
+<div class="panel-num">1</div>
+<div class="panel-desc">林霄站在洞府传送阵前，陆青鸢在一旁指引</div>
+<div class="panel-dialogue">陆青鸢：青冥山脉一层，小心妖兽。<br>林霄（握拳）：放心！</div>
+</div>
+<div class="panel">
+<div class="panel-num">2</div>
+<div class="panel-desc">林霄进入地下城，迷宫式走廊，岔路口</div>
+<div class="panel-dialogue">林霄：左边还是右边…（Roguelike随机地图！）</div>
+</div>
+<div class="panel">
+<div class="panel-num">3</div>
+<div class="panel-desc">遭遇小怪——一只妖蛇，林霄拔剑</div>
+<div class="panel-dialogue">林霄：吃我一剑！<br>妖蛇：嘶——</div>
+</div>
+<div class="panel">
+<div class="panel-num">4</div>
+<div class="panel-desc">林霄砍完妖蛇捡起掉落的灵石，得意</div>
+<div class="panel-dialogue">林霄：这就是修仙的快乐吗！</div>
+</div>
+<div class="panel">
+<div class="panel-num">5</div>
+<div class="panel-desc">走到第10层，巨大的Boss影子笼罩过来</div>
+<div class="panel-dialogue">林霄（冷汗）：这个…比刚才大了很多…<br>Boss（黑影）：吼——</div>
+</div>
+<div class="panel">
+<div class="panel-num">6</div>
+<div class="panel-desc">林霄被打飞出地下城，趴在洞府门口</div>
+<div class="panel-dialogue">陆青鸢：…我说了小心。<br>林霄（鼻青脸肿）：我下次一定行！<br>旁白：每10层一个Boss，Roguelike无限重玩！</div>
+</div>
+</div>
+
+<div class="mechanic-box">
+<span class="mechanic-label">展示机制</span>：地下城Roguelike探索 — 随机地图、战斗、掉落、每10层Boss战
+</div>
+<div class="hook">
+<span>钩子</span>：你能打穿几层？来挑战→
+</div>
+</div>
+
+<!-- ═══ EP03 ═══ -->
+<div class="episode">
+<div class="ep-header">
+<div class="ep-num">3</div>
+<div><span class="ep-title">突破筑基</span><span class="ep-tag tag-4">4格</span><span class="ep-tag tag-gameplay">玩法</span></div>
+</div>
+
+<div class="panel-grid grid-4">
+<div class="panel">
+<div class="panel-num">1</div>
+<div class="panel-desc">林霄盘坐在洞府中，身上发光，经验条满</div>
+<div class="panel-dialogue">林霄：炼气圆满…该突破了！</div>
+</div>
+<div class="panel">
+<div class="panel-num">2</div>
+<div class="panel-desc">突破成功，全身爆发金光，属性面板弹出</div>
+<div class="panel-dialogue">系统提示：筑基成功！基础属性+12%！<br>林霄：我能打十个！</div>
+</div>
+<div class="panel">
+<div class="panel-num">3</div>
+<div class="panel-desc">旁边苏瑶在打瞌睡，境界显示「金丹」</div>
+<div class="panel-dialogue">苏瑶（哈欠）：吵死了…我金丹了都。<br>林霄：……你等着！</div>
+</div>
+<div class="panel">
+<div class="panel-num">4</div>
+<div class="panel-desc">境界成长阶梯图：炼气→筑基→金丹→元婴→化神→炼虚→合体</div>
+<div class="panel-dialogue">旁白：七大境界，每次突破实力飞跃<br>（小字）化神解锁仙界，合体可飞升！</div>
+</div>
+</div>
+
+<div class="mechanic-box">
+<span class="mechanic-label">展示机制</span>：七大境界系统（炼气→筑基→金丹→元婴→化神→炼虚→合体），每突破属性+12%，化神解锁仙界
+</div>
+<div class="hook">
+<span>钩子</span>：你的修仙路走到第几境了？
+</div>
+</div>
+
+<!-- ═══ EP04 ═══ -->
+<div class="episode">
+<div class="ep-header">
+<div class="ep-num">4</div>
+<div><span class="ep-title">天雷来了</span><span class="ep-tag tag-6">6格</span><span class="ep-tag tag-gameplay">玩法</span></div>
+</div>
+
+<div class="panel-grid grid-6">
+<div class="panel">
+<div class="panel-num">1</div>
+<div class="panel-desc">林霄即将突破化神，天空突然变暗，雷云密布</div>
+<div class="panel-dialogue">林霄（抬头）：这云…不对劲！<br>陆青鸢（远处喊）：天劫来了！！</div>
+</div>
+<div class="panel">
+<div class="panel-num">2</div>
+<div class="panel-desc">第一道天雷劈下，林霄举剑格挡，火花四溅</div>
+<div class="panel-dialogue">林霄：嘶——好疼！<br>系统：天雷劫·第一道</div>
+</div>
+<div class="panel">
+<div class="panel-num">3</div>
+<div class="panel-desc">第二、三道连劈，林霄衣衫破碎，咬牙硬撑</div>
+<div class="panel-dialogue">林霄：不能…倒下…</div>
+</div>
+<div class="panel">
+<div class="panel-num">4</div>
+<div class="panel-desc">旁白小字展示其他天劫类型（心魔劫/业火劫/风火劫/九九重劫）</div>
+<div class="panel-dialogue">旁白：天劫分五种——天雷/心魔/业火/风火/九九重劫<br>（画外音）你运气好只是天雷~</div>
+</div>
+<div class="panel">
+<div class="panel-num">5</div>
+<div class="panel-desc">最后一道雷劈完，金光散去，林霄单膝跪地，气血回满</div>
+<div class="panel-dialogue">系统：渡劫成功！化神境达成！<br>林霄（喘息）：我…活下来了…</div>
+</div>
+<div class="panel">
+<div class="panel-num">6</div>
+<div class="panel-desc">林霄抬头看到仙界入口（破碎仙宫），光芒万丈</div>
+<div class="panel-dialogue">林霄：这就是…仙界？<br>旁白：化神解锁破碎仙宫，万层起步！</div>
+</div>
+</div>
+
+<div class="mechanic-box">
+<span class="mechanic-label">展示机制</span>：天劫渡劫系统 — 5种天劫类型，成功晋境气血回满，化神解锁仙界
+</div>
+<div class="hook">
+<span>钩子</span>：九九重劫，你敢渡吗？
+</div>
+</div>
+
+<!-- ═══ EP05 ═══ -->
+<div class="episode">
+<div class="ep-header">
+<div class="ep-num">5</div>
+<div><span class="ep-title">玄阳剑尊</span><span class="ep-tag tag-6">6格</span><span class="ep-tag tag-story">剧情</span></div>
+</div>
+
+<div class="panel-grid grid-6">
+<div class="panel">
+<div class="panel-num">1</div>
+<div class="panel-desc">大地图·天剑冢，漫天古剑插在荒原上，林霄独行其间</div>
+<div class="panel-dialogue">林霄：这些剑…每一柄都有剑意残留。</div>
+</div>
+<div class="panel">
+<div class="panel-num">2</div>
+<div class="panel-desc">剑冢深处，白发老者（玄阳剑尊）盘坐在一柄巨剑上</div>
+<div class="panel-dialogue">玄阳剑尊：年轻人，你是来寻剑的？<br>林霄：前辈！我想变强！</div>
+</div>
+<div class="panel">
+<div class="panel-num">3</div>
+<div class="panel-desc">玄阳剑尊挥手，万剑齐鸣，林霄被剑意震退</div>
+<div class="panel-dialogue">玄阳剑尊：先过这一关——剑冢试炼。<br>林霄（惊讶）：万剑共鸣！</div>
+</div>
+<div class="panel">
+<div class="panel-num">4</div>
+<div class="panel-dialogue">林霄在剑雨中拔剑格挡，身上被划出伤痕但眼神坚定<br>林霄：我不会退！</div>
+</div>
+<div class="panel">
+<div class="panel-num">5</div>
+<div class="panel-desc">剑意共鸣，林霄手中的剑发出金光，与万剑同频</div>
+<div class="panel-dialogue">玄阳剑尊（微笑）：剑心通明…可教。<br>林霄：……！</div>
+</div>
+<div class="panel">
+<div class="panel-num">6</div>
+<div class="panel-desc">玄阳剑尊将一柄古剑递给林霄，背后万剑归鞘</div>
+<div class="panel-dialogue">玄阳剑尊：此剑名「玄阳」，剑道传承，交予你了。<br>旁白：NPC剧情线·剑道传承 — 寻师、试炼、传承</div>
+</div>
+</div>
+
+<div class="mechanic-box">
+<span class="mechanic-label">展示机制</span>：NPC剧情线系统 — 玄阳剑尊·剑道传承线，含寻师、试炼、传承奖励
+</div>
+<div class="hook">
+<span>钩子</span>：五条NPC剧情线等你发掘，你的师父是谁？
+</div>
+</div>
+
+<!-- ═══ EP06 ═══ -->
+<div class="episode">
+<div class="ep-header">
+<div class="ep-num">6</div>
+<div><span class="ep-title">建宗门</span><span class="ep-tag tag-4">4格</span><span class="ep-tag tag-gameplay">玩法</span></div>
+</div>
+
+<div class="panel-grid grid-4">
+<div class="panel">
+<div class="panel-num">1</div>
+<div class="panel-desc">林霄站在空旷山头，手握5000灵石，一脸兴奋</div>
+<div class="panel-dialogue">林霄：今天！我要建自己的宗门！<br>系统：消耗5000灵石开辟宗门</div>
+</div>
+<div class="panel">
+<div class="panel-num">2</div>
+<div class="panel-desc">画面切到宗门全景俯瞰图，各种建筑可建造</div>
+<div class="panel-dialogue">旁白：主殿/灵脉阵/炼丹房/炼器阁/藏经阁/演武场/灵田/矿脉/灵兽园…<br>林霄：全都要！</div>
+</div>
+<div class="panel">
+<div class="panel-num">3</div>
+<div class="panel-desc">弟子房里，几个Q版弟子排排站，属性各不同</div>
+<div class="panel-dialogue">林霄（逐个看）：这个根骨好…这个有灵兽缘…<br>弟子A：师父好！弟子B：我要变强！</div>
+</div>
+<div class="panel">
+<div class="panel-num">4</div>
+<div class="panel-desc">弟子们被派出去执行任务，林霄翘脚喝茶</div>
+<div class="panel-dialogue">林霄（惬意）：当掌门的感觉真好~<br>系统：弟子遇袭！弟子被欺负了！<br>林霄（喷茶）：什么！！</div>
+</div>
+</div>
+
+<div class="mechanic-box">
+<span class="mechanic-label">展示机制</span>：宗门系统 — 10种建筑、弟子收徒、任务派遣、灵石/灵草/矿石资源产出
+</div>
+<div class="hook">
+<span>钩子</span>：你的弟子被人打了？快来当掌门→
+</div>
+</div>
+
+<!-- ═══ EP07 ═══ -->
+<div class="episode">
+<div class="ep-header">
+<div class="ep-num">7</div>
+<div><span class="ep-title">药仙婆婆</span><span class="ep-tag tag-6">6格</span><span class="ep-tag tag-story">剧情</span></div>
+</div>
+
+<div class="panel-grid grid-6">
+<div class="panel">
+<div class="panel-num">1</div>
+<div class="panel-desc">冰原秘境，风雪中，佝偻老妇（药仙婆婆）在岩缝中寻找草药</div>
+<div class="panel-dialogue">药仙婆婆（自语）：九转还魂草…一定在这里…</div>
+</div>
+<div class="panel">
+<div class="panel-num">2</div>
+<div class="panel-desc">苏瑶路过看到，好奇走近</div>
+<div class="panel-dialogue">苏瑶：婆婆你在找什么？<br>药仙婆婆：救命的药草…我的眼睛不好了。</div>
+</div>
+<div class="panel">
+<div class="panel-num">3</div>
+<div class="panel-desc">苏瑶帮婆婆在冰缝中翻找，突然看到一株发光的草</div>
+<div class="panel-dialogue">苏瑶：这个是吗？<br>药仙婆婆（激动）：就是它！孩子你帮了大忙！</div>
+</div>
+<div class="panel">
+<div class="panel-num">4</div>
+<div class="panel-desc">药仙婆婆当场炼丹，古旧丹炉冒着灵光，苏瑶惊叹</div>
+<div class="panel-dialogue">药仙婆婆：这是我一生的丹道…看好了。<br>苏瑶（震惊）：好厉害的丹术！</div>
+</div>
+<div class="panel">
+<div class="panel-num">5</div>
+<div class="panel-desc">婆婆将炼好的丹药递给苏瑶，眼中含泪</div>
+<div class="panel-dialogue">药仙婆婆：这颗还魂丹给你，谢谢你。<br>苏瑶：婆婆…</div>
+</div>
+<div class="panel">
+<div class="panel-num">6</div>
+<div class="panel-desc">婆婆背影渐行渐远，消失在风雪中，苏瑶握着丹药</div>
+<div class="panel-dialogue">旁白：NPC剧情线·丹道大梦 — 冰原寻药、忘年之交<br>苏瑶：婆婆，我一定替你传下丹道！</div>
+</div>
+</div>
+
+<div class="mechanic-box">
+<span class="mechanic-label">展示机制</span>：NPC剧情线·丹道大梦 — 冰原秘境探索、NPC互动、炼丹系统
+</div>
+<div class="hook">
+<span>钩子</span>：五条NPC剧情线，各有温情与传承
+</div>
+</div>
+
+<!-- ═══ EP08 ═══ -->
+<div class="episode">
+<div class="ep-header">
+<div class="ep-num">8</div>
+<div><span class="ep-title">装备迷思</span><span class="ep-tag tag-4">4格</span><span class="ep-tag tag-gameplay">玩法</span></div>
+</div>
+
+<div class="panel-grid grid-4">
+<div class="panel">
+<div class="panel-num">1</div>
+<div class="panel-desc">赵岩面对一地装备，每个都在发光，完全不知道选什么</div>
+<div class="panel-dialogue">赵岩：这个加防…这个加血…这个加暴击…选哪个啊！</div>
+</div>
+<div class="panel">
+<div class="panel-num">2</div>
+<div class="panel-desc">柳烟拿起两件同套装装备，套装效果文字弹出</div>
+<div class="panel-dialogue">柳烟：笨，凑套装效果啊~ 两件套、四件套都有加成。<br>赵岩：哦！！原来如此！</div>
+</div>
+<div class="panel">
+<div class="panel-num">3</div>
+<div class="panel-desc">赵岩全副武装，身上五个装备槽全亮（武器/头/护甲/靴/饰品）</div>
+<div class="panel-dialogue">赵岩（变身）：我现在是无敌的！<br>系统：套装·玄铁防御（4件套）效果：伤害减免+25%</div>
+</div>
+<div class="panel">
+<div class="panel-num">4</div>
+<div class="panel-desc">赵岩自信满满冲进地下城，下一秒被打飞回来</div>
+<div class="panel-dialogue">赵岩（鼻青脸肿）：套装…也不是万能的吗…<br>柳烟（翻白眼）：装备要配职业天赋啊笨蛋。<br>旁白：6种装备槽 + 套装效果 + 天赋搭配！</div>
+</div>
+</div>
+
+<div class="mechanic-box">
+<span class="mechanic-label">展示机制</span>：装备系统 — 武器/头/护甲/靴/饰品六槽 + 套装效果 + 天赋搭配
+</div>
+<div class="hook">
+<span>钩子</span>：你的最强套装是什么搭配？
+</div>
+</div>
+
+<!-- ═══ EP09 ═══ -->
+<div class="episode">
+<div class="ep-header">
+<div class="ep-num">9</div>
+<div><span class="ep-title">封魔使·云清</span><span class="ep-tag tag-6">6格</span><span class="ep-tag tag-story">剧情</span></div>
+</div>
+
+<div class="panel-grid grid-6">
+<div class="panel">
+<div class="panel-num">1</div>
+<div class="panel-desc">深夜，古战场遗迹，林霄独自探索时遇到黑衣蒙面人</div>
+<div class="panel-dialogue">云清（冷声）：这里不是你该来的地方。<br>林霄：你是谁？</div>
+</div>
+<div class="panel">
+<div class="panel-num">2</div>
+<div class="panel-desc">云清亮出封魔印，金色符文在掌心浮现</div>
+<div class="panel-dialogue">云清：封魔使·云清。追查百年前魔修大案。<br>林霄：百年前的案子？</div>
+</div>
+<div class="panel">
+<div class="panel-num">3</div>
+<div class="panel-desc">遗迹深处封印裂开，魔气涌出，地面龟裂</div>
+<div class="panel-dialogue">云清（急）：封印松动…不好！<br>林霄：让我帮忙！</div>
+</div>
+<div class="panel">
+<div class="panel-num">4</div>
+<div class="panel-desc">林霄和云清并肩作战，剑光与封魔印齐出，镇压魔气</div>
+<div class="panel-dialogue">林霄：吃我一剑！<br>云清：封魔·镇！</div>
+</div>
+<div class="panel">
+<div class="panel-num">5</div>
+<div class="panel-desc">魔气被封，云清面纱被风吹落一角，露出伤疤</div>
+<div class="panel-dialogue">林霄：你的伤…<br>云清（别过脸）：百年前的代价。</div>
+</div>
+<div class="panel">
+<div class="panel-num">6</div>
+<div class="panel-desc">云清消失在夜色中，林霄望着她离去的方向</div>
+<div class="panel-dialogue">云清（画外音）：你…有些实力。后会有期。<br>旁白：NPC剧情线·封魔者 — 身世之谜、百年悬案、共镇魔修</div>
+</div>
+</div>
+
+<div class="mechanic-box">
+<span class="mechanic-label">展示机制</span>：NPC剧情线·封魔者 — 古战场秘境探索、NPC身世谜团、双人协作战斗
+</div>
+<div class="hook">
+<span>钩子</span>：百年魔修大案的真相是什么？来游戏里找→
+</div>
+</div>
+
+<!-- ═══ EP10 ═══ -->
+<div class="episode">
+<div class="ep-header">
+<div class="ep-num">10</div>
+<div><span class="ep-title">天赋树</span><span class="ep-tag tag-4">4格</span><span class="ep-tag tag-gameplay">玩法</span></div>
+</div>
+
+<div class="panel-grid grid-4">
+<div class="panel">
+<div class="panel-num">1</div>
+<div class="panel-desc">陈符面前浮现巨大的天赋树面板，3分支×6节点，密密麻麻</div>
+<div class="panel-dialogue">陈符（推眼镜）：让我仔细研究…90个节点，5棵天赋树。</div>
+</div>
+<div class="panel">
+<div class="panel-num">2</div>
+<div class="panel-desc">其他人已经在旁边打起来了，陈符还在算</div>
+<div class="panel-dialogue">陈符：这条路线…配合符箓伤害最大化…不对，该先点生存…<br>（远处传来打斗声）</div>
+</div>
+<div class="panel">
+<div class="panel-num">3</div>
+<div class="panel-desc">陈符终于点完天赋，全身符文环绕，气场全开</div>
+<div class="panel-dialogue">陈符：完成。冰雷双系，符箓增伤85%。<br>林霄：……你研究了多久？</div>
+</div>
+<div class="panel">
+<div class="panel-num">4</div>
+<div class="panel-desc">陈符淡定一挥手，前方小怪全灭，其他人目瞪口呆</div>
+<div class="panel-dialogue">陈符（推眼镜）：研究是有价值的。<br>旁白：5职业×90节点天赋树！100灵石随时重洗！<br>（小字）支持一键加点和预设方案</div>
+</div>
+</div>
+
+<div class="mechanic-box">
+<span class="mechanic-label">展示机制</span>：天赋系统 — 5职业独立天赋树，每树3分支×6节点=18节点，共90节点，100灵石重洗
+</div>
+<div class="hook">
+<span>钩子</span>：你的天赋Build是什么流派？
+</div>
+</div>
+
+<!-- ═══ EP11 ═══ -->
+<div class="episode">
+<div class="ep-header">
+<div class="ep-num">11</div>
+<div><span class="ep-title">无尽妖域</span><span class="ep-tag tag-6">6格</span><span class="ep-tag tag-gameplay">玩法</span></div>
+</div>
+
+<div class="panel-grid grid-6">
+<div class="panel">
+<div class="panel-num">1</div>
+<div class="panel-desc">大地图·无尽妖域入口，黑雾弥漫，数字显示「7层起 · 9999层」</div>
+<div class="panel-dialogue">林霄（吞口水）：9999层…<br>陆青鸢：无尽模式，理论上没有尽头。</div>
+</div>
+<div class="panel">
+<div class="panel-num">2</div>
+<div class="panel-desc">林霄在妖域中战斗，小怪越来越强，楼层递增</div>
+<div class="panel-dialogue">林霄：第50层了…怪物好强！<br>（系统提示：难度递增）</div>
+</div>
+<div class="panel">
+<div class="panel-num">3</div>
+<div class="panel-desc">第100层Boss出现——巨大的妖王，威压惊人</div>
+<div class="panel-dialogue">妖王：又一个送死的修士？<br>林霄（握紧剑）：不打到最后一层我绝不退！</div>
+</div>
+<div class="panel">
+<div class="panel-num">4</div>
+<div class="panel-desc">击败Boss，掉落光芒中浮现「天机套件」</div>
+<div class="panel-dialogue">系统：天机降临！【套件名】现世！<br>林霄：这是…！</div>
+</div>
+<div class="panel">
+<div class="panel-num">5</div>
+<div class="panel-desc">林霄装备套件后实力暴涨，继续向更深处进发</div>
+<div class="panel-dialogue">林霄：第200层…第500层…还能更深！</div>
+</div>
+<div class="panel">
+<div class="panel-num">6</div>
+<div class="panel-desc">画面拉远，显示「9999层」的数字如同高墙，林霄变成小点</div>
+<div class="panel-dialogue">旁白：无尽妖域 · Endless模式<br>Boss有20%概率掉落v4天机套件！<br>林霄（远处小声）：这到底有多深啊！！</div>
+</div>
+</div>
+
+<div class="mechanic-box">
+<span class="mechanic-label">展示机制</span>：无尽妖域Endless模式 — 9999层+、难度递增、Boss掉落v4天机套件
+</div>
+<div class="hook">
+<span>钩子</span>：你能在无尽妖域打到第几层？
+</div>
+</div>
+
+<!-- ═══ EP12 ═══ -->
+<div class="episode">
+<div class="ep-header">
+<div class="ep-num">12</div>
+<div><span class="ep-title">飞升</span><span class="ep-tag tag-6">6格</span><span class="ep-tag tag-story">剧情</span></div>
+</div>
+
+<div class="panel-grid grid-6">
+<div class="panel">
+<div class="panel-num">1</div>
+<div class="panel-desc">合体境的林霄站在破碎仙宫第50层，面前是天梯</div>
+<div class="panel-dialogue">林霄：合体圆满…最后一步了。</div>
+</div>
+<div class="panel">
+<div class="panel-num">2</div>
+<div class="panel-desc">天空裂开，九九八十一道天劫同时降临，天地变色</div>
+<div class="panel-dialogue">系统：九九重劫降临！<br>林霄：来吧！</div>
+</div>
+<div class="panel">
+<div class="panel-num">3</div>
+<div class="panel-desc">林霄在雷海中战斗，衣衫尽毁，但身周金光大盛</div>
+<div class="panel-dialogue">林霄：八十一道…一不留就死…但我不会退！</div>
+</div>
+<div class="panel">
+<div class="panel-num">4</div>
+<div class="panel-desc">最后一道天雷散去，林霄悬浮空中，全身散发圣光</div>
+<div class="panel-dialogue">系统：渡劫成功！飞升！<br>林霄：这就是…飞升的感觉…</div>
+</div>
+<div class="panel">
+<div class="panel-num">5</div>
+<div class="panel-desc">画面闪回：从炼气小修士到飞升的全部旅程（蒙太奇）</div>
+<div class="panel-dialogue">旁白：从青冥山脉的第一只妖蛇…到今日九九重劫。<br>（闪回画面：选职业/第一次下本/天劫/宗门/玄阳剑尊/药仙婆婆/封魔使）</div>
+</div>
+<div class="panel">
+<div class="panel-num">6</div>
+<div class="panel-desc">林霄飞升后，画面切到新存档「随机结缘」按钮，暗示新旅程</div>
+<div class="panel-dialogue">旁白：飞升后重置境界，获得永久属性加成。新旅程再启！<br>哲码游戏 出品 · 修仙与地下城<br>（扫码开始你的修仙之路）</div>
+</div>
+</div>
+
+<div class="mechanic-box">
+<span class="mechanic-label">展示机制</span>：终极目标·飞升 — 合体境触发九九重劫，成功后重置境界获永久加成，新旅程开始
+</div>
+<div class="hook">
+<span>钩子</span>：从炼气到飞升，你的修仙路在哪里？扫码开始→
+</div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<div class="divider"></div>
+<h2>四、发布策略</h2>
+
+<div class="card">
+<h3>发布节奏</h3>
+<table>
+<tr><th>阶段</th><th>集数</th><th>主题</th><th>平台</th></tr>
+<tr><td>第1周</td><td>EP01-03</td><td>入坑篇：选职业→下本→突破</td><td>小红书 + TapTap动态</td></tr>
+<tr><td>第2周</td><td>EP04-06</td><td>进阶篇：天劫→剑尊→宗门</td><td>小红书 + B站动态</td></tr>
+<tr><td>第3周</td><td>EP07-09</td><td>剧情篇：药仙→装备→封魔使</td><td>小红书 + TapTap</td></tr>
+<tr><td>第4周</td><td>EP10-12</td><td>终局篇：天赋→无尽→飞升</td><td>全平台 + B站专栏</td></tr>
+</table>
+
+<h3 style="margin-top:20px;">每集规格</h3>
+<table>
+<tr><th>项目</th><th>规格</th></tr>
+<tr><td>尺寸</td><td>1080×1440 (3:4竖屏) / 四格2×2 / 六格2×3</td></tr>
+<tr><td>格式</td><td>JPG 质量95%</td></tr>
+<tr><td>配色</td><td>紫金+星空修仙风格（与游戏一致）</td></tr>
+<tr><td>水印</td><td>右下角「哲码游戏 出品」</td></tr>
+<tr><td>引导语</td><td>每集底部「修仙与地下城 · TapTap搜索」</td></tr>
+<tr><td>角色风格</td><td>Q版(头身1:2)，表情夸张丰富</td></tr>
+</table>
+
+<h3 style="margin-top:20px;">制作流程</h3>
+<table>
+<tr><th>步骤</th><th>说明</th></tr>
+<tr><td>1. 分镜HTML</td><td>用HTML+CSS制作每个panel的分镜排版</td></tr>
+<tr><td>2. 角色立绘</td><td>用AI生成Q版角色立绘PNG（透明背景）</td></tr>
+<tr><td>3. 场景背景</td><td>用AI生成各场景背景（洞府/地下城/冰原/古战场等）</td></tr>
+<tr><td>4. 合成</td><td>将角色+背景+对话框合成到分镜模板中</td></tr>
+<tr><td>5. 截图</td><td>Playwright截取每个panel为JPG</td></tr>
+<tr><td>6. 组装</td><td>将panel组合为完整的四格/六格漫画图</td></tr>
+</table>
+</div>
+
+<div class="footer">
+哲码游戏 出品 · 修仙与地下城漫画策划方案 · v1.0
+</div>
+
+</div>
+</body>
+</html>

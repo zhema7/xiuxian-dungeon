@@ -3,6 +3,7 @@
 import type { GameState } from './state'
 import type { SectData } from './sect-data'
 import type { AiSect, ResourceNode, DiplomacyActionType, DiplomacyStatus } from './ai-sect-data'
+import { sectDisciplePower } from './disciple-data'
 import {
   DIPLOMACY_ACTIONS, getDiplomacyStatus, aiAcceptDiplomacy, aiSectTick,
   calcSectPower, diplomacyStatusName, dispositionDesc,
@@ -13,6 +14,7 @@ import { toast, showDialog } from './ui'
 import { sfx } from './audio'
 import { input } from './input'
 import { saveGame } from './state'
+import { buildingLabel } from './labels'
 
 /** 执行外交行动 */
 export async function executeDiplomacy(
@@ -63,7 +65,7 @@ export async function executeDiplomacy(
 
   const rng = makeRng(Date.now() % 2147483647)
   const buildingCount = Object.values(sect.buildings).filter(v => v > 0).length
-  const playerPower = calcSectPower(sect.level, buildingCount, sect.disciples.length, sect.resources)
+  const playerPower = calcSectPower(sect.level, buildingCount, sectDisciplePower(state.disciples), sect.resources)
 
   // 侦查行动特殊处理
   if (action === 'scout') {
@@ -213,7 +215,7 @@ export function tickAllAiSects(state: GameState, aiSects: AiSect[]): string[] {
   const rng = makeRng(Math.floor(Date.now() / 300000))
   const events: string[] = []
   const buildingCount = Object.values(sect.buildings).filter(v => v > 0).length
-  const playerPower = calcSectPower(sect.level, buildingCount, sect.disciples.length, sect.resources)
+  const playerPower = calcSectPower(sect.level, buildingCount, sectDisciplePower(state.disciples), sect.resources)
 
   for (const ai of aiSects) {
     const msg = aiSectTick(ai, playerPower, rng)
@@ -257,12 +259,12 @@ export async function processSectDefense(
   const guardLevel = sect.buildings.guard_array ?? 0
   const guardBonus = guardLevel * 80
   let discipleDefense = 0
-  for (const d of sect.disciples) {
+  for (const d of state.disciples) {
     if (d.status !== 'dispatched' && d.status !== 'retreating') {
       discipleDefense += d.atk + d.def
     }
   }
-  const playerSectPower = calcSectPower(sect.level, buildingCount, sect.disciples.length, sect.resources)
+  const playerSectPower = calcSectPower(sect.level, buildingCount, sectDisciplePower(state.disciples), sect.resources)
   const defensePower = playerSectPower + guardBonus + discipleDefense
 
   const defended = defensePower >= attackPower
@@ -276,8 +278,8 @@ export async function processSectDefense(
     sect.resources.prestige += 10
 
     // 弟子轻微损耗
-    if (sect.disciples.length > 0 && rng() < 0.3) {
-      const d = sect.disciples[Math.floor(rng() * sect.disciples.length)]
+    if (state.disciples.length > 0 && rng() < 0.3) {
+      const d = state.disciples[Math.floor(rng() * state.disciples.length)]
       if (d) {
         d.loyalty = Math.max(0, d.loyalty - 3)
       }
@@ -303,11 +305,11 @@ export async function processSectDefense(
 
     // 弟子损耗
     let discipleLost = 0
-    if (sect.disciples.length > 0) {
-      const losses = Math.min(sect.disciples.length, Math.floor(1 + rng() * 2))
+    if (state.disciples.length > 0) {
+      const losses = Math.min(state.disciples.length, Math.floor(1 + rng() * 2))
       for (let i = 0; i < losses; i++) {
-        if (rng() < 0.3 && sect.disciples.length > 0) {
-          sect.disciples.pop()
+        if (rng() < 0.3 && state.disciples.length > 0) {
+          state.disciples.pop()
           discipleLost++
         }
       }
@@ -319,7 +321,7 @@ export async function processSectDefense(
     if (buildingIds.length > 0 && rng() < 0.4) {
       const target = buildingIds[Math.floor(rng() * buildingIds.length)]
       sect.buildings[target] = Math.max(0, sect.buildings[target] - 1)
-      buildingDamaged = `${target} 降级`
+      buildingDamaged = `${buildingLabel(target)} 降级`
     }
 
     ai.warExhaustion += 5
@@ -352,7 +354,7 @@ export async function attackResourceNode(
   if (!sect) { input.clearQueues(); return }
 
   const buildingCount = Object.values(sect.buildings).filter(v => v > 0).length
-  const playerPower = calcSectPower(sect.level, buildingCount, sect.disciples.length, sect.resources)
+  const playerPower = calcSectPower(sect.level, buildingCount, sectDisciplePower(state.disciples), sect.resources)
   const rng = makeRng(Date.now() % 2147483647)
 
   // 驻军强度
@@ -361,12 +363,12 @@ export async function attackResourceNode(
   const success = attackPower > garrison
 
   // 扣减弟子（参战消耗）
-  if (sect.disciples.length > 0) {
-    const losses = Math.min(sect.disciples.length, Math.floor(1 + rng() * 2))
+  if (state.disciples.length > 0) {
+    const losses = Math.min(state.disciples.length, Math.floor(1 + rng() * 2))
     for (let i = 0; i < losses; i++) {
-      const d = sect.disciples[sect.disciples.length - 1 - i]
+      const d = state.disciples[state.disciples.length - 1 - i]
       if (d && rng() < 0.3) {
-        sect.disciples.splice(sect.disciples.length - 1 - i, 1)
+        state.disciples.splice(state.disciples.length - 1 - i, 1)
       }
     }
   }
@@ -447,7 +449,7 @@ export async function launchSectWar(
   if (!sect) { input.clearQueues(); return }
 
   const buildingCount = Object.values(sect.buildings).filter(v => v > 0).length
-  const playerPower = calcSectPower(sect.level, buildingCount, sect.disciples.length, sect.resources)
+  const playerPower = calcSectPower(sect.level, buildingCount, sectDisciplePower(state.disciples), sect.resources)
   const rng = makeRng(Date.now() % 2147483647)
 
   // 战力对比
@@ -464,10 +466,10 @@ export async function launchSectWar(
   ai.relationValue = Math.max(-100, ai.relationValue - 15)
 
   // 弟子损耗
-  const discipleLosses = Math.min(sect.disciples.length, Math.floor(1 + rng() * 3))
+  const discipleLosses = Math.min(state.disciples.length, Math.floor(1 + rng() * 3))
   for (let i = 0; i < discipleLosses; i++) {
-    if (rng() < 0.4 && sect.disciples.length > 0) {
-      sect.disciples.pop()
+    if (rng() < 0.4 && state.disciples.length > 0) {
+      state.disciples.pop()
     }
   }
   ai.discipleCount = Math.max(0, ai.discipleCount - Math.floor(1 + rng() * 3))
@@ -607,7 +609,7 @@ async function vassalizeSect(state: GameState, ai: AiSect): Promise<void> {
   sfx('sfx_levelup')
   await showDialog(`附庸 ${ai.name}`, [
     `${ai.name} 已成为你的附庸宗门！`,
-    `每 tick 进贡 ${Math.floor(ai.tributeRate * 100)}% 资源`,
+    `每 5 分钟进贡 ${Math.floor(ai.tributeRate * 100)}% 资源`,
     `占领资源点 ${nodesGained} 处`,
     `声望 +20`,
     '注意：附庸可能叛乱！',
@@ -640,7 +642,7 @@ async function destroySect(state: GameState, ai: AiSect): Promise<void> {
   toast(`已摧毁 ${ai.name}！`, '#f87171')
 }
 
-/** 附庸进贡结算（每 tick 调用） */
+/** 附庸进贡结算（每 5 分钟调用一次，见 WorldScene diplomacyTimer） */
 export function processVassalTribute(state: GameState, aiSects: AiSect[]): void {
   const sect = state.sect
   if (!sect) return
@@ -667,7 +669,7 @@ export function checkRebellion(state: GameState, aiSects: AiSect[], rng: () => n
   const sect = state.sect
   if (!sect) return []
   const buildingCount = Object.values(sect.buildings).filter(v => v > 0).length
-  const playerPower = calcSectPower(sect.level, buildingCount, sect.disciples.length, sect.resources)
+  const playerPower = calcSectPower(sect.level, buildingCount, sectDisciplePower(state.disciples), sect.resources)
   const events: string[] = []
 
   for (const ai of aiSects) {

@@ -37,10 +37,10 @@ export interface DamageResult { dmg: number; crit: boolean }
 
 export function calcDamage(
   atk: number, mult: number, critRate: number,
-  def: number, rng: () => number,
+  def: number, rng: () => number, critDmg = 0,
 ): DamageResult {
   const crit = rng() < critRate
-  let raw = atk * mult * (crit ? 1.6 : 1)
+  let raw = atk * mult * (crit ? 1.6 + critDmg : 1)
   raw *= 0.9 + rng() * 0.2 // ±10% 浮动
   const dmg = Math.max(1, Math.round(raw - def))
   return { dmg, crit }
@@ -48,7 +48,7 @@ export function calcDamage(
 
 // ---------- 经验 / 等级 ----------
 export function expNeed(level: number) {
-  return Math.round(40 * Math.pow(level, 1.45))
+  return Math.round(60 * Math.pow(level, 1.55))
 }
 
 // ---------- 装备实例 ----------

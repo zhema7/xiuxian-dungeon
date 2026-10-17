@@ -4,7 +4,9 @@
 import type { GameState } from './state'
 import type { AiSect } from './ai-sect-data'
 import { getBuildingEffects } from './sect-building-v2'
+import { sectDisciplePower } from './disciple-data'
 import { getDemonSummary } from './inner-demon'
+import { resourceLabel, sectLabel } from './labels'
 
 // ===== 战争类型 =====
 
@@ -50,9 +52,7 @@ export function evaluateSectPower(state: GameState, sectId: string): number {
   if (sectId === 'player') {
     if (!state.sect) return Math.floor(state.level * 50 + state.realm * 80)
     const effects = getBuildingEffects(state.sect)
-    const disciplePower = (state.disciples || []).reduce((s, d) => {
-      return s + d.level * 10 + d.loyalty * 0.5
-    }, 0)
+    const disciplePower = sectDisciplePower(state.disciples || [])
     const buildingPower = Object.entries(state.sect.buildings).reduce((s, [, lv]) => s + (lv as number) * 15, 0)
     return Math.floor(disciplePower + buildingPower + effects.defensePower * 0.3 + state.realm * 100 + 200)
   }
@@ -139,6 +139,10 @@ export function resolveWar(state: GameState, war: SectWar): WarResult {
   const attackerPower = evaluateSectPower(state, war.attacker)
   const defenderPower = evaluateSectPower(state, war.defender)
 
+  // 名称必须在灭门移除之前取好，否则会退化成「未知宗门」
+  const attackerName = sectLabel(state, war.attacker)
+  const defenderName = sectLabel(state, war.defender)
+
   // 加入随机因素（0.7~1.3 倍波动）
   const attackerRoll = attackerPower * (0.7 + Math.random() * 0.6)
   const defenderRoll = defenderPower * (0.7 + Math.random() * 0.6)
@@ -165,7 +169,7 @@ export function resolveWar(state: GameState, war: SectWar): WarResult {
   if (winner === 'player') {
     if (state.sect) {
       state.sect.resources[resourceType] = (state.sect.resources[resourceType] || 0) + resourcesGained
-      messages.push(`宗门获得${resourceType}×${resourcesGained}`)
+      messages.push(`宗门获得${resourceLabel(resourceType)}×${resourcesGained}`)
     } else {
       if (resourceType === 'stone') {
         state.gold += resourcesGained * 10
@@ -175,13 +179,13 @@ export function resolveWar(state: GameState, war: SectWar): WarResult {
         messages.push(`获得悟道点${resourcesGained}`)
       } else {
         state.materials[resourceType] = (state.materials[resourceType] || 0) + resourcesGained
-        messages.push(`获得${resourceType}×${resourcesGained}`)
+        messages.push(`获得${resourceLabel(resourceType)}×${resourcesGained}`)
       }
     }
   } else if (loser === 'player') {
     if (state.sect) {
       state.sect.resources[resourceType] = Math.max(0, (state.sect.resources[resourceType] || 0) - resourcesGained)
-      messages.push(`宗门损失${resourceType}×${resourcesGained}`)
+      messages.push(`宗门损失${resourceLabel(resourceType)}×${resourcesGained}`)
     } else {
       if (resourceType === 'stone') {
         state.gold = Math.max(0, state.gold - resourcesGained * 10)
@@ -191,7 +195,7 @@ export function resolveWar(state: GameState, war: SectWar): WarResult {
         messages.push(`损失悟道点${resourcesGained}`)
       } else {
         state.materials[resourceType] = Math.max(0, (state.materials[resourceType] || 0) - resourcesGained)
-        messages.push(`损失${resourceType}×${resourcesGained}`)
+        messages.push(`损失${resourceLabel(resourceType)}×${resourcesGained}`)
       }
     }
   }
@@ -205,7 +209,7 @@ export function resolveWar(state: GameState, war: SectWar): WarResult {
     if (annihilatedId !== 'player') {
       // 移除被灭AI宗门
       state.aiSects = state.aiSects.filter(s => s.id !== annihilatedId)
-      messages.push(`${annihilatedId}宗门被灭门！`)
+      messages.push(`「${sectLabel(state, annihilatedId)}」被灭门！`)
     } else {
       // 玩家宗门被灭——大幅降级但不完全删除
       if (state.sect) {
@@ -243,7 +247,9 @@ export function resolveWar(state: GameState, war: SectWar): WarResult {
     messages.push('战争杀戮，杀戮心魔+5')
   }
 
-  const description = `${winner === 'player' ? '你方' : winner}击败了${loser === 'player' ? '你方' : loser}，${annihilated ? '并将其灭门！' : `获得${resourceType}×${resourcesGained}`}`
+  const winnerName = winner === war.attacker ? attackerName : defenderName
+  const loserName = loser === war.attacker ? attackerName : defenderName
+  const description = `${winnerName}击败了${loserName}，${annihilated ? '并将其灭门！' : `获得${resourceLabel(resourceType)}×${resourcesGained}`}`
 
   return {
     warId: war.id,
@@ -274,7 +280,7 @@ export function formAlliance(
       const existing = alliances.find(a =>
         a.status === 'active' && a.memberIds.includes(m)
       )
-      if (existing) return { ok: false, reason: `${m}已在联盟「${existing.name}」中` }
+      if (existing) return { ok: false, reason: `${sectLabel(state, m)}已在联盟「${existing.name}」中` }
     }
   }
 
@@ -369,7 +375,7 @@ export function annexSect(state: GameState, winnerId: string, loserId: string): 
 
   return {
     ok: true,
-    description: `${winnerId === 'player' ? '你' : winnerId}吞并了${loserSect.name}，获得大量资源！`,
+    description: `${winnerId === 'player' ? '你' : sectLabel(state, winnerId)}吞并了${loserSect.name}，获得大量资源！`,
     resources,
   }
 }

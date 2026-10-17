@@ -4,6 +4,7 @@
 import type { GameState } from './state'
 import type { SectData, BuildingId, SectResources } from './sect-data'
 import { BUILDINGS } from './sect-data'
+import { resourceLabel } from './labels'
 
 export type { BuildingId } from './sect-data'
 
@@ -226,5 +227,5 @@ export function withdrawSectResources(state: GameState, type: keyof SectResource
     default:
       state.materials[type] = (state.materials[type] || 0) + amount
   }
-  return { ok: true, message: `提取了${amount}单位${type}` }
+  return { ok: true, message: `提取了${amount}单位${resourceLabel(type)}` }
 }

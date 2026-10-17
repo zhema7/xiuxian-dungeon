@@ -1,5 +1,0 @@
-
-> xiuxian-dungeon@0.1.0 typecheck
-> tsc --noEmit --pretty false
-
-src/lore.ts(138,82): error TS2345: Argument of type 'string' is not assignable to parameter of type '"大衍" | "青元" | "玄骨" | "虚天" | "魔银" | "惊蛰" | "曲魂" | "啼魂" | "六翼" | "金阙" | "苍坤" | "逆星" | "千竹" | "黄枫" | "掩月" | "紫灵" | "银月" | "冰魄" | "血焰" | "天澜" | "青焰" | "黑风" | "白虹" | "赤炎"'.

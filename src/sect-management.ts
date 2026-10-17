@@ -3,7 +3,7 @@
 
 import type { GameState } from './state'
 import type { SectData } from './sect-data'
-import type { DiscipleData } from './disciple-system'
+import type { Disciple } from './disciple-data'
 import { SPECIALTY_NAMES, type DiscipleSpecialty } from './disciple-system'
 
 // ===== 职务系统 =====
@@ -45,7 +45,7 @@ export const POSITION_DESC: Record<SectPosition, string> = {
 
 // ===== 职务分配 =====
 
-export function assignPosition(disciple: DiscipleData, position: SectPosition): { ok: boolean; message: string } {
+export function assignPosition(disciple: Disciple, position: SectPosition): { ok: boolean; message: string } {
   // 职务与特长的匹配度检查
   const matchTable: Record<DiscipleSpecialty, SectPosition[]> = {
     combat: ['captain', 'elder'],
@@ -56,7 +56,7 @@ export function assignPosition(disciple: DiscipleData, position: SectPosition): 
     intelligence: ['envoy'],
   }
 
-  const preferredPositions = matchTable[disciple.specialty] || ['disciple']
+  const preferredPositions = matchTable[disciple.specialty ?? 'combat'] || ['disciple']
 
   if (!preferredPositions.includes(position) && position !== 'disciple' && position !== 'none') {
     return {
@@ -67,7 +67,7 @@ export function assignPosition(disciple: DiscipleData, position: SectPosition): 
 
   const oldPosition = disciple.onMission === position ? 'none' : 'none'
   disciple.onMission = position
-  disciple.mood = Math.min(100, disciple.mood + 5)
+  disciple.mood = Math.min(100, (disciple.mood ?? 70) + 5)
 
   return {
     ok: true,
@@ -86,7 +86,7 @@ export interface SectPositionEffects {
   reputationBonus: number      // 声望产出加成
 }
 
-export function calculatePositionEffects(disciples: DiscipleData[]): SectPositionEffects {
+export function calculatePositionEffects(disciples: Disciple[]): SectPositionEffects {
   const effects: SectPositionEffects = {
     cultivationBonus: 0, productionBonus: 0, alchemyBonus: 0,
     forgeBonus: 0, defenseBonus: 0, reputationBonus: 0,
@@ -150,9 +150,9 @@ export const RULE_DESC: Record<SectRule, string> = {
   hermit: '与世无争，修炼加速，但声望增长缓慢',
 }
 
-export function applySectRule(sect: SectData, rule: SectRule): string {
-  // 门规影响弟子属性
-  for (const d of sect.disciples) {
+export function applySectRule(sect: SectData, rule: SectRule, disciples: Disciple[]): string {
+  // 门规影响弟子属性（弟子唯一真源是 state.disciples，由调用方传入）
+  for (const d of disciples) {
     switch (rule) {
       case 'benevolent':
         d.loyalty = Math.min(100, d.loyalty + 2)
@@ -234,8 +234,8 @@ export function getSectOverview(state: GameState): string[] {
     for (const d of state.disciples) {
       const pos = (d.onMission as SectPosition) || 'none'
       const posName = POSITION_NAMES[pos] || '修炼'
-      const specName = SPECIALTY_NAMES[d.specialty] || ''
-      lines.push(`${d.name} [${posName}] ${specName} 忠诚${d.loyalty.toFixed(0)} 心情${d.mood.toFixed(0)}`)
+      const specName = d.specialty ? (SPECIALTY_NAMES[d.specialty] || '') : ''
+      lines.push(`${d.name} [${posName}] ${specName} 忠诚${d.loyalty.toFixed(0)} 心情${(d.mood ?? 70).toFixed(0)}`)
     }
   }
 

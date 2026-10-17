@@ -395,15 +395,18 @@ export function aiSectTick(ai: AiSect, playerPower: number, rng: () => number): 
   return null
 }
 
-/** 计算宗门综合战力 */
+/**
+ * 计算宗门综合战力。
+ * 第三参数是**弟子战力贡献**（由 `sectDisciplePower()` 统一计算），不是弟子人数——
+ * 弟子合轨后不再用「人数×30」这种与实际强度脱节的口径。
+ */
 export function calcSectPower(
   level: number,
   buildingCount: number,
-  discipleCount: number,
+  disciplePower: number,
   resources: { stone: number; herb: number; ore: number; wood: number },
 ): number {
   const buildingPower = buildingCount * 50
-  const disciplePower = discipleCount * 30
   const resourcePower = Math.floor((resources.stone + resources.ore + resources.wood) * 0.1)
   return Math.floor((200 + level * 80 + buildingPower + disciplePower + resourcePower) * 1.0)
 }

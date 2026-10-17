@@ -613,6 +613,156 @@ export const STORIES: StoryDef[] = [
       },
     ],
   },
+  {
+    id: 'story_alchemist', npcId: 'npc_alchemist', name: '药尘拜师',
+    desc: '药尘说炼丹并不只是火候的事',
+    requireFavor: 30, requireLevel: 5,
+    stages: [
+      { index: 0, text: '药尘让你先去灵田采摘一份青灵草，他要看你的眼力。', objective: '探索灵田，采得青灵草×3', check: (lv) => lv >= 6, reward: '药尘赠送「清心丹方」，好感+10' },
+      { index: 1, text: '「火候到了药性就对了，但用心比火候更难得。」药尘让你跟炼一炉。', objective: '达到 12 级，炼丹成功率达 6 成以上', check: (lv) => lv >= 12, reward: '药尘赠予上品聚灵丹×3，炼丹经验+30%' },
+      { index: 2, text: '「去吧，丹道一途你已入门。」药尘微微点头。', objective: '完成最终对话', check: () => true, reward: '获得药尘传承：丹药品级+1，炼丹消耗-15%' },
+    ],
+  },
+  {
+    id: 'story_alchemy_master', npcId: 'npc_alchemy_master', name: '丹阳子的执念',
+    desc: '丹阳子手中有一张残缺丹方',
+    requireFavor: 70, requireLevel: 18,
+    stages: [
+      { index: 0, text: '丹阳子提起曾失传的「九转还魂丹」，只剩残方。', objective: '收集残方三页', check: (lv) => lv >= 22, reward: '丹阳子赠予回灵草×5，好感+15' },
+      { index: 1, text: '补全丹方需要千年灵药与玄火。', objective: '达到 30 级，获取千年灵药', check: (lv) => lv >= 30, reward: '丹阳子传授「玄火控温」手法' },
+      { index: 2, text: '「丹成之时，便是丹道圆满。」丹阳子眼中罕见地有了光。', objective: '完成最终对话', check: () => true, reward: '获得丹阳子传承：炼丹成功率+20%，悟道+25' },
+    ],
+  },
+  {
+    id: 'story_arena_master', npcId: 'npc_arena_master', name: '擂台登记',
+    desc: '雷震盯着你说「先排队」',
+    requireFavor: 20, requireLevel: 8,
+    stages: [
+      { index: 0, text: '雷震让你先去连胜三场证明有资格上榜。', objective: '在擂台连胜 3 场', check: (lv) => lv >= 12, reward: '雷震登记你的名号，声望+15' },
+      { index: 1, text: '「不错，下一步：去挑战榜上前十。」', objective: '挑战并战胜擂台前十', check: (lv) => lv >= 20, reward: '雷震授予「擂台守擂者」称号，好感+20' },
+      { index: 2, text: '「你已是这擂台的一员，去跟冠军多聊聊。」雷震难得笑了笑。', objective: '完成最终对话', check: () => true, reward: '获得擂台认证：战斗经验+15%，声望+30' },
+    ],
+  },
+  {
+    id: 'story_blacksmith', npcId: 'npc_blacksmith', name: '铁锤的小忙',
+    desc: '铁锤说他的炉子总熄火',
+    requireFavor: 25, requireLevel: 4,
+    stages: [
+      { index: 0, text: '铁锤让你帮他把坏掉的风箱拉杆修好。', objective: '在木匠铺取得硬木杆', check: (lv) => lv >= 6, reward: '铁锤帮你重铸一件白板兵器，好感+10' },
+      { index: 1, text: '铁锤想鉴别一批来路不明的矿石。', objective: '达到 10 级，鉴出至少 3 块灵矿', check: (lv) => lv >= 10, reward: '铁锤赠予「精铁矿×10」，并教你识别纯度' },
+      { index: 2, text: '「能用双巧手的人不多，你这小子算一个。」', objective: '完成最终对话', check: () => true, reward: '获得铁锤认可：装备精炼成本-10%，锻造经验+20%' },
+    ],
+  },
+  {
+    id: 'story_champion', npcId: 'npc_champion', name: '仰望独孤',
+    desc: '独孤剑每日清晨在城外练剑',
+    requireFavor: 50, requireLevel: 18,
+    stages: [
+      { index: 0, text: '独孤剑让你旁观他一套剑法，不发一言。', objective: '观剑三回，理解剑意', check: (lv) => lv >= 22, reward: '独孤剑点拨剑意，悟道+10' },
+      { index: 1, text: '「你若能接下我十招，我便收你为记名。」', objective: '与独孤剑切磋，接下十招', check: (lv) => lv >= 28, reward: '独孤剑传授「独孤九剑·起手式」，好感+20' },
+      { index: 2, text: '「剑道孤独，但你不孤独。」独孤剑转身离去。', objective: '完成最终对话', check: () => true, reward: '获得独孤传承：剑系技能伤害+15%，暴击+8%' },
+    ],
+  },
+  {
+    id: 'story_forge_master', npcId: 'npc_forge_master', name: '欧冶子的图谱',
+    desc: '欧冶子保存着远古锻造图',
+    requireFavor: 80, requireLevel: 22,
+    stages: [
+      { index: 0, text: '欧冶子提起上古剑胚，需要千年玄铁与真火。', objective: '取得千年玄铁', check: (lv) => lv >= 26, reward: '欧冶子赠予矿石样本与锻造笔记，悟道+10' },
+      { index: 1, text: '「火候之事，我亲自为你点这把。」', objective: '达到 35 级，获取玄火', check: (lv) => lv >= 35, reward: '欧冶子协助你完成首件玄兵锻造' },
+      { index: 2, text: '「匠人的传与承，便是这样吧。」欧冶子摘下腰牌递给你。', objective: '完成最终对话', check: () => true, reward: '获得欧冶传承：锻造消耗-20%，高级装备掉率+12%' },
+    ],
+  },
+  {
+    id: 'story_healer', npcId: 'npc_healer', name: '苏婉清问诊',
+    desc: '苏婉清请你帮一位疑难症的患者',
+    requireFavor: 30, requireLevel: 6,
+    stages: [
+      { index: 0, text: '苏婉清让你替她取一剂镇痛的灵草配药。', objective: '采集镇灵草×3', check: (lv) => lv >= 8, reward: '苏婉清赠予活血丹×5，好感+10' },
+      { index: 1, text: '村外爆发时疫，苏婉清希望你随她前往救治。', objective: '达到 14 级，治愈 10 名村民', check: (lv) => lv >= 14, reward: '苏婉清授你「清毒手法」，声望+10' },
+      { index: 2, text: '「医道即仁道，你已懂得。」苏婉清为你整衣领。', objective: '完成最终对话', check: () => true, reward: '获得苏婉清认可：丹药效果+15%，生命恢复+20%' },
+    ],
+  },
+  {
+    id: 'story_innkeeper', npcId: 'npc_innkeeper', name: '王婆的秘方',
+    desc: '王婆客栈有道不外卖的菜',
+    requireFavor: 20, requireLevel: 3,
+    stages: [
+      { index: 0, text: '王婆让你去山后取一味「晨露韭」。', objective: '取得晨露韭×2', check: (lv) => lv >= 5, reward: '王婆请你吃了一顿，好感+8，免费住三晚' },
+      { index: 1, text: '王婆想让你帮她鉴别一批陈年灵酒的真伪。', objective: '达到 10 级，鉴别出 3 瓶真酒', check: (lv) => lv >= 10, reward: '王婆赠予陈年灵酒×2，悟道+5' },
+      { index: 2, text: '「常来坐坐，年轻人。」王婆难得软了语气。', objective: '完成最终对话', check: () => true, reward: '获得王婆小店：客栈永久 7 折，每月免费饭票×3' },
+    ],
+  },
+  {
+    id: 'story_library_keeper', npcId: 'npc_library_keeper', name: '书灵的考据',
+    desc: '书灵会让你先抄录一卷古籍',
+    requireFavor: 40, requireLevel: 6,
+    stages: [
+      { index: 0, text: '书灵让你抄录一卷残破的《山河志》。', objective: '完整抄录《山河志》三页', check: (lv) => lv >= 8, reward: '书灵认可你的资质，借阅权限提升' },
+      { index: 1, text: '书灵考你：「何为考据？」', objective: '答对三题，考据值达 50', check: (lv) => lv >= 14, reward: '书灵赠予「云游札记」，见闻+15' },
+      { index: 2, text: '「下次来时，记得带壶好茶。」书灵合上书册。', objective: '完成最终对话', check: () => true, reward: '获得书灵许可：功法研习速度+20%，藏经阁新卷每周可借' },
+    ],
+  },
+  {
+    id: 'story_merchant', npcId: 'npc_merchant', name: '钱万三的货路',
+    desc: '钱万三说他从不亏本',
+    requireFavor: 25, requireLevel: 7,
+    stages: [
+      { index: 0, text: '钱万三让你帮他护送一批货到南边驿站。', objective: '护送三箱货物安全抵达', check: (lv) => lv >= 10, reward: '钱万三支付酬金 200 灵石，好感+10' },
+      { index: 1, text: '钱万三手上有一批稀罕物，只换不卖。', objective: '以物易物换得任意 2 件稀罕物', check: (lv) => lv >= 16, reward: '钱万三授予「同行折扣」，商店永久 9 折' },
+      { index: 2, text: '「咱们做生意的人，靠的是彼此。」钱万三拱手。', objective: '完成最终对话', check: () => true, reward: '获得商贸人脉：交易税率-10%，每月独家货源×1' },
+    ],
+  },
+  {
+    id: 'story_quest_elder', npcId: 'npc_quest_elder', name: '陈奉的派发',
+    desc: '陈奉说任务有真有假',
+    requireFavor: 35, requireLevel: 5,
+    stages: [
+      { index: 0, text: '陈奉让你领第一个任务：清剿镇外狐妖。', objective: '完成 1 个普通任务', check: (lv) => lv >= 8, reward: '陈奉登记你的资历，贡献+5' },
+      { index: 1, text: '陈奉说他会亲自审视你一次。', objective: '达到 12 级，连续完成 5 个任务', check: (lv) => lv >= 12, reward: '陈奉授予「任务殿常客」，声望+12' },
+      { index: 2, text: '「能信任的人，比能打的人难得。」陈奉点头示意。', objective: '完成最终对话', check: () => true, reward: '获得陈奉认可：任务奖励+15%，稀有任务解锁率+10%' },
+    ],
+  },
+  {
+    id: 'story_scout', npcId: 'npc_scout', name: '风影的探子',
+    desc: '风影说「口信比人走得快」',
+    requireFavor: 25, requireLevel: 9,
+    stages: [
+      { index: 0, text: '风影让你替他送一封密信到镇外哨所。', objective: '将密信安全送达', check: (lv) => lv >= 11, reward: '风影教你用「听风辨位」，好感+10' },
+      { index: 1, text: '风影要去探一处险地，需要你随行。', objective: '达到 16 级，勘探险地', check: (lv) => lv >= 16, reward: '风影赠予一份险地地图，见闻+15' },
+      { index: 2, text: '「下次有消息，记得来找我。」风影在风中一拱手。', objective: '完成最终对话', check: () => true, reward: '获得风影引荐：险地探索经验+20%，侦察成功率+12%' },
+    ],
+  },
+  {
+    id: 'story_sect_elder', npcId: 'npc_sect_elder', name: '周道玄议事',
+    desc: '周道玄邀你参宗门议事',
+    requireFavor: 60, requireLevel: 18,
+    stages: [
+      { index: 0, text: '周道玄想听你对门规的看法。', objective: '在议事堂提出一份门规修订建议', check: (lv) => lv >= 22, reward: '周道玄采纳你的意见，好感+15' },
+      { index: 1, text: '周道玄召集外门长老议事，要你列席。', objective: '达到 28 级，外门议事中发言', check: (lv) => lv >= 28, reward: '周道玄授予你外门议政的资格，声望+20' },
+      { index: 2, text: '「宗门的未来，就看你们这代了。」周道玄拂袖而起。', objective: '完成最终对话', check: () => true, reward: '获得宗门议政：宗门产出+8%，议事决策时长-10%' },
+    ],
+  },
+  {
+    id: 'story_training_master', npcId: 'npc_training_master', name: '武狂的入门',
+    desc: '武狂只认拳头',
+    requireFavor: 30, requireLevel: 5,
+    stages: [
+      { index: 0, text: '武狂让你扎马步半个时辰。', objective: '完成基础扎马步训练', check: (lv) => lv >= 7, reward: '武狂教你一套吐纳法，体力上限+10' },
+      { index: 1, text: '武狂要和演武堂的另一名弟子对练。', objective: '达到 12 级，对练胜出', check: (lv) => lv >= 12, reward: '武狂授予「武狂认可」，战斗经验+10%' },
+      { index: 2, text: '「下去自己练，别丢了演武堂的脸。」武狂恶狠狠又带笑。', objective: '完成最终对话', check: () => true, reward: '获得武狂指导：战斗训练减伤+5%，近战伤害+8%' },
+    ],
+  },
+  {
+    id: 'story_wanderer', npcId: 'npc_wanderer', name: '云游散修',
+    desc: '云游道人请你喝了一盏茶',
+    requireFavor: 0, requireLevel: 10,
+    stages: [
+      { index: 0, text: '云游道人说：「见过奇景么？说来听听。」', objective: '讲述或探险取得 3 处见闻', check: (lv) => lv >= 12, reward: '云游道人赠你一卷散记，悟道+8' },
+      { index: 1, text: '云游道人要去一处古遗址，邀请你同往。', objective: '达到 18 级，参与古遗址探索', check: (lv) => lv >= 18, reward: '云游道人传授见闻判定，见闻+20' },
+      { index: 2, text: '「修仙一途，最难得是忘形。」云游道人飘然而去。', objective: '完成最终对话', check: () => true, reward: '获得散修指引：野外探索奖励+15%，悟道+10' },
+    ],
+  },
 ]
 
 /** 获取 NPC 故事线 */

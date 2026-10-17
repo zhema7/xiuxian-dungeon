@@ -1,7 +1,7 @@
 // ---------- 实体：玩家与怪物（Phaser 绑定层） ----------
 
 import Phaser from 'phaser'
-import { CLASSES, type MonsterDef } from './data'
+import { CLASSES, SKILLS, type MonsterDef, type AttackMode, type ArtMode } from './data'
 import type { Stats } from './effects'
 import type { InputPort } from './input'
 
@@ -10,7 +10,12 @@ export interface CombatCtx {
   px: number
   py: number
   damagePlayer: (dmg: number, fromX: number, fromY: number) => void
-  spawnProj: (x: number, y: number, angle: number, atk: number) => void
+  /**
+   * 本次伤害的实际承受者。默认与 damagePlayer 相同；
+   * 敌人转向队员时由场景改写为「打队员」，见 DungeonScene.applyEnemyTarget。
+   */
+  damageTarget?: (dmg: number, fromX: number, fromY: number) => void
+  spawnProj: (x: number, y: number, angle: number, atk: number, enemyRef?: Enemy) => void
   enemyId?: string  // 可选：当前行动的敌人 ID（用于仙界敌人特殊投射物）
   // 敌人神通（仙界敌人复用玩家神通效果）
   spawnEnemyArt?: (enemyId: string, artMode: string, x: number, y: number, atk: number, targetX: number, targetY: number) => void
@@ -189,6 +194,8 @@ export class Enemy {
   def: number
   speed: number
   exp: number
+  /** 招式模式（NPC 敌人专用：从技能列表提取的 attackMode） */
+  styleMode?: string
   gold: [number, number]
   isBoss: boolean
   homeX: number
@@ -231,8 +238,8 @@ export class Enemy {
     this.homeY = y
     this.maxHp = Math.round(cfg.hp * scale)
     this.hp = this.maxHp
-    this.atk = Math.round(cfg.atk * (0.8 + scale * 0.2))
-    this.def = cfg.def + Math.floor((scale - 1) * 2)
+    this.atk = Math.round(cfg.atk * (0.7 + scale * 0.55))
+    this.def = cfg.def + Math.floor((scale - 1) * 3)
     this.speed = cfg.speed
     this.exp = Math.round(cfg.exp * scale)
     this.gold = cfg.gold
@@ -280,6 +287,39 @@ export class Enemy {
     this.sprite.scene.time.delayedCall(ms, () => {
       if (this.alive && this.state !== 'windup' && time + ms >= this.slowUntil) this.sprite.clearTint()
     })
+  }
+
+  // ---------- 持续伤害（天赋树：灼烧 / 剧毒） ----------
+  /** 剩余持续伤害 ms（0 表示无） */
+  dotUntil = 0
+  /** 每秒伤害值 */
+  dotDps = 0
+  /** 下一次持续伤害结算时间 */
+  private nextDotTick = 0
+
+  /** 施加持续伤害：同强度覆盖时长，更高强度直接替换 */
+  applyDot(dps: number, durationMs: number, now: number): void {
+    if (dps <= 0) return
+    if (dps >= this.dotDps) { this.dotDps = dps; this.dotUntil = now + durationMs }
+    else if (now < this.dotUntil) { this.dotUntil = Math.max(this.dotUntil, now + durationMs * 0.5) }
+  }
+
+  /**
+   * 结算持续伤害（由场景每帧调用）。
+   * @returns 本次跳伤数值（0 表示未到结算时刻或已失效）
+   */
+  tickDot(now: number): number {
+    if (!this.alive || this.dotDps <= 0 || now >= this.dotUntil) {
+      this.dotDps = 0; this.dotUntil = 0
+      return 0
+    }
+    if (this.nextDotTick === 0) this.nextDotTick = now + 500
+    if (now < this.nextDotTick) return 0
+    this.nextDotTick = now + 500
+    const dmg = Math.max(1, Math.round(this.dotDps * 0.5)) // 半秒一跳
+    this.hp -= dmg
+    if (this.hp <= 0) { this.die(); return dmg }
+    return dmg
   }
 
   takeDamage(dmg: number, fromX: number, fromY: number): boolean {
@@ -343,11 +383,11 @@ export class Enemy {
         this.sprite.clearTint()
         this.cdUntil = time + (this.cfg.cd ?? 1200)
         if (this.cfg.ai === 'ranged') {
-          ctx.spawnProj(this.x, this.y - 4, toPlayer.angle(), this.atk)
+          ctx.spawnProj(this.x, this.y - 4, toPlayer.angle(), this.atk, this)
         } else {
           const reach = this.isBoss ? 48 : 32
           if (dist < reach) {
-            ctx.damagePlayer(this.atk, this.x, this.y)
+            (ctx.damageTarget ?? ctx.damagePlayer)(this.atk, this.x, this.y)
             if (this.eliteAffix === 'vampiric') this.hp = Math.min(this.maxHp, this.hp + Math.round(this.atk * 0.3))
           }
         }
@@ -377,8 +417,8 @@ export class Enemy {
     if (this.state === 'dash') {
       if (!this.dashHit && dist < 40) {
         this.dashHit = true
-        const dashDmg = Math.round(this.atk * 1.4)
-        ctx.damagePlayer(dashDmg, this.x, this.y)
+        const dashDmg = Math.round(this.atk * 1.4);
+        (ctx.damageTarget ?? ctx.damagePlayer)(dashDmg, this.x, this.y)
         if (this.eliteAffix === 'vampiric') this.hp = Math.min(this.maxHp, this.hp + Math.round(dashDmg * 0.3))
       }
       if (time >= this.dashUntil) { this.state = 'chase'; this.sprite.clearTint() }
@@ -470,21 +510,111 @@ export class Enemy {
   }
 }
 
-// ---------- 道友（AI 队友，职业为玩家对立面；灵体护体不受伤害） ----------
-// 剑修道友近战，仙子道友远程火弹；攻击力为玩家的 80%
+// ---------- AI 队友（可由 PartyMember 驱动，支持多实例、独立血量与承伤系数） ----------
+// 剑修近战，仙子/法师远程火弹；攻击力按 attackMult 折算玩家面板
+export interface AllyConfig {
+  /** PartyMember.uid，用于与队伍状态回写对齐 */
+  uid?: string
+  refId?: string
+  displayName?: string
+  maxHp?: number
+  hp?: number
+  /** 相对玩家面板的伤害倍率 */
+  attackMult?: number
+  /** 承伤系数：0 = 灵体护体（保持 v0.7 陆青鸢手感） */
+  damageTakenRatio?: number
+  /** 移动速度倍率 */
+  speedMult?: number
+  /** 队员防御（来自装备）：按 half 折算减伤 */
+  def?: number
+  /** 装备提供的固定攻击加成（不走倍率，直接加在玩家攻击之上） */
+  flatAtk?: number
+  /** 形态：cultivator 走职业动画；beast 走灵兽图集 */
+  kind?: 'cultivator' | 'beast'
+  /** beast 专用：图集 key / 动画 key / 首帧 / 缩放 */
+  atlasKey?: string
+  animKey?: string
+  frame0?: string
+  spriteScale?: number
+  /** 招式 attackMode（来自 skillSlots.style） */
+  styleMode?: AttackMode
+  /** 招式威力倍率 */
+  stylePower?: number
+  /** 神通 artMode（来自 skillSlots.art） */
+  artMode?: ArtMode
+  /** 神通威力倍率 */
+  artPower?: number
+  /** 神通冷却(ms) */
+  artCd?: number
+}
+
 export class Ally {
   sprite: Phaser.Physics.Arcade.Sprite
   classId: string
   attackMult = 0.8
+  /** 气血；maxHp<=0 视为不可伤害单位（兼容旧行为） */
+  hp = 0
+  maxHp = 0
+  damageTakenRatio = 1
+  uid: string
+  refId: string
+  displayName: string
+  /** 本局是否已力竭退场 */
+  downed = false
+  /** 形态：cultivator 走职业动画，beast 走灵兽图集 */
+  kind: 'cultivator' | 'beast' = 'cultivator'
+  /** 装备折算的固定攻击与防御 */
+  flatAtk = 0
+  def = 0
+  /** 招式模式 */
+  styleMode: AttackMode | null = null
+  /** 招式威力 */
+  stylePower = 1
+  /** 神通模式 */
+  artMode: ArtMode | null = null
+  /** 神通威力 */
+  artPower = 1
+  /** 神通冷却(ms) */
+  artCdMs = 8000
+  /** 神通下次可用时间 */
+  artCdUntil = 0
   private cdUntil = 0
   private animated: boolean
   private facing: Facing = 'down'
   private animLockUntil = 0
+  private speedMult = 1
 
-  constructor(scene: Phaser.Scene, x: number, y: number, classId: string) {
+  constructor(scene: Phaser.Scene, x: number, y: number, classId: string, cfg: AllyConfig = {}) {
     this.classId = classId
-    this.animated = scene.anims.exists(`${classId}_down_idle`)
-    if (this.animated) {
+    this.uid = cfg.uid ?? `ally_${Math.round(x)}_${Math.round(y)}_${classId}`
+    this.refId = cfg.refId ?? ''
+    this.displayName = cfg.displayName ?? '道友'
+    this.maxHp = Math.max(0, Math.round(cfg.maxHp ?? 0))
+    this.hp = Math.max(0, Math.round(cfg.hp ?? this.maxHp))
+    this.damageTakenRatio = Math.max(0, Math.min(1, cfg.damageTakenRatio ?? 1))
+    this.attackMult = cfg.attackMult ?? 0.8
+    this.speedMult = Math.max(0.3, cfg.speedMult ?? 1)
+    this.kind = cfg.kind === 'beast' ? 'beast' : 'cultivator'
+    this.flatAtk = Math.max(0, Math.round(cfg.flatAtk ?? 0))
+    this.def = Math.max(0, Math.round(cfg.def ?? 0))
+    this.styleMode = cfg.styleMode ?? null
+    this.stylePower = cfg.stylePower ?? 1
+    this.artMode = cfg.artMode ?? null
+    this.artPower = cfg.artPower ?? 1
+    this.artCdMs = cfg.artCd ?? 8000
+    this.animated = this.kind !== 'beast' && scene.anims.exists(`${classId}_down_idle`)
+    if (this.kind === 'beast' && cfg.atlasKey) {
+      // 灵兽：独立图集 + 缩放（数值沿用原 petSprite 参数，保证视觉不变）
+      this.sprite = scene.physics.add.sprite(x, y, cfg.atlasKey, cfg.frame0 ?? 0)
+      const beastScale = cfg.spriteScale ?? 0.07
+      this.sprite.setScale(beastScale)
+      // 碰撞体按纹理坐标设置（会被精灵缩放再次缩放）。灵兽帧为 682×1024，
+      // 取中下部约 340×220 → 世界尺寸约 24×15，贴合兽身且不会因整帧体积卡墙。
+      const body = this.sprite.body as Phaser.Physics.Arcade.Body
+      body.setSize(340, 220)
+      body.setOffset(171, 780)
+      if (cfg.animKey && scene.anims.exists(cfg.animKey)) this.sprite.play(cfg.animKey)
+    } else if (this.animated) {
       // 与玩家同规格的职业动画形象
       this.sprite = scene.physics.add.sprite(x, y, `${classId}_atlas`, `${classId}_down_idle_00`)
       this.sprite.setScale(0.55)
@@ -505,8 +635,26 @@ export class Ally {
 
   get x() { return this.sprite.x }
   get y() { return this.sprite.y }
-  get ranged() { return this.classId === 'fairy' || this.classId === 'fairy_new' || this.classId === 'mage' }
-  get attackCd() { return this.ranged ? 1300 : 950 }
+  get ranged() {
+    if (this.kind === 'beast') return false
+    return this.classId === 'fairy' || this.classId === 'fairy_new' || this.classId === 'mage'
+  }
+  /** 灵兽沿用原宠物 800ms 攻速，修士按远/近战区分 */
+  get attackCd() { return this.kind === 'beast' ? 800 : this.ranged ? 1300 : 950 }
+  /** 是否具备承伤能力：有气血且非灵体护体 */
+  get damageable() { return this.maxHp > 0 && this.damageTakenRatio > 0 }
+
+  /** 结算一次伤害；返回 true 表示本次导致力竭退场。damageTakenRatio=0（灵体护体）恒免疫 */
+  takeDamage(amount: number): boolean {
+    if (!this.damageable || this.downed) return false
+    // 装备防御按半值折算减伤，保底 1 点，避免高防队员完全免疫
+    const dmg = Math.max(1, Math.round(amount * this.damageTakenRatio - this.def * 0.5))
+    this.hp = Math.max(0, this.hp - dmg)
+    if (this.hp <= 0) { this.downed = true; return true }
+    return false
+  }
+
+  destroy(): void { this.sprite.destroy() }
 
   private animFacing(): Facing {
     return (CLASSES[this.classId]?.dirRemap?.[this.facing] ?? this.facing) as Facing
@@ -526,9 +674,25 @@ export class Ally {
     this.facing = Math.abs(x) >= Math.abs(y) ? (x < 0 ? 'left' : 'right') : (y < 0 ? 'up' : 'down')
   }
 
-  /** 返回要攻击的目标（本帧出招），否则 null */
-  updateAI(time: number, px: number, py: number, enemies: Enemy[]): Enemy | null {
-    // 索敌：玩家附近 220 内最近的活怪
+  /** 返回要执行的动作（普攻/神通），否则 null */
+  updateAI(time: number, px: number, py: number, enemies: Enemy[]): AllyAction | null {
+    // 神通优先：冷却好了就放
+    if (this.artMode && time >= this.artCdUntil) {
+      let target: Enemy | null = null
+      let best = 280
+      for (const e of enemies) {
+        if (!e.alive) continue
+        const d = Phaser.Math.Distance.Between(this.x, this.y, e.x, e.y)
+        if (d < best) { best = d; target = e }
+      }
+      if (target) {
+        this.artCdUntil = time + this.artCdMs
+        this.animLockUntil = time + 500
+        this.playAnim('attack')
+        return { type: 'art', target, artMode: this.artMode, power: this.artPower }
+      }
+    }
+    // 普攻
     let target: Enemy | null = null
     let best = 220
     for (const e of enemies) {
@@ -541,7 +705,7 @@ export class Ally {
     if (target) {
       const dist = Phaser.Math.Distance.Between(this.x, this.y, target.x, target.y)
       if (dist > range) {
-        const t = new Phaser.Math.Vector2(target.x - this.x, target.y - this.y).normalize().scale(150)
+        const t = new Phaser.Math.Vector2(target.x - this.x, target.y - this.y).normalize().scale(150 * this.speedMult)
         this.sprite.setVelocity(t.x, t.y)
         this.face(t.x, t.y)
         if (time >= this.animLockUntil) this.playAnim('walk')
@@ -552,7 +716,7 @@ export class Ally {
           this.cdUntil = time + this.attackCd
           this.animLockUntil = time + 380
           this.playAnim('attack')
-          return target
+          return { type: 'attack', target }
         }
         if (time >= this.animLockUntil) this.playAnim('idle')
       }
@@ -562,7 +726,7 @@ export class Ally {
     // 跟随玩家
     const followDist = Phaser.Math.Distance.Between(this.x, this.y, px, py)
     if (followDist > 44) {
-      const t = new Phaser.Math.Vector2(px - this.x, py - this.y).normalize().scale(140)
+      const t = new Phaser.Math.Vector2(px - this.x, py - this.y).normalize().scale(140 * this.speedMult)
       this.sprite.setVelocity(t.x, t.y)
       this.face(t.x, t.y)
       if (time >= this.animLockUntil) this.playAnim('walk')
@@ -572,4 +736,11 @@ export class Ally {
     }
     return null
   }
+}
+
+export interface AllyAction {
+  type: 'attack' | 'art'
+  target: Enemy
+  artMode?: ArtMode
+  power?: number
 }

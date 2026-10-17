@@ -155,7 +155,7 @@ export function checkHeavenBacklash(state: GameState): string | null {
   // 严重恶业
   if (netEvil > 80 && state.morality < -50 && Math.random() < 0.15) {
     const effects = [
-      '天雷降下！修为受损，HP大幅降低',
+      '天雷降下！修为受损，气血大幅降低',
       '心魔入侵！修炼进度倒退',
       '天道警示！突破概率降低',
       '灵气逆行！一段时间内修炼效率减半',
@@ -164,7 +164,7 @@ export function checkHeavenBacklash(state: GameState): string | null {
     const effect = effects[Math.floor(Math.random() * effects.length)]
 
     // 实际惩罚效果
-    if (effect.includes('HP')) {
+    if (effect.includes('气血')) {
       state.hp = Math.max(1, state.hp - 50)
     } else if (effect.includes('灵石')) {
       const loss = Math.min(state.gold, Math.floor(state.gold * 0.1))
@@ -182,13 +182,13 @@ export function checkHeavenBacklash(state: GameState): string | null {
       '天道眷顾！修炼效率大幅提升',
       '福至心灵！悟道点增加',
       '机缘降临！发现一处隐藏秘境',
-      '灵气汇聚！HP全满',
+      '灵气汇聚！气血全满',
       '贵人相助！获得稀有材料',
     ]
     const effect = effects[Math.floor(Math.random() * effects.length)]
 
     // 实际奖励效果
-    if (effect.includes('HP全满')) {
+    if (effect.includes('气血全满')) {
       state.hp = state.level * 100 + 200
     } else if (effect.includes('悟道')) {
       state.insight = (state.insight || 0) + 5

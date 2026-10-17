@@ -3,6 +3,7 @@
 
 import type { GameState } from './state'
 import type { WorldTime } from './world-time'
+import { materialLabel } from './labels'
 
 // ===== 事件链定义 =====
 
@@ -470,7 +471,7 @@ export function completeChainStage(
     if (r.items) {
       for (const [k, v] of Object.entries(r.items)) {
         state.materials[k] = (state.materials[k] || 0) + v
-        messages.push(`${k}+${v}`)
+        messages.push(`${materialLabel(k)}+${v}`)
       }
     }
   }

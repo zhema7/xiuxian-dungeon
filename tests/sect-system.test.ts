@@ -73,7 +73,6 @@ describe('createNewSect', () => {
     expect(s.mapX).toBe(300)
     expect(s.mapY).toBe(400)
     expect(s.productionTimer).toBe(0)
-    expect(s.disciples).toEqual([])
     expect(s.techs).toEqual({})
     expect(s.farmSlots).toHaveLength(3)
     expect(s.farmSlots.every(x => x === null)).toBe(true)
@@ -485,8 +484,9 @@ describe('弟子房容量与弟子列表', () => {
   it('弟子房等级决定容量上限', () => {
     const cap = discipleCapacity(3) // 2 + 3*2 = 8
     expect(cap).toBe(8)
-    const sect = makeSect({ disciples: Array.from({ length: cap }, (_, i) => makeDisciple({ uid: `d${i}` })) })
-    expect(sect.disciples.length).toBeLessThanOrEqual(cap)
+    // 弟子真源是 state.disciples（v13 合轨后 sect 不再持有 disciples）
+    const disciples = Array.from({ length: cap }, (_, i) => makeDisciple({ uid: `d${i}` }))
+    expect(disciples.length).toBeLessThanOrEqual(cap)
   })
 
   it('建造配置中的建筑 id 均可作为 buildings 键使用', () => {

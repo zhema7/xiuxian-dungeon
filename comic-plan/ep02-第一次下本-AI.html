@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>修仙与地下城 · 漫画第2集 · 第一次下本</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #050508;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+  font-family: "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", sans-serif;
+  padding: 20px;
+}
+.comic {
+  width: 1080px;
+  height: 2160px;
+  background: #0a0a14;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  position: relative;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 0 50px rgba(80,60,180,0.4);
+}
+.panel {
+  position: relative;
+  overflow: hidden;
+  border: 3px solid #c9a84c;
+  border-radius: 4px;
+  background-size: cover;
+  background-position: center;
+}
+.panel-num {
+  position: absolute;
+  top: 10px; left: 10px;
+  width: 40px; height: 40px;
+  background: linear-gradient(135deg, #c9a84c, #8a6a2c);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; font-weight: bold; color: #1a1a28;
+  z-index: 10;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.6);
+}
+.caption {
+  position: absolute;
+  top: 12px; right: 12px;
+  background: rgba(10,10,20,0.85);
+  border-left: 3px solid #c9a84c;
+  padding: 6px 16px;
+  color: #f0d896;
+  font-size: 14px;
+  font-style: italic;
+  z-index: 9;
+  border-radius: 0 4px 4px 0;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+}
+.bubble {
+  position: absolute;
+  background: #fff;
+  border: 3px solid #1a1a28;
+  border-radius: 20px;
+  padding: 10px 18px;
+  font-size: 15px;
+  font-weight: bold;
+  color: #1a1a28;
+  max-width: 300px;
+  line-height: 1.6;
+  z-index: 8;
+  box-shadow: 0 3px 12px rgba(0,0,0,0.4);
+}
+.bubble.small { font-size: 13px; padding: 7px 13px; border-radius: 14px; max-width: 160px; }
+.bubble.large { font-size: 17px; padding: 12px 22px; border-radius: 22px; }
+.bubble.gold {
+  background: linear-gradient(135deg, #fff8e0, #f0d896);
+  border-color: #8a6a2c;
+  color: #4a3a1a;
+}
+.bubble.blue {
+  background: linear-gradient(135deg, #e0f0ff, #b0d0f0);
+  border-color: #2060a0;
+  color: #1a3050;
+}
+.bubble.red {
+  background: linear-gradient(135deg, #fff0f0, #ffc0c0);
+  border-color: #a02020;
+  color: #501010;
+}
+.bubble.system {
+  background: rgba(10,10,20,0.9);
+  border-color: #c9a84c;
+  color: #f0d896;
+}
+.bubble::after {
+  content: '';
+  position: absolute;
+  width: 0; height: 0;
+  border: 12px solid transparent;
+}
+.bubble.tail-tl::after { top: -22px; left: 28px; border-bottom: 0; border-top: 0; }
+.bubble.tail-bl::after { bottom: -22px; left: 28px; border-top: 0; border-bottom: 0; }
+.bubble.tail-tr::after { top: -22px; right: 28px; border-bottom: 0; border-top: 0; }
+.bubble.tail-br::after { bottom: -22px; right: 28px; border-top: 0; border-bottom: 0; }
+.bubble.tail-tl::after { border-bottom-color: #fff; }
+.bubble.tail-bl::after { border-top-color: #fff; }
+.bubble.tail-tr::after { border-bottom-color: #fff; }
+.bubble.tail-br::after { border-top-color: #fff; }
+.bubble.gold.tail-tl::after { border-bottom-color: #f0d896; }
+.bubble.gold.tail-bl::after { border-top-color: #f0d896; }
+.bubble.blue.tail-tl::after { border-bottom-color: #b0d0f0; }
+.bubble.blue.tail-bl::after { border-top-color: #b0d0f0; }
+.bubble.red.tail-tl::after { border-bottom-color: #ffc0c0; }
+.bubble.system.tail-tl::after { border-bottom-color: rgba(10,10,20,0.9); }
+.bubble.system.tail-bl::after { border-top-color: rgba(10,10,20,0.9); }
+
+.narration {
+  position: absolute;
+  bottom: 8px; left: 8px; right: 8px;
+  text-align: center;
+  color: #f0d896;
+  font-size: 13px;
+  z-index: 9;
+  padding: 8px 12px;
+  background: rgba(0,0,0,0.65);
+  border-radius: 4px;
+  border-top: 1px solid #c9a84c44;
+}
+.narration .highlight { color: #f0d896; font-weight: bold; }
+.narration .small { color: #8a8aa0; font-size: 11px; }
+
+.sparkle {
+  position: absolute;
+  pointer-events: none;
+  color: #c9a84c;
+  font-size: 16px;
+  text-shadow: 0 0 8px rgba(201,168,76,0.8);
+  animation: sparkFlash 1.5s infinite;
+  z-index: 7;
+}
+@keyframes sparkFlash {
+  0%, 100% { opacity: 0.3; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.3); }
+}
+
+.sweat-drop {
+  position: absolute;
+  width: 14px; height: 18px;
+  background: #80c0ff;
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  transform: rotate(-15deg);
+  z-index: 7;
+  box-shadow: inset -2px -2px 4px rgba(0,0,0,0.1);
+  animation: sweatDrip 2s infinite;
+}
+@keyframes sweatDrip {
+  0%, 100% { opacity: 0.6; transform: rotate(-15deg) translateY(0); }
+  50% { opacity: 1; transform: rotate(-15deg) translateY(3px); }
+}
+
+.impact-text {
+  position: absolute;
+  font-size: 28px;
+  font-weight: bold;
+  color: #ff6040;
+  text-shadow: 2px 2px 0 #1a1a28, -1px -1px 0 #fff, 0 0 20px rgba(255,100,60,0.6);
+  z-index: 9;
+  font-style: italic;
+}
+
+.panel-1 { background-image: url('art/ep02_panel1.jpg'); }
+.panel-2 { background-image: url('art/ep02_panel2.jpg'); }
+.panel-3 { background-image: url('art/ep02_panel3.jpg'); }
+.panel-4 { background-image: url('art/ep02_panel4.jpg'); }
+.panel-5 { background-image: url('art/ep02_panel5.jpg'); }
+.panel-6 { background-image: url('art/ep02_panel6.jpg'); }
+
+.footer {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 36px;
+  background: rgba(5,5,10,0.95);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  z-index: 20;
+  border-top: 1px solid #c9a84c44;
+}
+.footer .left { color: #c9a84c; font-size: 13px; font-weight: bold; }
+.footer .right { color: #6a6a8a; font-size: 12px; }
+</style>
+</head>
+<body>
+
+<div class="comic">
+
+  <!-- ═══ PANEL 1: 洞府传送阵 ═══ -->
+  <div class="panel panel-1">
+    <div class="panel-num">1</div>
+    <div class="caption">青冥洞府 · 传送阵</div>
+
+    <div class="bubble blue tail-tl" style="bottom:55px; left:15px; max-width:200px;">
+      青冥山脉一层，<br>小心妖兽。
+    </div>
+    <div class="bubble gold tail-tr" style="bottom:55px; right:15px; max-width:160px;">
+      放心！
+    </div>
+
+    <div class="narration">
+      <span class="highlight">洞府</span>是冒险的起点 — <span class="highlight">传送阵</span>通往各大秘境
+    </div>
+  </div>
+
+  <!-- ═══ PANEL 2: 迷宫岔路 ═══ -->
+  <div class="panel panel-2">
+    <div class="panel-num">2</div>
+    <div class="caption">地下城 · 第一层</div>
+
+    <div class="bubble small tail-tl" style="top:55px; left:15px;">
+      左边还是右边…<br>
+    </div>
+
+    <div class="sparkle" style="top:30%; left:45%; font-size:18px;">?</div>
+    <div class="sparkle" style="top:25%; left:55%; font-size:14px; animation-delay:0.4s;">?</div>
+    <div class="sparkle" style="top:35%; left:50%; font-size:12px; animation-delay:0.8s;">?</div>
+
+    <div class="narration">
+      <span class="highlight">Roguelike随机地图</span> · 每次进入都是全新迷宫
+    </div>
+  </div>
+
+  <!-- ═══ PANEL 3: 遭遇妖蛇 ═══ -->
+  <div class="panel panel-3">
+    <div class="panel-num">3</div>
+    <div class="caption">遭遇妖兽！</div>
+
+    <div class="bubble gold tail-bl" style="top:55px; left:15px; max-width:180px;">
+      吃我一剑！
+    </div>
+
+    <div class="impact-text" style="top:35%; right:15px; transform:rotate(8deg);">
+      嘶——！
+    </div>
+
+    <div class="sparkle" style="top:40%; left:40%; font-size:20px; color:#ff8060;">✦</div>
+    <div class="sparkle" style="top:50%; left:50%; font-size:14px; color:#ff8060; animation-delay:0.3s;">✦</div>
+    <div class="sparkle" style="top:45%; left:60%; font-size:16px; color:#ff8060; animation-delay:0.6s;">✧</div>
+
+    <div class="narration">
+      <span class="small">地下城小怪 — 妖蛇、妖狼、妖蝠… 各有属性和弱点</span>
+    </div>
+  </div>
+
+  <!-- ═══ PANEL 4: 击败妖蛇捡灵石 ═══ -->
+  <div class="panel panel-4">
+    <div class="panel-num">4</div>
+    <div class="caption">战斗胜利！</div>
+
+    <div class="bubble gold tail-tl" style="bottom:55px; left:15px; max-width:220px;">
+      这就是修仙的快乐吗！
+    </div>
+
+    <div class="bubble system small tail-tl" style="bottom:120px; left:20px;">
+      获得灵石 ×3
+    </div>
+
+    <div class="sparkle" style="top:35%; left:35%; font-size:18px;">✦</div>
+    <div class="sparkle" style="top:40%; left:55%; font-size:14px; animation-delay:0.4s;">✦</div>
+    <div class="sparkle" style="top:50%; left:45%; font-size:16px; animation-delay:0.7s;">✧</div>
+    <div class="sparkle" style="top:30%; left:50%; font-size:12px; animation-delay:1s;">✦</div>
+
+    <div class="narration">
+      击败怪物掉落 <span class="highlight">灵石 · 装备 · 材料</span> — 越深的层级奖励越好
+    </div>
+  </div>
+
+  <!-- ═══ PANEL 5: Boss出现 ═══ -->
+  <div class="panel panel-5">
+    <div class="panel-num">5</div>
+    <div class="caption">第10层 · Boss</div>
+
+    <div class="bubble red tail-bl" style="top:55px; left:15px; max-width:180px;">
+      这个…<br>比刚才大了很多…
+    </div>
+
+    <div class="impact-text" style="top:40%; right:15px; transform:rotate(-5deg); font-size:32px;">
+      吼——！！
+    </div>
+
+    <div class="sweat-drop" style="top:55%; left:30%;"></div>
+
+    <div class="narration">
+      每 <span class="highlight">10层</span> 一个Boss · 实力飞跃 · 风险与回报并存
+    </div>
+  </div>
+
+  <!-- ═══ PANEL 6: 被打飞出地下城 ═══ -->
+  <div class="panel panel-6">
+    <div class="panel-num">6</div>
+    <div class="caption">挑战失败…</div>
+
+    <div class="bubble blue tail-tl" style="top:55px; right:15px; max-width:180px;">
+      …我说了小心。
+    </div>
+
+    <div class="bubble gold small tail-tl" style="bottom:110px; left:15px;">
+      我下次一定行！
+    </div>
+
+    <div class="impact-text" style="top:50%; left:50%; transform:translate(-50%,-50%) rotate(-12deg); font-size:36px;">
+      失败！
+    </div>
+
+    <div class="narration">
+      <span class="small">Roguelike失败不丢全部进度 — 带着经验再来！</span><br>
+      <span class="highlight">每10层一个Boss</span> · 无限重玩 · 越战越强
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="left">哲码游戏 出品</div>
+    <div class="right">修仙与地下城 · 漫画 EP02 · 第一次下本</div>
+  </div>
+
+</div>
+
+</body>
+</html>

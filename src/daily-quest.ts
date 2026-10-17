@@ -38,7 +38,7 @@ const DAILY_QUEST_POOL: { type: DailyQuestType; name: string; desc: string; goal
   { type: 'gold_earn', name: '聚财有道', desc: '获得 {n} 灵石', goal: 2000, reward: { insight: 5 } },
   { type: 'gold_earn', name: '日进斗金', desc: '获得 {n} 灵石', goal: 5000, reward: { insight: 12 } },
   { type: 'sect_quest', name: '宗门差遣', desc: '完成 {n} 个宗门任务', goal: 2, reward: { gold: 600, prestige: 5 } },
-  { type: 'npc_talk', name: '广结善缘', desc: '与 NPC 对话 {n} 次', goal: 3, reward: { gold: 300 } },
+  { type: 'npc_talk', name: '广结善缘', desc: '与修士交谈 {n} 次', goal: 3, reward: { gold: 300 } },
   { type: 'arena_win', name: '擂台争锋', desc: '赢得 {n} 场擂台赛', goal: 1, reward: { gold: 1000, prestige: 3 } },
   { type: 'cultivate', name: '潜心修炼', desc: '修炼 {n} 次（闭关/指点弟子）', goal: 1, reward: { gold: 400, insight: 3 } },
   { type: 'spend_gold', name: '灵石流转', desc: '消耗 {n} 灵石', goal: 1000, reward: { insight: 4 } },

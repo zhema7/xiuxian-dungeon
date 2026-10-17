@@ -149,6 +149,7 @@ export class CityScene extends Phaser.Scene {
 
     this.time.delayedCall(800, () => {
       tryCompleteQuest(this.state).then(() => {
+        if (!questHud.scene) return   // 场景已切走：questHud 已被销毁，跳过刷新
         questHud.setText(getQuestHudText(this.state))
       })
     })
@@ -498,13 +499,13 @@ export class CityScene extends Phaser.Scene {
     const honorReward = RANK_HONOR[rank]
     const lines = [
       `「来得好！你当前段位：【${rankName}】」`,
-      `（1v1：单挑精英敌手，胜者获 ${honorReward} 荣誉点）`,
-      `（1vN：群战波次，越往后奖励越高）`,
-      `累计胜场：${this.state.arenaWins}（1v1: ${this.state.arena1v1Wins} / 1vN: ${this.state.arena1vNWins}）`,
+      `（单人论剑：单挑精英敌手，胜者获 ${honorReward} 荣誉点）`,
+      `（群战演武：车轮连战，越往后奖励越高）`,
+      `累计胜场：${this.state.arenaWins}（单挑 ${this.state.arena1v1Wins} / 群战 ${this.state.arena1vNWins}）`,
     ]
     const pick = await showDialog('擂台裁判', lines, [
-      { label: `1v1 单挑（${honorReward}荣誉）`, value: '1v1' },
-      { label: `1vN 群战（${honorReward * 2}荣誉）`, value: '1vN' },
+      { label: `单人论剑（${honorReward}荣誉）`, value: '1v1' },
+      { label: `群战演武（${honorReward * 2}荣誉）`, value: '1vN' },
       { label: '查看段位说明', value: 'rank' },
       { label: '告辞', value: 'bye' },
     ])
@@ -676,7 +677,7 @@ export class CityScene extends Phaser.Scene {
       } else {
         await showDialog('天枢城主', [
           '「魔将尚未伏诛，道友尚需在擂台中多多历练。」',
-          `（需在擂台1v1累计获胜10场）当前：${this.state.arena1v1Wins} / 10`,
+          `（需在擂台单人论剑累计获胜10场）当前：${this.state.arena1v1Wins} / 10`,
         ])
       }
       input.clearQueues()
@@ -700,11 +701,11 @@ export class CityScene extends Phaser.Scene {
       '「你就是最近在天枢城闯出名号的那位？」',
       '「我在这擂台守了三年，无人能胜。你有胆量来挑战我吗？」',
       `（挑战霸主需 3 胜场门槛，胜则获 200 荣誉 + 特殊装备）`,
-      `当前1v1胜场：${this.state.arena1v1Wins}`,
+      `当前单挑战绩：${this.state.arena1v1Wins}`,
     ]
     const canChallenge = this.state.arena1v1Wins >= 3
     const pick = await showDialog('擂台霸主', lines, [
-      { label: canChallenge ? '挑战霸主' : '需3场1v1胜场', value: 'challenge' },
+      { label: canChallenge ? '挑战霸主' : '需3场单挑战绩', value: 'challenge' },
       { label: '告辞', value: 'bye' },
     ])
     input.clearQueues()

@@ -143,7 +143,7 @@ export class BootScene extends Phaser.Scene {
     }).setOrigin(0.5)
 
     // 副标题
-    this.add.text(cx, cy - 60, '像素修仙 · ROGUELIKE', {
+    this.add.text(cx, cy - 60, '像素修仙 · 肉鸽探秘', {
       fontSize: '14px',
       color: '#aabbdd',
     }).setOrigin(0.5)

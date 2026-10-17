@@ -5,6 +5,7 @@ import type { GameState } from './state'
 import type { ProceduralNpc } from './procedural-npc'
 import { getPlayerNpcRelation, getRelationLevelName } from './npc-relation-net'
 import { getNpcRelation } from './npc-relation-net'
+import { materialLabel } from './labels'
 
 // ===== 任务类型 =====
 
@@ -325,7 +326,7 @@ export function claimQuestReward(state: GameState, quest: RelationQuest): string
   if (r.items) {
     for (const [k, v] of Object.entries(r.items)) {
       state.materials[k] = (state.materials[k] || 0) + v
-      msgs.push(`获得物品 ${k}×${v}`)
+      msgs.push(`获得物品 ${materialLabel(k)}×${v}`)
     }
   }
   if (r.favorGain) {

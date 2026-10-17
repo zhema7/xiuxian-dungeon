@@ -2,6 +2,7 @@
 // 秘境原住民部落 + 隐藏剧情 + 秘境生态系统
 
 import type { GameState } from './state'
+import { materialLabel } from './labels'
 
 // ===== 部落纹理映射 =====
 export const TRIBE_TEXTURES: Record<TribeType, { tex: string; anim: string }> = {
@@ -191,7 +192,7 @@ export function interactWithTribe(
       state.materials[goods.item] = (state.materials[goods.item] || 0) + 1
       ecology.tradeHistory.push({ item: goods.item, amount: 1, date: Date.now() })
       return {
-        type: 'trade', success: true, message: `从${tribe.name}购得${goods.item}×1`,
+        type: 'trade', success: true, message: `从${tribe.name}购得${materialLabel(goods.item)}×1`,
         rewards: { gold: -goods.price, items: { [goods.item]: 1 } },
       }
     }
@@ -245,7 +246,7 @@ export function interactWithTribe(
         setTribeRelation(state, ecology.realmId, -100)
         return {
           type: 'war', success: false,
-          message: `你被${tribe.name}击退！损失灵石${loss}，HP-50`,
+          message: `你被${tribe.name}击退！损失灵石${loss}，气血-50`,
         }
       }
     }

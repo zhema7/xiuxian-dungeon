@@ -27,6 +27,8 @@ export interface Mods {
   atk: number; def: number; speed: number; crit: number; maxHp: number
   atkPct: number; defPct: number; hpPct: number
   aspd: number; lifesteal: number; skillPct: number; cdPct: number
+  // 天赋树新增（v0.9）：会心伤害 / 反伤 / 闪避 / 持续伤害 / 斩杀线 / 护盾
+  critDmg: number; thorns: number; dodge: number; dotPct: number; execute: number; shieldPct: number
 }
 export type ModKey = keyof Mods
 
@@ -43,10 +45,20 @@ export const MOD_LABELS: Record<ModKey, (v: number) => string> = {
   lifesteal: (v) => `吸血+${(v * 100).toFixed(0)}%`,
   skillPct: (v) => `技伤+${(v * 100).toFixed(0)}%`,
   cdPct: (v) => `冷却-${(v * 100).toFixed(0)}%`,
+  critDmg: (v) => `会心伤害+${(v * 100).toFixed(0)}%`,
+  thorns: (v) => `反伤+${(v * 100).toFixed(0)}%`,
+  dodge: (v) => `闪避+${(v * 100).toFixed(0)}%`,
+  dotPct: (v) => `持续伤害+${(v * 100).toFixed(0)}%`,
+  execute: (v) => `斩杀线+${(v * 100).toFixed(0)}%`,
+  shieldPct: (v) => `护盾+${(v * 100).toFixed(0)}%`,
 }
 
 export function emptyMods(): Mods {
-  return { atk: 0, def: 0, speed: 0, crit: 0, maxHp: 0, atkPct: 0, defPct: 0, hpPct: 0, aspd: 0, lifesteal: 0, skillPct: 0, cdPct: 0 }
+  return {
+    atk: 0, def: 0, speed: 0, crit: 0, maxHp: 0, atkPct: 0, defPct: 0, hpPct: 0,
+    aspd: 0, lifesteal: 0, skillPct: 0, cdPct: 0,
+    critDmg: 0, thorns: 0, dodge: 0, dotPct: 0, execute: 0, shieldPct: 0,
+  }
 }
 
 // ---------- 类型 ----------
@@ -239,8 +251,13 @@ export interface SkillDef {
   mods?: Partial<Mods>; desc: string
 }
 
-export interface TalentNode { id: string; name: string; max: number; per: Partial<Mods>; desc: string }
-export interface TalentBranch { id: string; name: string; nodes: TalentNode[] }
+/** 天赋节点层级：1 基础（max 8）/ 2 进阶（max 6）/ 3 顶点（max 1，需本分支前置点数） */
+export type TalentTier = 1 | 2 | 3
+export interface TalentNode { id: string; name: string; tier: TalentTier; max: number; per: Partial<Mods>; desc: string }
+export interface TalentBranch { id: string; name: string; style: string; desc: string; nodes: TalentNode[] }
+export interface TalentTree { name: string; branches: TalentBranch[] }
+/** 顶点节点解锁门槛：本分支需先投入的点数 */
+export const CAPSTONE_REQ = 24
 
 // ---------- v4 三十套独立 Kit 类型（不并入 AttackMode/ArtMode 联合，ADR D8） ----------
 export type KitPrimitive =
@@ -337,8 +354,23 @@ export const ITEM_BASE_MAP = new Map(ITEM_BASES.map((b) => [b.id, b]))
 export const AFFIXES = affixesJson as unknown as AffixDef[]
 export const SETS = setsJson as unknown as Record<string, SetDef>
 export const SKILLS = new Map((skillsJson as unknown as SkillDef[]).map((s) => [s.id, s]))
-export const TALENT_BRANCHES = (talentsJson as { branches: TalentBranch[] }).branches
-export const TALENT_NODES = new Map(TALENT_BRANCHES.flatMap((b) => b.nodes).map((n) => [n.id, n]))
+/** 五职业天赋树：classId → 树（每职业 3 分支 × 6 节点 = 18 节点） */
+export const TALENT_TREES = (talentsJson as { trees: Record<string, TalentTree> }).trees
+/** 职业没有专属树时回退到剑修，保证任何 classId 都能取到分支 */
+export function talentTreeFor(classId: string): TalentTree {
+  return TALENT_TREES[classId] ?? TALENT_TREES.sword
+}
+export function talentBranchesFor(classId: string): TalentBranch[] {
+  return talentTreeFor(classId).branches
+}
+/** 全职业节点总表（90 个），用于点数校验与修饰聚合 */
+export const TALENT_NODES = new Map(
+  Object.values(TALENT_TREES).flatMap((t) => t.branches).flatMap((b) => b.nodes).map((n) => [n.id, n]),
+)
+/** 节点 → 所属职业，用于拦截非本职业节点 */
+export const TALENT_NODE_CLASS = new Map<string, string>(
+  Object.entries(TALENT_TREES).flatMap(([cls, t]) => t.branches.flatMap((b) => b.nodes).map((n) => [n.id, cls] as [string, string])),
+)
 
 // 品质 → 数值倍率 & 出现权重
 export const QUALITY_MULT = [1, 1.35, 1.75, 2.2]

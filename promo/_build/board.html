@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>修仙与地下城 · TapTap v1.0 物料板</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { background:#2a2a2a; }
+  body { display:flex; flex-direction:column; align-items:center; gap:40px; padding:40px 0; }
+  .card { position:relative; overflow:hidden; flex:none; background:#0b1027; }
+  .card.plain { background:transparent; }
+
+  .tt { position:relative; display:inline-block; line-height:1; white-space:nowrap; }
+  .tt .stroke, .tt .fill { font-family:'STXingkai','华文行楷','STKaiti','华文楷体','KaiTi',serif; letter-spacing:.045em; }
+  .tt .stroke { position:absolute; inset:0; color:transparent;
+    -webkit-text-stroke:0.055em #150a06;
+    filter:drop-shadow(0 0 .10em rgba(255,196,96,.85)) drop-shadow(0 0 .60em rgba(255,168,60,.55)) drop-shadow(0 0 1.6em rgba(255,150,40,.35)); }
+  .tt .fill { position:relative;
+    background:linear-gradient(180deg,#fffdf3 0%,#fff0bd 16%,#f8cd63 42%,#e0a223 62%,#b97708 76%,#f3d68a 92%,#fff6d8 100%);
+    -webkit-background-clip:text; background-clip:text; color:transparent; }
+
+  .tag { font-family:'STKaiti','华文楷体','KaiTi',serif; color:#cfe0f5; letter-spacing:.42em; }
+  .stars, .sprk, .mist, .mtn, .fx { position:absolute; inset:0; width:100%; height:100%; }
+  .vig { position:absolute; inset:0; pointer-events:none;
+    background:radial-gradient(120% 92% at 50% 44%, rgba(0,0,0,0) 38%, rgba(4,6,16,.50) 80%, rgba(2,3,10,.88) 100%); }
+  .frame { position:absolute; pointer-events:none; border:2px solid rgba(244,203,110,.35); }
+</style>
+</head>
+<body>
+
+<!-- ===================== 共享 SVG 资源 ===================== -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <radialGradient id="gMoonGlow">
+      <stop offset="0%" stop-color="#fff8e2" stop-opacity=".92"/>
+      <stop offset="38%" stop-color="#ffeab4" stop-opacity=".28"/>
+      <stop offset="100%" stop-color="#ffdf9a" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="gFar" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#56699f"/><stop offset="55%" stop-color="#38477a"/><stop offset="100%" stop-color="#25315a"/>
+    </linearGradient>
+    <linearGradient id="gMid" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#33456f"/><stop offset="55%" stop-color="#1e2a4d"/><stop offset="100%" stop-color="#121a35"/>
+    </linearGradient>
+    <linearGradient id="gNear" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#212e51"/><stop offset="55%" stop-color="#111730"/><stop offset="100%" stop-color="#080c1c"/>
+    </linearGradient>
+    <filter id="bl6"><feGaussianBlur stdDeviation="6"/></filter>
+    <filter id="bl14"><feGaussianBlur stdDeviation="14"/></filter>
+    <filter id="bl26"><feGaussianBlur stdDeviation="26"/></filter>
+    <filter id="bl44"><feGaussianBlur stdDeviation="44"/></filter>
+  </defs>
+</svg>
+
+<!-- ===================== LOGO 1280×720 透明 ===================== -->
+<div class="card plain" id="logo" data-safe="10" style="width:1280px;height:720px;">
+  <div style="position:absolute;left:0;right:0;top:50%;transform:translateY(-56%);text-align:center;">
+    <div class="tt" style="font-size:200px;">
+      <div class="stroke">修仙与地下城</div>
+      <div class="fill">修仙与地下城</div>
+    </div>
+    <div class="tag" style="font-size:40px;margin-top:26px;">像素修仙 · 肉鸽探秘 · 青冥山</div>
+    <svg width="620" height="26" style="margin-top:6px" viewBox="0 0 620 26">
+      <path d="M6 14 H 250" stroke="rgba(240,199,110,.75)" stroke-width="2" stroke-linecap="round"/>
+      <path d="M370 14 H 614" stroke="rgba(240,199,110,.75)" stroke-width="2" stroke-linecap="round"/>
+      <path d="M310 6 l10 8 l-10 8 l-10 -8 z" fill="rgba(248,214,138,.95)"/>
+    </svg>
+  </div>
+</div>
+
+<!-- ===================== 图标 512×512 ===================== -->
+<div class="card" id="icon512" style="width:512px;height:512px;background:#0a0f22;">
+  <img src="/public/sprites/title_bg.png" alt=""
+       style="position:absolute;left:-80px;top:-48px;width:576px;height:1024px;
+              filter:saturate(1.38) brightness(1.30) contrast(1.06);">
+  <div style="position:absolute;inset:0;background:
+      radial-gradient(62% 46% at 50% 20%, rgba(255,242,200,.52) 0%, rgba(255,208,116,.20) 44%, rgba(255,190,90,0) 74%),
+      radial-gradient(78% 60% at 50% 100%, rgba(32,146,214,.40) 0%, rgba(20,90,150,0) 72%);"></div>
+  <div class="vig"></div>
+  <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,16,40,.34) 0%,rgba(8,12,30,0) 30%,rgba(6,10,26,0) 60%,rgba(6,9,22,.52) 100%);"></div>
+  <div class="sprk" data-sprk="70"></div>
+  <div class="frame" style="inset:14px;border-width:3px;border-color:rgba(246,206,116,.55);"></div>
+  <div class="frame" style="inset:26px;border-width:1px;border-color:rgba(246,206,116,.28);"></div>
+</div>
+
+<!-- ===================== 宣传图 16:9 1920×1080 ===================== -->
+<div class="card" id="promo169" data-safe="80" style="width:1920px;height:1080px;">
+  <div style="position:absolute;inset:0;background:linear-gradient(180deg,
+      #03050c 0%,#070b22 18%,#0f1739 40%,#1a2550 60%,#28396f 78%,#3e5492 92%,#5e77b0 100%);"></div>
+  <div class="stars" data-stars="330"></div>
+
+  <!-- 流星 -->
+  <svg class="fx" viewBox="0 0 1920 1080" preserveAspectRatio="none">
+    <g filter="url(#bl6)" opacity=".9">
+      <path d="M266 216 L 452 182" stroke="#ffeecb" stroke-width="4.5" stroke-linecap="round"/>
+      <path d="M228 392 L 344 372" stroke="#ffeecb" stroke-width="3" stroke-linecap="round"/>
+    </g>
+    <g filter="url(#bl14)" opacity=".45">
+      <path d="M266 216 L 452 182" stroke="#ffd489" stroke-width="10" stroke-linecap="round"/>
+      <path d="M228 392 L 344 372" stroke="#ffd489" stroke-width="7" stroke-linecap="round"/>
+    </g>
+    <circle cx="452" cy="182" r="4" fill="#fffaf0"/>
+    <circle cx="344" cy="372" r="3" fill="#fffaf0"/>
+  </svg>
+
+  <!-- 月 -->
+  <svg class="fx" viewBox="0 0 1920 1080" preserveAspectRatio="none">
+    <circle cx="1452" cy="262" r="330" fill="url(#gMoonGlow)"/>
+    <circle cx="1452" cy="262" r="118" fill="#fbf3d3"/>
+    <circle cx="1418" cy="234" r="27" fill="#e8d9a9" opacity=".55"/>
+    <circle cx="1474" cy="296" r="18" fill="#e8d9a9" opacity=".48"/>
+    <circle cx="1404" cy="302" r="12" fill="#e8d9a9" opacity=".4"/>
+    <circle cx="1488" cy="222" r="10" fill="#e8d9a9" opacity=".4"/>
+  </svg>
+
+  <!-- 雾带 -->
+  <svg class="fx" viewBox="0 0 1920 1080" preserveAspectRatio="none">
+    <g filter="url(#bl44)" opacity=".26" fill="#c7ddf2">
+      <ellipse cx="360" cy="836" rx="560" ry="38"/>
+      <ellipse cx="1250" cy="880" rx="620" ry="34"/>
+      <ellipse cx="820" cy="960" rx="820" ry="42"/>
+      <ellipse cx="1720" cy="848" rx="440" ry="30"/>
+    </g>
+  </svg>
+
+  <!-- 三层山峦 -->
+  <svg class="mtn" viewBox="0 0 1920 1080" preserveAspectRatio="none">
+    <path fill="url(#gFar)" stroke="#9dbbe8" stroke-width="2" stroke-opacity=".30"
+      d="M0,748 180,690 262,606 420,468 560,598 700,538 882,640 1022,498 1180,640 1302,558 1462,690 1622,600 1782,702 1920,640 L1920,1080 0,1080 Z"/>
+    <path fill="url(#gMid)"
+      d="M0,880 150,768 300,852 432,700 560,802 702,730 842,862 982,742 1122,852 1272,720 1422,862 1562,758 1702,882 1842,792 1920,852 L1920,1080 0,1080 Z"/>
+    <path fill="url(#gNear)"
+      d="M0,1010 170,918 332,992 482,888 642,982 802,900 962,1002 1122,916 1292,996 1452,904 1622,1002 1792,926 1920,992 L1920,1080 0,1080 Z"/>
+  </svg>
+
+  <!-- 山道灯火 -->
+  <svg class="fx" viewBox="0 0 1920 1080" preserveAspectRatio="none">
+    <g filter="url(#bl14)" opacity=".38" fill="#ffae44">
+      <circle cx="862" cy="1030" r="16"/><circle cx="838" cy="986" r="16"/><circle cx="814" cy="944" r="16"/>
+      <circle cx="792" cy="902" r="16"/><circle cx="806" cy="864" r="16"/><circle cx="832" cy="830" r="16"/>
+      <circle cx="852" cy="798" r="16"/><circle cx="858" cy="760" r="16"/><circle cx="836" cy="728" r="16"/>
+    </g>
+    <g fill="#ffd489">
+      <circle cx="862" cy="1030" r="6.5"/><circle cx="838" cy="986" r="6"/><circle cx="814" cy="944" r="5.5"/>
+      <circle cx="792" cy="902" r="5.5"/><circle cx="806" cy="864" r="5"/><circle cx="832" cy="830" r="5"/>
+      <circle cx="852" cy="798" r="4.5"/><circle cx="858" cy="760" r="4.5"/><circle cx="836" cy="728" r="4"/>
+    </g>
+  </svg>
+
+  <!-- 仙鹤 -->
+  <svg class="fx" viewBox="0 0 1920 1080" preserveAspectRatio="none">
+    <g transform="translate(1140,398) scale(1.34) rotate(-7)" data-crane></g>
+    <g transform="translate(620,470) scale(.9) rotate(5)" data-crane></g>
+    <g transform="translate(1668,446) scale(.72) rotate(-12)" data-crane></g>
+  </svg>
+
+  <div class="vig"></div>
+
+  <!-- 游戏名（唯一文字） -->
+  <div style="position:absolute;left:0;right:0;top:556px;text-align:center;">
+    <div class="tt" style="font-size:198px;">
+      <div class="stroke">修仙与地下城</div>
+      <div class="fill">修仙与地下城</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== 宣传图 1:1 1440×1440 ===================== -->
+<div class="card" id="promo11" data-safe="80" style="width:1440px;height:1440px;">
+  <div style="position:absolute;inset:0;background:linear-gradient(180deg,
+      #03050c 0%,#070b22 18%,#0f1739 40%,#1a2550 60%,#28396f 78%,#3e5492 92%,#5e77b0 100%);"></div>
+  <div class="stars" data-stars="270"></div>
+  <svg class="fx" viewBox="0 0 1440 1440" preserveAspectRatio="none">
+    <g filter="url(#bl6)" opacity=".9">
+      <path d="M198 202 L 336 176" stroke="#ffeecb" stroke-width="4.5" stroke-linecap="round"/>
+    </g>
+    <g filter="url(#bl14)" opacity=".45">
+      <path d="M198 202 L 336 176" stroke="#ffd489" stroke-width="10" stroke-linecap="round"/>
+    </g>
+    <circle cx="336" cy="176" r="4" fill="#fffaf0"/>
+  </svg>
+  <svg class="fx" viewBox="0 0 1440 1440" preserveAspectRatio="none">
+    <circle cx="1032" cy="314" r="340" fill="url(#gMoonGlow)"/>
+    <circle cx="1032" cy="314" r="126" fill="#fbf3d3"/>
+    <circle cx="996" cy="282" r="28" fill="#e8d9a9" opacity=".55"/>
+    <circle cx="1058" cy="352" r="19" fill="#e8d9a9" opacity=".48"/>
+    <circle cx="986" cy="354" r="13" fill="#e8d9a9" opacity=".4"/>
+  </svg>
+  <svg class="fx" viewBox="0 0 1440 1440" preserveAspectRatio="none">
+    <g filter="url(#bl44)" opacity=".24" fill="#c7ddf2">
+      <ellipse cx="380" cy="1156" rx="520" ry="40"/>
+      <ellipse cx="1080" cy="1210" rx="540" ry="36"/>
+      <ellipse cx="720" cy="1308" rx="740" ry="46"/>
+    </g>
+  </svg>
+  <svg class="mtn" viewBox="0 0 1440 1440" preserveAspectRatio="none">
+    <path fill="url(#gFar)" stroke="#9dbbe8" stroke-width="2" stroke-opacity=".30"
+      d="M0,1108 150,1046 250,952 372,824 470,964 592,872 720,1002 838,860 950,1000 1068,900 1180,1010 1290,912 1440,1000 L1440,1440 0,1440 Z"/>
+    <path fill="url(#gMid)"
+      d="M0,1234 140,1124 268,1206 386,1058 494,1160 610,1078 730,1214 850,1092 968,1204 1088,1074 1204,1214 1322,1110 1440,1200 L1440,1440 0,1440 Z"/>
+    <path fill="url(#gNear)"
+      d="M0,1352 158,1262 300,1336 442,1230 584,1330 726,1246 868,1352 1010,1262 1152,1344 1294,1250 1440,1350 L1440,1440 0,1440 Z"/>
+  </svg>
+  <svg class="fx" viewBox="0 0 1440 1440" preserveAspectRatio="none">
+    <g filter="url(#bl14)" opacity=".36" fill="#ffae44">
+      <circle cx="648" cy="1392" r="15"/><circle cx="624" cy="1352" r="15"/><circle cx="602" cy="1312" r="15"/>
+      <circle cx="584" cy="1272" r="15"/><circle cx="598" cy="1234" r="15"/><circle cx="622" cy="1200" r="15"/>
+      <circle cx="640" cy="1170" r="15"/><circle cx="646" cy="1132" r="15"/>
+    </g>
+    <g fill="#ffd489">
+      <circle cx="648" cy="1392" r="6.5"/><circle cx="624" cy="1352" r="6"/><circle cx="602" cy="1312" r="5.5"/>
+      <circle cx="584" cy="1272" r="5.5"/><circle cx="598" cy="1234" r="5"/><circle cx="622" cy="1200" r="5"/>
+      <circle cx="640" cy="1170" r="4.5"/><circle cx="646" cy="1132" r="4.5"/>
+    </g>
+  </svg>
+  <svg class="fx" viewBox="0 0 1440 1440" preserveAspectRatio="none">
+    <g transform="translate(822,626) scale(1.18) rotate(-7)" data-crane></g>
+    <g transform="translate(432,700) scale(.82) rotate(5)" data-crane></g>
+  </svg>
+  <div class="vig"></div>
+  <div style="position:absolute;left:0;right:0;top:962px;text-align:center;">
+    <div class="tt" style="font-size:186px;">
+      <div class="stroke">修仙与地下城</div>
+      <div class="fill">修仙与地下城</div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== 横版封面 460×215 ===================== -->
+<div class="card" id="coverL" data-safe="40" style="width:460px;height:215px;background:#0a1027;">
+  <div style="position:absolute;inset:0;background:linear-gradient(180deg,
+      #04060e 0%,#080d26 26%,#101a40 54%,#1b2752 76%,#2a3a72 100%);"></div>
+  <div class="stars" data-stars="70"></div>
+  <svg class="fx" viewBox="0 0 460 215" preserveAspectRatio="none">
+    <circle cx="374" cy="58" r="62" fill="url(#gMoonGlow)"/>
+    <circle cx="374" cy="58" r="24" fill="#fbf3d3"/>
+    <circle cx="368" cy="51" r="6" fill="#e8d9a9" opacity=".55"/>
+    <circle cx="381" cy="65" r="4.5" fill="#e8d9a9" opacity=".48"/>
+  </svg>
+  <svg class="fx" viewBox="0 0 460 215" preserveAspectRatio="none">
+    <g filter="url(#bl14)" opacity=".30" fill="#c7ddf2">
+      <ellipse cx="110" cy="152" rx="130" ry="12"/>
+      <ellipse cx="330" cy="164" rx="150" ry="11"/>
+    </g>
+  </svg>
+  <svg class="mtn" viewBox="0 0 460 215" preserveAspectRatio="none">
+    <path fill="url(#gFar)" stroke="#9dbbe8" stroke-width="1" stroke-opacity=".28"
+      d="M0,150 46,132 66,120 104,92 130,118 164,106 208,126 240,98 282,126 314,110 352,138 392,120 434,140 460,128 L460,215 0,215 Z"/>
+    <path fill="url(#gMid)"
+      d="M0,178 38,156 76,172 110,142 144,164 178,148 214,176 250,150 288,172 322,146 358,176 394,154 434,180 460,166 L460,215 0,215 Z"/>
+    <path fill="url(#gNear)"
+      d="M0,204 44,188 84,200 126,182 168,198 210,184 252,202 294,186 336,202 378,186 420,204 460,192 L460,215 0,215 Z"/>
+  </svg>
+  <!-- 标题聚焦暗区：确保标题完整、清晰，且不与该区域任何素材重叠干扰 -->
+  <div style="position:absolute;left:0;right:0;top:60px;height:104px;
+              background:radial-gradient(62% 100% at 50% 50%, rgba(3,5,14,.78) 0%, rgba(3,5,14,.44) 56%, rgba(3,5,14,0) 100%);"></div>
+  <div class="vig" style="opacity:.55"></div>
+  <div style="position:absolute;left:0;right:0;top:88px;text-align:center;">
+    <div class="tt" style="font-size:52px;">
+      <div class="stroke">修仙与地下城</div>
+      <div class="fill">修仙与地下城</div>
+    </div>
+  </div>
+  <div class="frame" style="inset:7px;border-width:2px;border-color:rgba(246,206,116,.45);"></div>
+</div>
+
+<!-- ===================== 竖版封面 600×900 ===================== -->
+<div class="card" id="coverP" data-safe="44" style="width:600px;height:900px;">
+  <img src="/public/sprites/title_bg.png" alt=""
+       style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 34%;
+              filter:saturate(1.24) brightness(1.08);">
+  <div style="position:absolute;inset:0;background:linear-gradient(180deg,rgba(6,10,28,.55) 0%,rgba(6,10,28,.06) 34%,rgba(5,8,20,.14) 66%,rgba(4,6,16,.78) 100%);"></div>
+  <div class="sprk" data-sprk="60"></div>
+  <div class="vig" style="opacity:.7"></div>
+  <div style="position:absolute;left:0;right:0;top:104px;text-align:center;">
+    <div class="tt" style="font-size:80px;">
+      <div class="stroke">修仙与地下城</div>
+      <div class="fill">修仙与地下城</div>
+    </div>
+  </div>
+  <div class="frame" style="inset:12px;border-width:2px;border-color:rgba(246,206,116,.5);"></div>
+</div>
+
+<!-- ===================== 游戏库壁纸 3840×1240 ===================== -->
+<div class="card" id="wall" style="width:3840px;height:1240px;">
+  <div style="position:absolute;inset:0;background:linear-gradient(180deg,
+      #03050c 0%,#070b22 20%,#0f1739 46%,#1a2550 66%,#28396f 84%,#3e5492 100%);"></div>
+  <div class="stars" data-stars="580"></div>
+  <svg class="fx" viewBox="0 0 3840 1240" preserveAspectRatio="none">
+    <g filter="url(#bl6)" opacity=".85">
+      <path d="M572 196 L 806 162" stroke="#ffeecb" stroke-width="5" stroke-linecap="round"/>
+      <path d="M1534 330 L 1690 306" stroke="#ffeecb" stroke-width="4" stroke-linecap="round"/>
+    </g>
+    <g filter="url(#bl14)" opacity=".42">
+      <path d="M572 196 L 806 162" stroke="#ffd489" stroke-width="11" stroke-linecap="round"/>
+      <path d="M1534 330 L 1690 306" stroke="#ffd489" stroke-width="8" stroke-linecap="round"/>
+    </g>
+    <circle cx="806" cy="162" r="4.5" fill="#fffaf0"/>
+    <circle cx="1690" cy="306" r="3.5" fill="#fffaf0"/>
+  </svg>
+  <svg class="fx" viewBox="0 0 3840 1240" preserveAspectRatio="none">
+    <circle cx="2892" cy="296" r="380" fill="url(#gMoonGlow)"/>
+    <circle cx="2892" cy="296" r="146" fill="#fbf3d3"/>
+    <circle cx="2844" cy="258" r="32" fill="#e8d9a9" opacity=".55"/>
+    <circle cx="2924" cy="340" r="22" fill="#e8d9a9" opacity=".48"/>
+    <circle cx="2830" cy="348" r="15" fill="#e8d9a9" opacity=".4"/>
+  </svg>
+  <svg class="fx" viewBox="0 0 3840 1240" preserveAspectRatio="none">
+    <g filter="url(#bl44)" opacity=".24" fill="#c7ddf2">
+      <ellipse cx="700" cy="960" rx="920" ry="46"/>
+      <ellipse cx="2200" cy="1010" rx="1040" ry="42"/>
+      <ellipse cx="3440" cy="930" rx="800" ry="38"/>
+      <ellipse cx="1480" cy="1090" rx="1260" ry="52"/>
+    </g>
+  </svg>
+  <svg class="mtn" viewBox="0 0 3840 1240" preserveAspectRatio="none">
+    <path fill="url(#gFar)" stroke="#9dbbe8" stroke-width="2" stroke-opacity=".28"
+      d="M0,868 220,690 404,776 640,560 890,724 1060,650 1360,470 1596,678 1830,596 2100,736 2356,600 2612,752 2846,644 3096,784 3336,620 3574,758 3780,672 3840,736 L3840,1240 0,1240 Z"/>
+    <path fill="url(#gMid)"
+      d="M0,1024 272,894 520,978 748,806 1010,948 1240,838 1516,996 1752,864 2020,986 2286,846 2556,1006 2814,872 3082,1014 3348,884 3610,1026 3830,928 3840,1002 L3840,1240 0,1240 Z"/>
+    <path fill="url(#gNear)"
+      d="M0,1150 310,1054 574,1132 862,1034 1148,1142 1436,1054 1724,1158 2016,1060 2304,1152 2594,1058 2884,1152 3176,1062 3464,1156 3736,1070 3840,1134 L3840,1240 0,1240 Z"/>
+  </svg>
+  <svg class="fx" viewBox="0 0 3840 1240" preserveAspectRatio="none">
+    <g filter="url(#bl14)" opacity=".34" fill="#ffae44">
+      <circle cx="1444" cy="1196" r="17"/><circle cx="1416" cy="1150" r="17"/><circle cx="1390" cy="1104" r="17"/>
+      <circle cx="1370" cy="1058" r="17"/><circle cx="1386" cy="1014" r="17"/><circle cx="1414" cy="976" r="17"/>
+      <circle cx="1440" cy="940" r="17"/><circle cx="1452" cy="898" r="17"/><circle cx="1432" cy="862" r="17"/>
+    </g>
+    <g fill="#ffd489">
+      <circle cx="1444" cy="1196" r="7"/><circle cx="1416" cy="1150" r="6.5"/><circle cx="1390" cy="1104" r="6"/>
+      <circle cx="1370" cy="1058" r="6"/><circle cx="1386" cy="1014" r="5.5"/><circle cx="1414" cy="976" r="5.5"/>
+      <circle cx="1440" cy="940" r="5"/><circle cx="1452" cy="898" r="5"/><circle cx="1432" cy="862" r="4.5"/>
+    </g>
+  </svg>
+  <svg class="fx" viewBox="0 0 3840 1240" preserveAspectRatio="none">
+    <g transform="translate(2200,520) scale(1.5) rotate(-7)" data-crane></g>
+    <g transform="translate(1660,672) scale(1.06) rotate(5)" data-crane></g>
+    <g transform="translate(3320,568) scale(.92) rotate(-12)" data-crane></g>
+    <g transform="translate(540,648) scale(.82) rotate(6)" data-crane></g>
+  </svg>
+  <div class="vig"></div>
+  <div class="sprk" data-sprk="240"></div>
+</div>
+
+<script>
+// ---- 确定性随机 ----
+function rng(seed) { let s = seed >>> 0; return () => (s = (s * 1664525 + 1013904223) >>> 0) / 4294967296; }
+
+// ---- 星空 ----
+document.querySelectorAll('.stars[data-stars]').forEach((el) => {
+  const n = +el.dataset.stars, r = rng(n * 977 + 13);
+  let out = '';
+  for (let i = 0; i < n; i++) {
+    const x = r() * 100, y = r() * 60, big = r() < 0.08;
+    const s = big ? 0.20 : 0.09, o = (0.18 + r() * 0.72).toFixed(2);
+    out += `<rect x="${x.toFixed(3)}%" y="${y.toFixed(3)}%" width="${s}%" height="${s}%" fill="#ffffff" opacity="${o}"/>`;
+  }
+  el.innerHTML = `<svg viewBox="0 0 1000 1000" preserveAspectRatio="none" style="width:100%;height:100%">${out}</svg>`;
+});
+
+// ---- 金色浮尘 ----
+document.querySelectorAll('.sprk[data-sprk]').forEach((el) => {
+  const n = +el.dataset.sprk, r = rng(n * 613 + 7);
+  let out = '';
+  for (let i = 0; i < n; i++) {
+    const x = r() * 100, y = 26 + r() * 74, s = 0.12 + r() * 0.34, o = (0.25 + r() * 0.6).toFixed(2);
+    out += `<rect x="${x.toFixed(3)}%" y="${y.toFixed(3)}%" width="${s}%" height="${s}%" fill="#ffd27a" opacity="${o}"/>`;
+  }
+  el.innerHTML = `<svg viewBox="0 0 1000 1000" preserveAspectRatio="none" style="width:100%;height:100%">${out}</svg>`;
+});
+
+// ---- 仙鹤（白羽 / 黑翼尖 / 丹顶 / 金喙） ----
+const CRANE = `
+  <g>
+    <path d="M52 26 C38 2, 12 -14, -18 -20 C8 -4, 26 12, 40 30 Z" fill="#f3f7ff"/>
+    <path d="M-18 -20 C-4 -12, 8 -2, 18 8 C4 -2, -8 -12, -18 -20 Z" fill="#242a44"/>
+    <path d="M-18 -20 C-30 -22, -44 -26, -58 -32 C-42 -20, -28 -16, -16 -14 Z" fill="#1b2038"/>
+    <path d="M50 42 C34 62, 8 76, -22 82 C4 68, 26 56, 42 40 Z" fill="#e9eefc"/>
+    <path d="M-22 82 C-34 84, -48 88, -62 94 C-46 82, -32 78, -20 78 Z" fill="#242a44"/>
+    <path d="M-4 44 C-18 40, -34 40, -50 44 C-34 34, -16 34, -2 38 Z" fill="#dfe6fa"/>
+    <ellipse cx="46" cy="36" rx="22" ry="9" fill="#f7faff"/>
+    <path d="M64 32 C74 28, 82 25, 88 26" stroke="#f7faff" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <circle cx="91" cy="25" r="4.4" fill="#f7faff"/>
+    <path d="M88 18 l3.6 -6.4 l4 6.4 z" fill="#c8452c"/>
+    <path d="M95 24 l9 2 l-9 2.6 z" fill="#e9b23c"/>
+    <path d="M34 44 l-9 13" stroke="#e9b23c" stroke-width="2.1" stroke-linecap="round"/>
+    <path d="M44 46 l-3 14" stroke="#e9b23c" stroke-width="2.1" stroke-linecap="round"/>
+  </g>`;
+document.querySelectorAll('[data-crane]').forEach((g) => { g.innerHTML = CRANE; });
+
+// ---- 标题宽度自适应：实测字宽，保证不贴边、不被卡片裁切 ----
+async function fitTitles() {
+  if (document.fonts && document.fonts.ready) { try { await document.fonts.ready } catch (e) {} }
+  const report = [];
+  document.querySelectorAll('.card[data-safe]').forEach((card) => {
+    const tt = card.querySelector('.tt');
+    if (!tt) return;
+    const safe = +card.dataset.safe;
+    const cardW = card.getBoundingClientRect().width;
+    let fs = parseFloat(getComputedStyle(tt).fontSize);
+    const limit = cardW - 2 * safe;
+    let guard = 0;
+    while (tt.getBoundingClientRect().width > limit && fs > 20 && guard++ < 300) {
+      fs -= 1; tt.style.fontSize = fs + 'px';
+    }
+    const w = tt.getBoundingClientRect().width;
+    report.push({ card: card.id, font: Math.round(fs), textW: Math.round(w),
+                  cardW: Math.round(cardW), margin: Math.round((cardW - w) / 2), safe });
+  });
+  window.__fitReport = report;
+}
+fitTitles();
+</script>
+</body>
+</html>

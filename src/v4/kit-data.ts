@@ -2,6 +2,7 @@
 // 读取 v4-kits.json → 构建独立 V4_KIT_SETS 注册器 + item bases 注入 ITEM_BASE_MAP
 // 数值 mods 走 effects.ts aggregateMods 的 v4 旁路缝（S1），表现能力走 v4/runtime.ts（S4-S6）
 
+import { primitiveLabel } from '../labels'
 import {
   ITEM_BASES, ITEM_BASE_MAP,
   V4_KIT_ABILITIES, V4_KIT_SET_ID_PREFIX, kitIdFromSetId,
@@ -50,7 +51,7 @@ function buildSetDef(kit: KitAbility): SetDef {
     {
       count: 4,
       mods: m4,
-      desc: `4件：攻击+15%，气血+15%，攻速+5%；招式化为【${kit.theme}·${kit.normalPrimitive}】，神通化为【${kit.theme}·${kit.artPrimitive}】`,
+      desc: `4件：攻击+15%，气血+15%，攻速+5%；招式化为【${kit.theme}·${primitiveLabel(kit.normalPrimitive)}】，神通化为【${kit.theme}·${primitiveLabel(kit.artPrimitive)}】`,
     },
   ]
   return { id: setId, name: kit.name, pieces, bonuses }

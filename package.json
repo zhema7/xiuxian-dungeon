@@ -1,7 +1,7 @@
 {
   "name": "xiuxian-dungeon",
   "private": true,
-  "version": "0.7.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "predev": "node scripts/validate-data.mjs && node scripts/validate-assets.mjs",
@@ -15,6 +15,7 @@
     "validate:data": "node scripts/validate-data.mjs",
     "validate:assets": "node scripts/validate-assets.mjs",
     "validate:assets:strict": "node scripts/validate-assets.mjs --strict",
+  "validate:i18n": "node scripts/scan-cjk-english.mjs",
     "test": "node ../vitest-env/node_modules/vitest/vitest.mjs run --root . --config ./vitest.config.ts",
     "test:run": "node ../vitest-env/node_modules/vitest/vitest.mjs run --root . --config ./vitest.config.ts",
     "cap:sync": "vite build && npx cap sync",

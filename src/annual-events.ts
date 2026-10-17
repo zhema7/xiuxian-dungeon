@@ -7,7 +7,9 @@ import type { AnnualEventType, AnnualEventRecord } from './state'
 import type { WorldTime } from './world-time'
 import { seasonOf } from './world-time'
 import { getBuildingEffects } from './sect-building-v2'
+import { sectDisciplePower } from './disciple-data'
 import { getDemonSummary } from './inner-demon'
+import { materialLabel } from './labels'
 
 // ===== 事件触发时间配置 =====
 
@@ -62,9 +64,7 @@ export function simulateSectTournament(state: GameState): TournamentResult {
   let playerPower = 0
   if (state.sect) {
     const effects = getBuildingEffects(state.sect)
-    const disciplePower = (state.disciples || []).reduce((s, d) => {
-      return s + d.level * 10 + d.loyalty * 0.5
-    }, 0)
+    const disciplePower = sectDisciplePower(state.disciples || [])
     const buildingPower = Object.entries(state.sect.buildings).reduce((s, [, lv]) => s + (lv as number) * 15, 0)
     playerPower = Math.floor(disciplePower + buildingPower + effects.defensePower * 0.3 + state.realm * 100)
     messages.push(`本门实力评估：${playerPower}`)
@@ -168,7 +168,7 @@ export function simulateMarketFair(state: GameState): MarketFairResult {
         state.materials[mat] = have - sellAmount
         state.gold += sellPrice
         goldEarned += sellPrice
-        messages.push(`售出${mat}×${sellAmount}，获利${sellPrice}灵石`)
+        messages.push(`售出${materialLabel(mat)}×${sellAmount}，获利${sellPrice}灵石`)
       }
     }
   }

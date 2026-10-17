@@ -1,28 +1,194 @@
 {
-  "branches": [
-    {
-      "id": "fast", "name": "快剑",
-      "nodes": [
-        { "id": "t_jifeng", "name": "疾风", "max": 3, "per": { "aspd": 0.06 }, "desc": "每级 攻速 +6%" },
-        { "id": "t_jinghong", "name": "惊鸿", "max": 3, "per": { "crit": 0.03 }, "desc": "每级 会心 +3%" },
-        { "id": "t_liuyun", "name": "流云", "max": 3, "per": { "speed": 6 }, "desc": "每级 速度 +6" }
+  "trees": {
+    "sword": {
+      "name": "剑修",
+      "branches": [
+        {
+          "id": "fast", "name": "快剑", "style": "攻速流", "desc": "以快打慢，靠攻击频率与吸血续航滚雪球",
+          "nodes": [
+            { "id": "t_jifeng", "name": "疾风", "tier": 1, "max": 8, "per": { "aspd": 0.06 }, "desc": "每级 攻速 +6%" },
+            { "id": "t_jinghong", "name": "惊鸿", "tier": 1, "max": 8, "per": { "crit": 0.03 }, "desc": "每级 会心 +3%" },
+            { "id": "t_liuyun", "name": "流云", "tier": 1, "max": 8, "per": { "speed": 6 }, "desc": "每级 速度 +6" },
+            { "id": "sword_fast_a1", "name": "追星", "tier": 2, "max": 6, "per": { "lifesteal": 0.015 }, "desc": "每级 吸血 +1.5%" },
+            { "id": "sword_fast_a2", "name": "破锋", "tier": 2, "max": 6, "per": { "atkPct": 0.04 }, "desc": "每级 攻击 +4%" },
+            { "id": "sword_fast_cap", "name": "无影", "tier": 3, "max": 1, "per": { "aspd": 0.15, "crit": 0.08 }, "desc": "顶点：攻速 +15%，会心 +8%" }
+          ]
+        },
+        {
+          "id": "heavy", "name": "重剑", "style": "暴击流", "desc": "蓄势一击，堆叠会心与会心伤害打出爆发",
+          "nodes": [
+            { "id": "t_bengshan", "name": "崩山", "tier": 1, "max": 8, "per": { "atkPct": 0.05 }, "desc": "每级 攻击 +5%" },
+            { "id": "t_liekong", "name": "裂空", "tier": 1, "max": 8, "per": { "skillPct": 0.08 }, "desc": "每级 技能伤害 +8%" },
+            { "id": "t_zhenyue", "name": "镇岳", "tier": 1, "max": 8, "per": { "hpPct": 0.06 }, "desc": "每级 气血 +6%" },
+            { "id": "sword_heavy_a1", "name": "摧岳", "tier": 2, "max": 6, "per": { "critDmg": 0.12 }, "desc": "每级 会心伤害 +12%" },
+            { "id": "sword_heavy_a2", "name": "断岳", "tier": 2, "max": 6, "per": { "crit": 0.02 }, "desc": "每级 会心 +2%" },
+            { "id": "sword_heavy_cap", "name": "开山", "tier": 3, "max": 1, "per": { "critDmg": 0.5, "atkPct": 0.1 }, "desc": "顶点：会心伤害 +50%，攻击 +10%" }
+          ]
+        },
+        {
+          "id": "qi", "name": "剑气", "style": "冷却流", "desc": "压缩神通冷却，用技能密度覆盖战场",
+          "nodes": [
+            { "id": "t_yujianshu", "name": "御剑", "tier": 1, "max": 8, "per": { "cdPct": 0.08 }, "desc": "每级 神通冷却 -8%" },
+            { "id": "t_ningjian", "name": "凝剑", "tier": 1, "max": 8, "per": { "lifesteal": 0.02 }, "desc": "每级 吸血 +2%" },
+            { "id": "t_huahong", "name": "化虹", "tier": 1, "max": 8, "per": { "defPct": 0.08 }, "desc": "每级 防御 +8%" },
+            { "id": "sword_qi_a1", "name": "剑域", "tier": 2, "max": 6, "per": { "skillPct": 0.06 }, "desc": "每级 技能伤害 +6%" },
+            { "id": "sword_qi_a2", "name": "归墟", "tier": 2, "max": 6, "per": { "cdPct": 0.05 }, "desc": "每级 神通冷却 -5%" },
+            { "id": "sword_qi_cap", "name": "万剑归宗", "tier": 3, "max": 1, "per": { "cdPct": 0.2, "skillPct": 0.3 }, "desc": "顶点：神通冷却 -20%，技能伤害 +30%" }
+          ]
+        }
       ]
     },
-    {
-      "id": "heavy", "name": "重剑",
-      "nodes": [
-        { "id": "t_bengshan", "name": "崩山", "max": 3, "per": { "atkPct": 0.05 }, "desc": "每级 攻击 +5%" },
-        { "id": "t_liekong", "name": "裂空", "max": 3, "per": { "skillPct": 0.08 }, "desc": "每级 技能伤害 +8%" },
-        { "id": "t_zhenyue", "name": "镇岳", "max": 3, "per": { "hpPct": 0.06 }, "desc": "每级 气血 +6%" }
+    "fairy": {
+      "name": "仙子",
+      "branches": [
+        {
+          "id": "fire", "name": "炎凤", "style": "灼烧流", "desc": "命中附加持续灼烧，以时间换总伤害",
+          "nodes": [
+            { "id": "fairy_fire_b1", "name": "焚心", "tier": 1, "max": 8, "per": { "dotPct": 0.04 }, "desc": "每级 灼烧强度 +4%" },
+            { "id": "fairy_fire_b2", "name": "炽羽", "tier": 1, "max": 8, "per": { "atkPct": 0.05 }, "desc": "每级 攻击 +5%" },
+            { "id": "fairy_fire_b3", "name": "涅槃", "tier": 1, "max": 8, "per": { "hpPct": 0.05 }, "desc": "每级 气血 +5%" },
+            { "id": "fairy_fire_a1", "name": "燎原", "tier": 2, "max": 6, "per": { "skillPct": 0.06 }, "desc": "每级 技能伤害 +6%" },
+            { "id": "fairy_fire_a2", "name": "灼魂", "tier": 2, "max": 6, "per": { "dotPct": 0.06 }, "desc": "每级 灼烧强度 +6%" },
+            { "id": "fairy_fire_cap", "name": "焚天", "tier": 3, "max": 1, "per": { "dotPct": 0.3, "atkPct": 0.12 }, "desc": "顶点：灼烧强度 +30%，攻击 +12%" }
+          ]
+        },
+        {
+          "id": "ice", "name": "冰心", "style": "会心流", "desc": "高会心配高会心伤害，冷冽爆发",
+          "nodes": [
+            { "id": "fairy_ice_b1", "name": "凝霜", "tier": 1, "max": 8, "per": { "crit": 0.03 }, "desc": "每级 会心 +3%" },
+            { "id": "fairy_ice_b2", "name": "冰魄", "tier": 1, "max": 8, "per": { "critDmg": 0.06 }, "desc": "每级 会心伤害 +6%" },
+            { "id": "fairy_ice_b3", "name": "寒髓", "tier": 1, "max": 8, "per": { "defPct": 0.06 }, "desc": "每级 防御 +6%" },
+            { "id": "fairy_ice_a1", "name": "冰封", "tier": 2, "max": 6, "per": { "crit": 0.02 }, "desc": "每级 会心 +2%" },
+            { "id": "fairy_ice_a2", "name": "绝境", "tier": 2, "max": 6, "per": { "critDmg": 0.12 }, "desc": "每级 会心伤害 +12%" },
+            { "id": "fairy_ice_cap", "name": "一念封天", "tier": 3, "max": 1, "per": { "crit": 0.1, "critDmg": 0.6 }, "desc": "顶点：会心 +10%，会心伤害 +60%" }
+          ]
+        },
+        {
+          "id": "thunder", "name": "紫霄", "style": "冷却爆发流", "desc": "减冷却叠技伤，神通连发打出爆发窗口",
+          "nodes": [
+            { "id": "fairy_thunder_b1", "name": "引雷", "tier": 1, "max": 8, "per": { "cdPct": 0.06 }, "desc": "每级 神通冷却 -6%" },
+            { "id": "fairy_thunder_b2", "name": "紫电", "tier": 1, "max": 8, "per": { "skillPct": 0.07 }, "desc": "每级 技能伤害 +7%" },
+            { "id": "fairy_thunder_b3", "name": "雷体", "tier": 1, "max": 8, "per": { "speed": 5 }, "desc": "每级 速度 +5" },
+            { "id": "fairy_thunder_a1", "name": "天罚", "tier": 2, "max": 6, "per": { "aspd": 0.04 }, "desc": "每级 攻速 +4%" },
+            { "id": "fairy_thunder_a2", "name": "霄鸣", "tier": 2, "max": 6, "per": { "cdPct": 0.05 }, "desc": "每级 神通冷却 -5%" },
+            { "id": "fairy_thunder_cap", "name": "九霄雷动", "tier": 3, "max": 1, "per": { "cdPct": 0.25, "skillPct": 0.25 }, "desc": "顶点：神通冷却 -25%，技能伤害 +25%" }
+          ]
+        }
       ]
     },
-    {
-      "id": "qi", "name": "剑气",
-      "nodes": [
-        { "id": "t_yujianshu", "name": "御剑", "max": 3, "per": { "cdPct": 0.08 }, "desc": "每级 神通冷却 -8%" },
-        { "id": "t_ningjian", "name": "凝剑", "max": 3, "per": { "lifesteal": 0.02 }, "desc": "每级 吸血 +2%" },
-        { "id": "t_huahong", "name": "化虹", "max": 3, "per": { "defPct": 0.08 }, "desc": "每级 防御 +8%" }
+    "sword_new": {
+      "name": "道修",
+      "branches": [
+        {
+          "id": "earth", "name": "厚土", "style": "反伤流", "desc": "堆防御与反震，站着挨打也在输出",
+          "nodes": [
+            { "id": "dao_earth_b1", "name": "磐石", "tier": 1, "max": 8, "per": { "defPct": 0.07 }, "desc": "每级 防御 +7%" },
+            { "id": "dao_earth_b2", "name": "反震", "tier": 1, "max": 8, "per": { "thorns": 0.06 }, "desc": "每级 反伤 +6%" },
+            { "id": "dao_earth_b3", "name": "厚德", "tier": 1, "max": 8, "per": { "hpPct": 0.07 }, "desc": "每级 气血 +7%" },
+            { "id": "dao_earth_a1", "name": "山岳", "tier": 2, "max": 6, "per": { "thorns": 0.08 }, "desc": "每级 反伤 +8%" },
+            { "id": "dao_earth_a2", "name": "载物", "tier": 2, "max": 6, "per": { "shieldPct": 0.04 }, "desc": "每级 护盾 +4%" },
+            { "id": "dao_earth_cap", "name": "不动如山", "tier": 3, "max": 1, "per": { "thorns": 0.35, "defPct": 0.2 }, "desc": "顶点：反伤 +35%，防御 +20%" }
+          ]
+        },
+        {
+          "id": "xuan", "name": "玄武", "style": "护盾续航流", "desc": "每层自动获得护盾，配合吸血长期作战",
+          "nodes": [
+            { "id": "dao_xuan_b1", "name": "玄甲", "tier": 1, "max": 8, "per": { "shieldPct": 0.05 }, "desc": "每级 护盾 +5%" },
+            { "id": "dao_xuan_b2", "name": "龟息", "tier": 1, "max": 8, "per": { "hpPct": 0.06 }, "desc": "每级 气血 +6%" },
+            { "id": "dao_xuan_b3", "name": "纳川", "tier": 1, "max": 8, "per": { "lifesteal": 0.015 }, "desc": "每级 吸血 +1.5%" },
+            { "id": "dao_xuan_a1", "name": "凝盾", "tier": 2, "max": 6, "per": { "shieldPct": 0.06 }, "desc": "每级 护盾 +6%" },
+            { "id": "dao_xuan_a2", "name": "生生", "tier": 2, "max": 6, "per": { "lifesteal": 0.02 }, "desc": "每级 吸血 +2%" },
+            { "id": "dao_xuan_cap", "name": "长生", "tier": 3, "max": 1, "per": { "shieldPct": 0.25, "lifesteal": 0.08 }, "desc": "顶点：护盾 +25%，吸血 +8%" }
+          ]
+        },
+        {
+          "id": "geo", "name": "山河", "style": "剑阵流", "desc": "以神通与攻速铺场，持续压制成群敌人",
+          "nodes": [
+            { "id": "dao_geo_b1", "name": "开阵", "tier": 1, "max": 8, "per": { "skillPct": 0.06 }, "desc": "每级 技能伤害 +6%" },
+            { "id": "dao_geo_b2", "name": "布阵", "tier": 1, "max": 8, "per": { "aspd": 0.04 }, "desc": "每级 攻速 +4%" },
+            { "id": "dao_geo_b3", "name": "镇守", "tier": 1, "max": 8, "per": { "atkPct": 0.04 }, "desc": "每级 攻击 +4%" },
+            { "id": "dao_geo_a1", "name": "剑冢", "tier": 2, "max": 6, "per": { "dotPct": 0.05 }, "desc": "每级 灼烧强度 +5%" },
+            { "id": "dao_geo_a2", "name": "天罡", "tier": 2, "max": 6, "per": { "skillPct": 0.07 }, "desc": "每级 技能伤害 +7%" },
+            { "id": "dao_geo_cap", "name": "周天剑阵", "tier": 3, "max": 1, "per": { "skillPct": 0.35, "aspd": 0.15 }, "desc": "顶点：技能伤害 +35%，攻速 +15%" }
+          ]
+        }
+      ]
+    },
+    "fairy_new": {
+      "name": "合欢",
+      "branches": [
+        {
+          "id": "shadow", "name": "魅影", "style": "闪避流", "desc": "以闪避与身法规避伤害，游斗消耗",
+          "nodes": [
+            { "id": "huan_shadow_b1", "name": "轻盈", "tier": 1, "max": 8, "per": { "dodge": 0.03 }, "desc": "每级 闪避 +3%" },
+            { "id": "huan_shadow_b2", "name": "幻步", "tier": 1, "max": 8, "per": { "speed": 6 }, "desc": "每级 速度 +6" },
+            { "id": "huan_shadow_b3", "name": "迷踪", "tier": 1, "max": 8, "per": { "aspd": 0.05 }, "desc": "每级 攻速 +5%" },
+            { "id": "huan_shadow_a1", "name": "影遁", "tier": 2, "max": 6, "per": { "dodge": 0.04 }, "desc": "每级 闪避 +4%" },
+            { "id": "huan_shadow_a2", "name": "残影", "tier": 2, "max": 6, "per": { "crit": 0.02 }, "desc": "每级 会心 +2%" },
+            { "id": "huan_shadow_cap", "name": "无迹", "tier": 3, "max": 1, "per": { "dodge": 0.15, "aspd": 0.15 }, "desc": "顶点：闪避 +15%，攻速 +15%" }
+          ]
+        },
+        {
+          "id": "poison", "name": "毒术", "style": "毒伤流", "desc": "叠毒持续掉血，越拖越致命",
+          "nodes": [
+            { "id": "huan_poison_b1", "name": "淬毒", "tier": 1, "max": 8, "per": { "dotPct": 0.05 }, "desc": "每级 剧毒强度 +5%" },
+            { "id": "huan_poison_b2", "name": "蚀骨", "tier": 1, "max": 8, "per": { "atkPct": 0.04 }, "desc": "每级 攻击 +4%" },
+            { "id": "huan_poison_b3", "name": "瘴气", "tier": 1, "max": 8, "per": { "defPct": 0.05 }, "desc": "每级 防御 +5%" },
+            { "id": "huan_poison_a1", "name": "蔓延", "tier": 2, "max": 6, "per": { "dotPct": 0.07 }, "desc": "每级 剧毒强度 +7%" },
+            { "id": "huan_poison_a2", "name": "剧毒", "tier": 2, "max": 6, "per": { "skillPct": 0.06 }, "desc": "每级 技能伤害 +6%" },
+            { "id": "huan_poison_cap", "name": "万毒归宗", "tier": 3, "max": 1, "per": { "dotPct": 0.35, "skillPct": 0.2 }, "desc": "顶点：剧毒强度 +35%，技能伤害 +20%" }
+          ]
+        },
+        {
+          "id": "blood", "name": "血煞", "style": "收割流", "desc": "低血斩杀加吸血，残血越战越勇",
+          "nodes": [
+            { "id": "huan_blood_b1", "name": "嗜血", "tier": 1, "max": 8, "per": { "lifesteal": 0.02 }, "desc": "每级 吸血 +2%" },
+            { "id": "huan_blood_b2", "name": "追猎", "tier": 1, "max": 8, "per": { "execute": 0.015 }, "desc": "每级 斩杀线 +1.5%" },
+            { "id": "huan_blood_b3", "name": "狂煞", "tier": 1, "max": 8, "per": { "atkPct": 0.05 }, "desc": "每级 攻击 +5%" },
+            { "id": "huan_blood_a1", "name": "吞噬", "tier": 2, "max": 6, "per": { "lifesteal": 0.025 }, "desc": "每级 吸血 +2.5%" },
+            { "id": "huan_blood_a2", "name": "戮心", "tier": 2, "max": 6, "per": { "execute": 0.02 }, "desc": "每级 斩杀线 +2%" },
+            { "id": "huan_blood_cap", "name": "血狱", "tier": 3, "max": 1, "per": { "execute": 0.12, "lifesteal": 0.1 }, "desc": "顶点：斩杀线 +12%，吸血 +10%" }
+          ]
+        }
+      ]
+    },
+    "mage": {
+      "name": "法修",
+      "branches": [
+        {
+          "id": "element", "name": "元素", "style": "法强流", "desc": "纯粹堆高法术强度，一发入魂",
+          "nodes": [
+            { "id": "mage_ele_b1", "name": "元素亲和", "tier": 1, "max": 8, "per": { "atkPct": 0.06 }, "desc": "每级 攻击 +6%" },
+            { "id": "mage_ele_b2", "name": "灵涌", "tier": 1, "max": 8, "per": { "skillPct": 0.07 }, "desc": "每级 技能伤害 +7%" },
+            { "id": "mage_ele_b3", "name": "法体", "tier": 1, "max": 8, "per": { "hpPct": 0.05 }, "desc": "每级 气血 +5%" },
+            { "id": "mage_ele_a1", "name": "元素精通", "tier": 2, "max": 6, "per": { "cdPct": 0.05 }, "desc": "每级 神通冷却 -5%" },
+            { "id": "mage_ele_a2", "name": "奥术", "tier": 2, "max": 6, "per": { "atkPct": 0.05 }, "desc": "每级 攻击 +5%" },
+            { "id": "mage_ele_cap", "name": "法则归一", "tier": 3, "max": 1, "per": { "atkPct": 0.15, "skillPct": 0.3 }, "desc": "顶点：攻击 +15%，技能伤害 +30%" }
+          ]
+        },
+        {
+          "id": "frost", "name": "玄冰", "style": "护盾流", "desc": "冰甲护体，站着把法术倾泻完",
+          "nodes": [
+            { "id": "mage_ice_b1", "name": "冰甲", "tier": 1, "max": 8, "per": { "shieldPct": 0.05 }, "desc": "每级 护盾 +5%" },
+            { "id": "mage_ice_b2", "name": "寒霜", "tier": 1, "max": 8, "per": { "defPct": 0.06 }, "desc": "每级 防御 +6%" },
+            { "id": "mage_ice_b3", "name": "凝冰", "tier": 1, "max": 8, "per": { "crit": 0.02 }, "desc": "每级 会心 +2%" },
+            { "id": "mage_ice_a1", "name": "冰封千里", "tier": 2, "max": 6, "per": { "shieldPct": 0.06 }, "desc": "每级 护盾 +6%" },
+            { "id": "mage_ice_a2", "name": "极寒", "tier": 2, "max": 6, "per": { "dodge": 0.03 }, "desc": "每级 闪避 +3%" },
+            { "id": "mage_ice_cap", "name": "绝对零度", "tier": 3, "max": 1, "per": { "shieldPct": 0.25, "defPct": 0.2 }, "desc": "顶点：护盾 +25%，防御 +20%" }
+          ]
+        },
+        {
+          "id": "star", "name": "星辰", "style": "法爆流", "desc": "会心与会心伤害双高，星爆秒杀",
+          "nodes": [
+            { "id": "mage_star_b1", "name": "星引", "tier": 1, "max": 8, "per": { "crit": 0.03 }, "desc": "每级 会心 +3%" },
+            { "id": "mage_star_b2", "name": "星爆", "tier": 1, "max": 8, "per": { "critDmg": 0.1 }, "desc": "每级 会心伤害 +10%" },
+            { "id": "mage_star_b3", "name": "星轨", "tier": 1, "max": 8, "per": { "cdPct": 0.05 }, "desc": "每级 神通冷却 -5%" },
+            { "id": "mage_star_a1", "name": "陨落", "tier": 2, "max": 6, "per": { "critDmg": 0.12 }, "desc": "每级 会心伤害 +12%" },
+            { "id": "mage_star_a2", "name": "天穹", "tier": 2, "max": 6, "per": { "skillPct": 0.06 }, "desc": "每级 技能伤害 +6%" },
+            { "id": "mage_star_cap", "name": "星河倒卷", "tier": 3, "max": 1, "per": { "crit": 0.12, "critDmg": 0.7 }, "desc": "顶点：会心 +12%，会心伤害 +70%" }
+          ]
+        }
       ]
     }
-  ]
+  }
 }

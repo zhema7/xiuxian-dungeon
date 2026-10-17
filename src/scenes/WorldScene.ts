@@ -18,6 +18,7 @@ import { generateAiSect, generateResourceNodes, getDiplomacyStatus, diplomacySta
 import { tickAllAiSects, processTradeIncome, processResourceIncome, executeDiplomacy, attackResourceNode, launchSectWar } from '../diplomacy'
 import { tryCompleteQuest, initMainQuest, onSectEstablished, getQuestHudText } from '../storyline-system'
 import { refreshNpcsAroundPlayer, moveNpc, findNearbyNpcs, type ProceduralNpc, getNpcEquipName, getNpcSkillName, getNpcItemName, getRealmName } from '../procedural-npc'
+import { daoYearsOf, npcGearSummary, npcSkillSummary, tickNpcCultivation } from '../npc-progression'
 import { getOrCreateNpcTexture } from '../npc-sprite-gen'
 import { createNpcCombatData, decideNpcAction, damageNpc, npcAttackDamage, onNpcDefeated, plunderNpc, sparWithNpc, type NpcCombatData } from '../npc-combat'
 import { performDivineSense, updateDivineSenseLevel, type DivineSenseResult } from '../divine-sense'
@@ -34,7 +35,8 @@ import { runDailySocialSimulation, getNpcSocialSummary } from '../social-simulat
 import { updateNpcBySchedule, applyScheduleEffect, getNpcActivityDesc } from '../npc-schedule-system'
 import { generateRelationQuest, updateQuestProgress, claimQuestReward, getAvailableQuests, type RelationQuest } from '../relation-quests'
 import { recordLifeEvent, rewriteNpcStory, getNpcLifeEvents, runDailyNpcEvents } from '../narrative-engine-v2'
-import { generateSecretRealm, discoverRealm, canBringNpcToRealm, bringNpcToRealm, generateRealmNpcs, getRealmProgress, type SecretRealmDef } from '../secret-realm'
+import { generateSecretRealm, discoverRealm, canBringNpcToRealm, bringNpcToRealm, dismissCompanion, generateRealmNpcs, getRealmProgress, type SecretRealmDef } from '../secret-realm'
+import { activeCompanionRef, countActive, findMemberByRef, getActiveMembers, PARTY_RULES, removeMemberFromState, sortParty, toggleMemberInState } from '../party'
 import { tickStamina, getStaminaSpeedModifier, getStaminaDisplay } from '../stamina'
 import { refreshDynamicElements, collectElement, type DynamicElement } from '../dynamic-elements'
 import { exploreTile, isExplored, getVisionRadius } from '../world-fog'
@@ -68,6 +70,8 @@ export class WorldScene extends Phaser.Scene {
   private timeText: Phaser.GameObjects.Text | null = null
   private travelText: Phaser.GameObjects.Text | null = null
   private moveAccumulator = 0
+  /** 上次推进 NPC 修行时的「苍玄历总天数」（跨天才推进，避免每帧重算） */
+  private lastNpcGrowthDay = 0
   private eventActive = false
   private transitioning = false
   private lastTickMs = 0
@@ -220,6 +224,8 @@ export class WorldScene extends Phaser.Scene {
     this.terrainObjects = []
     this.realmEntranceMarkers = []
     this.parallaxLayers = []
+    // 坐骑 Sprite：上一轮实例已被 Phaser 销毁，必须清掉引用（否则二次进入大地图 setTexture 崩溃）
+    this.mountSprite = null
 
     // 从 NPC 战斗场景返回时处理战斗结果
     if (this.registry.get('npcCombatData')) {
@@ -253,6 +259,7 @@ export class WorldScene extends Phaser.Scene {
 
     this.time.delayedCall(800, () => {
       tryCompleteQuest(this.state).then(() => {
+        if (!questHud.scene) return   // 场景已切走：questHud 已被销毁，跳过刷新
         questHud.setText(getQuestHudText(this.state))
       })
     })
@@ -801,10 +808,19 @@ export class WorldScene extends Phaser.Scene {
 
   /** 刷新坐骑贴图（召唤/收回时调用） */
   private refreshMountSprite() {
-    const activeMount = (this.state as any).activeMount as { type: MountType; summoned: boolean; endurance: number } | undefined
-    if (activeMount?.summoned && activeMount.endurance > 0) {
-      const texInfo = MOUNT_TEXTURES[activeMount.type]
-      if (this.textures.exists(texInfo.tex)) {
+    try {
+      // 兜底：场景 restart/start 后旧 Sprite 已销毁（scene 被置空），丢弃引用
+      if (this.mountSprite && !this.mountSprite.scene) this.mountSprite = null
+
+      const activeMount = (this.state as any).activeMount as { type: MountType; summoned: boolean; endurance: number } | undefined
+      if (activeMount?.summoned && activeMount.endurance > 0) {
+        const texInfo = MOUNT_TEXTURES[activeMount.type]
+        // 防御：type 不在映射表、纹理不存在、玩家精灵未就绪，均跳过
+        if (!texInfo || !this.textures.exists(texInfo.tex) || !this.player?.sprite) return
+        // 防御：验证纹理首帧有效，避免 setTexture 时 frame.sys 为 undefined 崩溃
+        const tex = this.textures.get(texInfo.tex)
+        if (!tex || !tex.frames || !tex.get('__BASE')) return
+
         if (!this.mountSprite) {
           this.mountSprite = this.add.sprite(this.player.sprite.x, this.player.sprite.y + 6, texInfo.tex)
           this.mountSprite.setDepth(4.5).setScale(0.6)
@@ -816,9 +832,12 @@ export class WorldScene extends Phaser.Scene {
           this.mountSprite.anims.play(texInfo.anim, true)
         }
         this.mountSprite.setVisible(true)
+      } else {
+        if (this.mountSprite) this.mountSprite.setVisible(false)
       }
-    } else {
-      if (this.mountSprite) this.mountSprite.setVisible(false)
+    } catch (e) {
+      // 坐骑贴图异常不应中断游戏，静默记录
+      console.warn('[refreshMountSprite] failed:', e)
     }
   }
 
@@ -1379,6 +1398,7 @@ export class WorldScene extends Phaser.Scene {
   /** 每帧同步 3D billboard + 2D 标签投影 */
   private sync3DBillboards(): void {
     if (!this.threeBridge) return
+    try {
     // 玩家 billboard
     const frame = this.player.sprite.frame
     if (frame && frame.texture) {
@@ -1414,6 +1434,9 @@ export class WorldScene extends Phaser.Scene {
           label.setVisible(false)
         }
       }
+    }
+    } catch (e) {
+      console.warn('[sync3DBillboards] failed:', e)
     }
 
     // 投影所有世界空间标签和标记容器
@@ -2812,8 +2835,12 @@ export class WorldScene extends Phaser.Scene {
     options.push({ label: '劫掠', value: 'plunder' })
     options.push({ label: '强行攻击', value: 'attack' })
 
-    // 带下秘境（好感>=50且有空位）
-    if (rel && rel.favor >= 50 && !this.state.activeCompanionNpcId) {
+    // 邀入队伍：好感达标且出战修士未满（名额判定统一走 party）
+    if (
+      rel && rel.favor >= 50
+      && countActive(this.state.party, 'cultivator') < PARTY_RULES.maxCultivator
+      && !findMemberByRef(this.state.party, npc.id)
+    ) {
       options.push({ label: '邀入队伍', value: 'invite' })
     }
 
@@ -2916,17 +2943,28 @@ export class WorldScene extends Phaser.Scene {
     lines.push('')
     lines.push('—— 修为履历 ——')
     lines.push(`境界：${getRealmName(npc.realm)} ${npc.level}级`)
-    lines.push(`道途：${npc.daoPath}`)
+    lines.push(`资质：${npc.physique} · 道途：${npc.daoPath}`)
     lines.push(`出身：${npc.background}`)
     lines.push(`志向：${npc.lifeGoal}`)
-    if (npc.skills.length > 0) lines.push(`功法：${npc.skills.map(s => getNpcSkillName(s)).join('、')}`)
+    // 修为档案：道行（年岁 + 突破 + 在世历练）与战力评分
+    const daoYears = daoYearsOf(npc)
+    if (npc.power > 0) lines.push(`道行：${daoYears} 年 · 战力 ${npc.power}`)
+    // 功法（带修炼等级）
+    const skSummary = npcSkillSummary(npc)
+    if (skSummary.length > 0) lines.push(`功法：${skSummary.join('、')}`)
+    else if (npc.skills.length > 0) lines.push(`功法：${npc.skills.map(s => getNpcSkillName(s)).join('、')}`)
 
-    // 装备
-    const eqParts: string[] = []
-    if (npc.equipment.weapon) eqParts.push(getNpcEquipName(npc.equipment.weapon))
-    if (npc.equipment.armor) eqParts.push(getNpcEquipName(npc.equipment.armor))
-    if (npc.equipment.accessory) eqParts.push(getNpcEquipName(npc.equipment.accessory))
-    if (eqParts.length > 0) lines.push(`装备：${eqParts.join('、')}`)
+    // 装备（真实法器，带品质与强化）
+    const gearSummary = npcGearSummary(npc)
+    if (gearSummary.length > 0) {
+      lines.push(`法器：${gearSummary.join('、')}`)
+    } else {
+      const eqParts: string[] = []
+      if (npc.equipment.weapon) eqParts.push(getNpcEquipName(npc.equipment.weapon))
+      if (npc.equipment.armor) eqParts.push(getNpcEquipName(npc.equipment.armor))
+      if (npc.equipment.accessory) eqParts.push(getNpcEquipName(npc.equipment.accessory))
+      if (eqParts.length > 0) lines.push(`装备：${eqParts.join('、')}`)
+    }
 
     // 持有物品
     const invEntries = Object.entries(npc.inventory)
@@ -3560,7 +3598,7 @@ export class WorldScene extends Phaser.Scene {
     const x = Math.max(50, Math.min(WORLD_MAP_W - 50, px + Math.cos(angle) * dist))
     const y = Math.max(50, Math.min(WORLD_MAP_H - 50, py + Math.sin(angle) * dist))
 
-    const realm = generateSecretRealm(this.currentDomain, Math.floor(x), Math.floor(y))
+    const realm = generateSecretRealm(this.currentDomain, Math.floor(x), Math.floor(y), undefined, this.state.level)
     if (discoverRealm(this.state, realm)) {
       this.discoveredRealmDefs.push(realm)
       this.renderSecretRealmEntrance(realm)
@@ -3636,15 +3674,71 @@ export class WorldScene extends Phaser.Scene {
 
   // ===== 秘境入口交互 =====
 
+  /** 队伍管理面板（大世界入口，与洞府 TownScene 共用同一套 party 操作） */
+  private async openPartyPanelFromWorld() {
+    const party = sortParty(this.state.party)
+    if (party.length === 0) {
+      await showDialog('队伍', [
+        '你如今仍是孤身一人。',
+        '（洞府可与陆青鸢结伴；大世界中好感达友好的道友可邀入队伍）',
+      ])
+      input.clearQueues()
+      return
+    }
+    const options: Array<{ label: string; value: string }> = []
+    for (const m of party) {
+      const tag = m.status === 'active' ? '出战' : m.status === 'downed' ? '重伤' : '待命'
+      options.push({ label: `${m.displayName}（${tag}）`, value: `m_${m.refId}` })
+    }
+    options.push({ label: '返回', value: 'back' })
+
+    const lines = party.map(m => {
+      const pct = m.maxHp > 0 ? Math.round((m.hp / m.maxHp) * 100) : 100
+      const role = m.kind === 'beast' ? '灵兽' : '道友'
+      return `${m.displayName} · ${role} Lv.${m.level} · 气血 ${pct}% · 战力 ${(m.attackMult * 100).toFixed(0)}%`
+    })
+    lines.push(`<span class="dim">出战 ${countActive(this.state.party, 'cultivator')}/${PARTY_RULES.maxCultivator} 道友，${countActive(this.state.party, 'beast')}/${PARTY_RULES.maxBeast} 灵兽</span>`)
+
+    const choice = await showDialog('队伍', lines, options)
+    if (!choice || !choice.startsWith('m_')) { input.clearQueues(); return }
+    const refId = choice.slice(2)
+    const cur = findMemberByRef(this.state.party, refId)
+    if (!cur) { input.clearQueues(); return }
+
+    const ops: Array<{ label: string; value: string }> = []
+    if (cur.status === 'active') ops.push({ label: '转为待命', value: 'toggle' })
+    else if (cur.status !== 'downed') ops.push({ label: '转为出战', value: 'toggle' })
+    ops.push({ label: '移出队伍', value: 'remove' })
+    ops.push({ label: '返回', value: 'back' })
+
+    const act = await showDialog(cur.displayName, [
+      cur.status === 'downed' ? '「……这一战着实凶险，容我调息片刻。」' : '「听你安排。」',
+    ], ops)
+    if (act === 'toggle') {
+      const res = toggleMemberInState(this.state, refId)
+      saveGame(this.state)
+      toast(res.ok ? '已调整出战状态' : res.reason, res.ok ? '#4ade80' : '#f87171')
+    } else if (act === 'remove') {
+      removeMemberFromState(this.state, refId)
+      saveGame(this.state)
+      toast(`${cur.displayName}已离开队伍`, '#a3e4d7')
+    }
+    input.clearQueues()
+  }
+
   private async interactWithSecretRealm(realm: SecretRealmDef) {
     if (this.transitioning || this.eventActive) return
     input.clearQueues()
     this.player.halt()
 
     const progress = getRealmProgress(this.state, realm.id)
+    const party = getActiveMembers(this.state.party)
     const realmNames = ['练气', '筑基', '金丹', '元婴', '化神', '合体', '大乘', '渡劫']
-    const companionNpc = this.state.activeCompanionNpcId
-      ? this.state.proceduralNpcs.find(n => n.id === this.state.activeCompanionNpcId)
+    const realmByLevel = (lv: number) => realmNames[Math.max(0, Math.min(realmNames.length - 1, lv))]
+    // 组队信息统一取自 party（旧字段 activeCompanionNpcId 已于 v13 移除）
+    const companionRef = activeCompanionRef(this.state.party)
+    const companionNpc = companionRef
+      ? this.state.proceduralNpcs.find(n => n.id === companionRef)
       : null
 
     const lines: string[] = [
@@ -3654,8 +3748,13 @@ export class WorldScene extends Phaser.Scene {
       `时限：${realm.isTimeLimited ? '限时开启' : '常驻可入'}`,
     ]
 
-    if (companionNpc) {
-      lines.push(`组队道友：${companionNpc.name}（${realmNames[companionNpc.realm]}境）`)
+    if (party.length > 0) {
+      const roster = party.map(m => {
+        const pct = m.maxHp > 0 ? Math.round((m.hp / m.maxHp) * 100) : 100
+        const role = m.kind === 'beast' ? '灵兽' : `${realmByLevel(m.realm)}境`
+        return `${m.displayName}（${role} 气血 ${pct}%）`
+      })
+      lines.push(`队伍：${roster.join('、')}`)
     }
 
     // 显示各层信息
@@ -3672,10 +3771,16 @@ export class WorldScene extends Phaser.Scene {
     if (companionNpc) {
       options.push({ label: `让${companionNpc.name}等候`, value: 'dismiss' })
     }
+    options.push({ label: '队伍', value: 'party_manage' })
 
     options.push({ label: '离开', value: 'leave' })
 
     const result = await showDialog(realm.name, lines, options)
+
+    if (result === 'party_manage') {
+      await this.openPartyPanelFromWorld()
+      return
+    }
 
     if (result === 'enter') {
       // 生成秘境NPC
@@ -3689,6 +3794,7 @@ export class WorldScene extends Phaser.Scene {
         layerIndex: layerToEnter,
         layer: realm.layers[layerToEnter],
         npcs: realmNpcs,
+        // ⚠️ 已作废：v12 起组队信息统一走 state.party，DungeonScene 不再从 registry 读取
         companionNpc: companionNpc || null,
       })
 
@@ -3712,7 +3818,7 @@ export class WorldScene extends Phaser.Scene {
         })
       })
     } else if (result === 'dismiss') {
-      this.state.activeCompanionNpcId = null
+      dismissCompanion(this.state, companionNpc!.id)
       toast(`${companionNpc!.name}在入口等候`, '#a3e4d7')
       saveGame(this.state)
       input.clearQueues()
@@ -3917,6 +4023,7 @@ export class WorldScene extends Phaser.Scene {
     this.worldTime = advanceTime(this.worldTime, delta * timeMult)
     this.state.worldTime = this.worldTime
     this.updateTimeDisplay()
+    this.tickNpcGrowth()
 
     // 赶路提示
     if (this.travelText) {
@@ -4192,6 +4299,20 @@ export class WorldScene extends Phaser.Scene {
         if (events.length > 0) saveGame(this.state)
       }
     }
+  }
+
+  /**
+   * NPC 随时间自行修行：每跨过 1 个苍玄历日推进一次历练（升级 / 突破 / 换装补功法）。
+   * 休眠 NPC 以半速积累；突破记录写入 npc.eventLog，可在详情面板查看。
+   */
+  private tickNpcGrowth(): void {
+    const total = (this.worldTime.year - 1) * 360 + (this.worldTime.month - 1) * 30 + this.worldTime.day
+    if (this.lastNpcGrowthDay === 0) { this.lastNpcGrowthDay = total; return }
+    const diff = total - this.lastNpcGrowthDay
+    if (diff <= 0) return
+    this.lastNpcGrowthDay = total
+    // 突破只改数值（境界/战力/装备），不影响贴图，故无需重建精灵
+    tickNpcCultivation(this.state, diff)
   }
 
   private updateTimeDisplay() {

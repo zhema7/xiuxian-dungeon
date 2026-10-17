@@ -6,6 +6,7 @@ import { toast } from './ui'
 import { sfx } from './audio'
 import { saveGame } from './state'
 import { calcSectPower } from './ai-sect-data'
+import { sectDisciplePower } from './disciple-data'
 // 用于把「完成全部主线任务」的门槛绑定到主线表长度，避免数据表增删后再次失同步（缺陷 B1）
 import { MAIN_QUESTS } from './storyline-data'
 
@@ -140,11 +141,11 @@ export function getAchievementProgress(state: GameState, cond: AchievementCondTy
       if (!state.aiSects) return 0
       return state.aiSects.filter(a => !a.defeated && a.vassalOf === 'player').length
     }
-    case 'disciple_count': return state.sect?.disciples.length ?? 0
+    case 'disciple_count': return state.disciples.length
     case 'sect_power': {
       if (!state.sect) return 0
       const bc = Object.values(state.sect.buildings).filter(v => v > 0).length
-      return calcSectPower(state.sect.level, bc, state.sect.disciples.length, state.sect.resources)
+      return calcSectPower(state.sect.level, bc, sectDisciplePower(state.disciples), state.sect.resources)
     }
     case 'domains_explored': {
       const d = state.worldDomain

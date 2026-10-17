@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>修仙与地下城 · 漫画第1集 · 选职业</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #050508;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+  font-family: "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", sans-serif;
+  padding: 20px;
+}
+.comic {
+  width: 1080px;
+  height: 1440px;
+  background: #0a0a14;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 4px;
+  padding: 4px;
+  position: relative;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 0 50px rgba(120,80,200,0.4);
+}
+.panel {
+  position: relative;
+  overflow: hidden;
+  border: 3px solid #c9a84c;
+  border-radius: 4px;
+  background-size: cover;
+  background-position: center;
+}
+.panel-num {
+  position: absolute;
+  top: 10px; left: 10px;
+  width: 40px; height: 40px;
+  background: linear-gradient(135deg, #c9a84c, #8a6a2c);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; font-weight: bold; color: #1a1a28;
+  z-index: 10;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.6);
+}
+
+/* Caption (top-right narration) */
+.caption {
+  position: absolute;
+  top: 12px; right: 12px;
+  background: rgba(10,10,20,0.85);
+  border-left: 3px solid #c9a84c;
+  padding: 6px 16px;
+  color: #f0d896;
+  font-size: 14px;
+  font-style: italic;
+  z-index: 9;
+  border-radius: 0 4px 4px 0;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+}
+
+/* Speech bubbles */
+.bubble {
+  position: absolute;
+  background: #fff;
+  border: 3px solid #1a1a28;
+  border-radius: 20px;
+  padding: 10px 18px;
+  font-size: 16px;
+  font-weight: bold;
+  color: #1a1a28;
+  max-width: 320px;
+  line-height: 1.6;
+  z-index: 8;
+  box-shadow: 0 3px 12px rgba(0,0,0,0.4);
+}
+.bubble.small { font-size: 13px; padding: 7px 13px; border-radius: 14px; }
+.bubble.large { font-size: 18px; padding: 12px 22px; border-radius: 22px; }
+.bubble.gold {
+  background: linear-gradient(135deg, #fff8e0, #f0d896);
+  border-color: #8a6a2c;
+  color: #4a3a1a;
+}
+.bubble.pink {
+  background: linear-gradient(135deg, #fff0f5, #ffd0e0);
+  border-color: #c06080;
+  color: #6a2040;
+}
+.bubble.purple {
+  background: linear-gradient(135deg, #f0e0ff, #d0a0e0);
+  border-color: #603080;
+  color: #3a1a50;
+}
+.bubble.teal {
+  background: linear-gradient(135deg, #e0f8f8, #a0e0e0);
+  border-color: #208080;
+  color: #1a4040;
+}
+.bubble.brown {
+  background: linear-gradient(135deg, #f0e0c0, #d0b080);
+  border-color: #604020;
+  color: #3a2010;
+}
+.bubble::after {
+  content: '';
+  position: absolute;
+  width: 0; height: 0;
+  border: 12px solid transparent;
+}
+.bubble.tail-bl::after { bottom: -22px; left: 28px; border-top-color: inherit; border-bottom: 0; }
+.bubble.tail-br::after { bottom: -22px; right: 28px; border-top-color: inherit; border-bottom: 0; }
+.bubble.tail-tl::after { top: -22px; left: 28px; border-bottom-color: inherit; border-top: 0; }
+.bubble.tail-tr::after { top: -22px; right: 28px; border-bottom-color: inherit; border-top: 0; }
+
+/* Fix tail colors */
+.bubble.tail-bl::after { border-top-color: #fff; }
+.bubble.gold.tail-bl::after { border-top-color: #f0d896; }
+.bubble.pink.tail-bl::after { border-top-color: #ffd0e0; }
+.bubble.purple.tail-bl::after { border-top-color: #d0a0e0; }
+.bubble.teal.tail-bl::after { border-top-color: #a0e0e0; }
+.bubble.brown.tail-bl::after { border-top-color: #d0b080; }
+.bubble.tail-tl::after { border-bottom-color: #fff; }
+.bubble.gold.tail-tl::after { border-bottom-color: #f0d896; }
+.bubble.pink.tail-tl::after { border-bottom-color: #ffd0e0; }
+.bubble.purple.tail-tl::after { border-bottom-color: #d0a0e0; }
+.bubble.teal.tail-tl::after { border-bottom-color: #a0e0e0; }
+.bubble.brown.tail-tl::after { border-bottom-color: #d0b080; }
+
+/* Bottom narration */
+.narration {
+  position: absolute;
+  bottom: 8px; left: 8px; right: 8px;
+  text-align: center;
+  color: #f0d896;
+  font-size: 13px;
+  z-index: 9;
+  padding: 8px 12px;
+  background: rgba(0,0,0,0.6);
+  border-radius: 4px;
+  border-top: 1px solid #c9a84c44;
+}
+.narration .highlight { color: #f0d896; font-weight: bold; }
+.narration .small { color: #8a8aa0; font-size: 11px; }
+
+/* Clash text overlay */
+.clash-text {
+  position: absolute;
+  top: 42%; left: 50%;
+  transform: translate(-50%, -50%) rotate(-3deg);
+  font-size: 26px;
+  font-weight: bold;
+  color: #f0d896;
+  text-shadow: 2px 2px 0 #1a1a28, -2px -2px 0 #1a1a28, 2px -2px 0 #1a1a28, -2px 2px 0 #1a1a28, 0 0 20px rgba(240,216,150,0.8);
+  z-index: 9;
+  text-align: center;
+  line-height: 1.5;
+}
+.clash-bang {
+  position: absolute;
+  top: 25%; left: 50%;
+  transform: translate(-50%, -50%) rotate(-8deg);
+  font-size: 40px;
+  font-weight: bold;
+  color: #ff6040;
+  text-shadow: 2px 2px 0 #1a1a28, -1px -1px 0 #fff, 0 0 20px rgba(255,100,60,0.6);
+  z-index: 9;
+  font-style: italic;
+}
+
+/* Game title overlay for panel 4 */
+.game-title-overlay {
+  position: absolute;
+  top: 35%; left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  z-index: 7;
+}
+.game-title-overlay h1 {
+  font-size: 32px;
+  font-weight: bold;
+  letter-spacing: 8px;
+  background: linear-gradient(135deg, #c9a84c, #f0d896, #c9a84c);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 30px rgba(201,168,76,0.5);
+  margin-bottom: 6px;
+}
+.game-title-overlay .sub {
+  color: #a0a0c0;
+  font-size: 12px;
+  margin-bottom: 16px;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+}
+.game-title-overlay .hint {
+  color: #8a8aa0;
+  font-size: 11px;
+  margin-top: 10px;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+}
+
+/* Sparkle effects */
+.sparkle {
+  position: absolute;
+  pointer-events: none;
+  color: #c9a84c;
+  font-size: 16px;
+  text-shadow: 0 0 8px rgba(201,168,76,0.8);
+  animation: sparkFlash 1.5s infinite;
+  z-index: 7;
+}
+@keyframes sparkFlash {
+  0%, 100% { opacity: 0.3; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.3); }
+}
+
+/* Panel background images */
+.panel-1 { background-image: url('art/ep01_panel1.jpg'); }
+.panel-2 { background-image: url('art/ep01_panel2.jpg'); }
+.panel-3 { background-image: url('art/ep01_panel3.jpg'); }
+.panel-4 { background-image: url('art/ep01_panel4.jpg'); }
+
+/* Footer */
+.footer {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 32px;
+  background: rgba(5,5,10,0.95);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  z-index: 20;
+  border-top: 1px solid #c9a84c44;
+}
+.footer .left { color: #c9a84c; font-size: 13px; font-weight: bold; }
+.footer .right { color: #6a6a8a; font-size: 12px; }
+</style>
+</head>
+<body>
+
+<div class="comic">
+
+  <!-- ═══ PANEL 1: 剑修选职业 ═══ -->
+  <div class="panel panel-1">
+    <div class="panel-num">1</div>
+    <div class="caption">修仙之路，始于择道</div>
+    
+    <!-- 林霄兴奋 -->
+    <div class="bubble large tail-tl" style="top:60px; left:30px;">
+      我选剑修！<br>一剑破万法！
+    </div>
+    
+    <!-- 火花特效 -->
+    <div class="sparkle" style="top:30%; left:55%; font-size:20px;">✦</div>
+    <div class="sparkle" style="top:40%; left:70%; font-size:14px; animation-delay:0.4s;">✦</div>
+    <div class="sparkle" style="top:55%; left:45%; font-size:12px; animation-delay:0.8s;">✧</div>
+    
+    <div class="narration">
+      <span class="highlight">五大职业</span> · 随心选择 · <span class="highlight">随机结缘</span>更有惊喜
+    </div>
+  </div>
+
+  <!-- ═══ PANEL 2: 五大职业展示 ═══ -->
+  <div class="panel panel-2">
+    <div class="panel-num">2</div>
+    <div class="caption">五大职业 · 各显神通</div>
+    
+    <!-- 仙子 -->
+    <div class="bubble pink small tail-tl" style="bottom:140px; left:15px; max-width:130px;">
+      仙子才是正道~<br>灵法秒杀！
+    </div>
+    
+    <!-- 法修 -->
+    <div class="bubble teal small tail-tl" style="bottom:140px; left:24%; max-width:110px;">
+      法修稳…<br>符箓通玄。
+    </div>
+    
+    <!-- 道修 -->
+    <div class="bubble brown small tail-tl" style="bottom:140px; left:46%; max-width:100px;">
+      道修肉！<br>打不死！
+    </div>
+    
+    <!-- 合欢 -->
+    <div class="bubble purple small tail-tl" style="bottom:140px; left:66%; max-width:120px;">
+      合欢暴击，<br>一刀一个~
+    </div>
+    
+    <div class="narration">
+      <span class="small">剑修 · 仙子 · 法修 · 道修 · 合欢 — 你的道是哪条？</span>
+    </div>
+  </div>
+
+  <!-- ═══ PANEL 3: 对峙争辩 ═══ -->
+  <div class="panel panel-3">
+    <div class="panel-num">3</div>
+    <div class="caption">谁才是最强？</div>
+    
+    <!-- 对峙大字 -->
+    <div class="clash-bang">对峙！！</div>
+    <div class="clash-text">我的职业<br>才是最强的！！</div>
+    
+    <!-- 火花 -->
+    <div class="sparkle" style="top:15%; left:20%; font-size:22px;">✦</div>
+    <div class="sparkle" style="top:20%; left:75%; font-size:18px; animation-delay:0.3s;">✦</div>
+    <div class="sparkle" style="top:60%; left:15%; font-size:16px; animation-delay:0.6s;">✧</div>
+    <div class="sparkle" style="top:65%; left:80%; font-size:20px; animation-delay:0.9s;">✦</div>
+    <div class="sparkle" style="top:35%; left:90%; font-size:14px; animation-delay:1.2s;">✧</div>
+    
+    <div class="narration">
+      <span class="small">每条道都有独到之处 — 选你所爱，爱你所选</span>
+    </div>
+  </div>
+
+  <!-- ═══ PANEL 4: 标题画面 ═══ -->
+  <div class="panel panel-4">
+    <div class="panel-num">4</div>
+    
+    <!-- 游戏标题 -->
+    <div class="game-title-overlay">
+      <h1>修仙与地下城</h1>
+      <div class="sub">— 五大职业 · 七大境界 · 无尽探索 —</div>
+      <div class="hint">其实选「随机」才有惊喜哦~</div>
+    </div>
+    
+    <!-- 火花 -->
+    <div class="sparkle" style="top:25%; left:30%; font-size:14px;">✦</div>
+    <div class="sparkle" style="top:20%; left:65%; font-size:16px; animation-delay:0.5s;">✧</div>
+    
+    <div class="narration">
+      <span class="highlight">TapTap搜索：修仙与地下城</span><br>
+      <span class="small">你的修仙之路从哪个职业开始？</span>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="left">哲码游戏 出品</div>
+    <div class="right">修仙与地下城 · 漫画 EP01 · 选职业</div>
+  </div>
+
+</div>
+
+</body>
+</html>

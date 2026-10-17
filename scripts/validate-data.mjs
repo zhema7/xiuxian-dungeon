@@ -10,7 +10,8 @@ let errors = 0
 const err = (msg) => { errors++; console.error(`  ✗ ${msg}`) }
 
 const SLOTS = ['weapon', 'head', 'armor', 'boots', 'charm']
-const MOD_KEYS = ['atk', 'def', 'speed', 'crit', 'maxHp', 'atkPct', 'defPct', 'hpPct', 'aspd', 'lifesteal', 'skillPct', 'cdPct']
+const MOD_KEYS = ['atk', 'def', 'speed', 'crit', 'maxHp', 'atkPct', 'defPct', 'hpPct', 'aspd', 'lifesteal', 'skillPct', 'cdPct',
+  'critDmg', 'thorns', 'dodge', 'dotPct', 'execute', 'shieldPct']
 const ATTACK_MODES = ['melee_arc', 'whirlwind', 'flying_sword', 'flying_sword_burst', 'magic_bolt', 'frost_nova', 'frost_nova_burst', 'thunder_chain', 'sword_array', 'giant_sword', 'slash_pierce', 'bolt_fire', 'slash_heavy', 'bolt_needle', 'slash_ice', 'bolt_dart', 'thunder_net', 'flying_sword_split', 'flame_slash', 'shadow_blade', 'spirit_chain', 'wind_slash', 'stone_spike', 'blood_scythe', 'star_barrage', 'venom_claw', 'light_beam', 'soul_flame', 'crystal_shard']
 const SKILL_TYPES = ['style', 'mind', 'art']
 const SKILL_CLASSES = ['sword', 'fairy', 'sword_new', 'fairy_new', 'mage', 'any']
@@ -142,15 +143,29 @@ for (const [cid, c] of Object.entries(classes)) {
   else if (def.type !== 'style') err(`classes.${cid}: 默认招式必须是 style 类型`)
 }
 
-// talents
+// talents（v0.9 起为五职业独立树：{ trees: { classId: { name, branches } } }）
 const talentIds = new Set()
-for (const br of talents.branches) {
-  for (const n of br.nodes) {
-    if (talentIds.has(n.id)) err(`talents: 节点 id 重复 ${n.id}`)
-    talentIds.add(n.id)
-    for (const k of Object.keys(n.per)) if (!MOD_KEYS.includes(k)) err(`talents.${n.id}: 未知修饰 ${k}`)
-    if (!(n.max > 0)) err(`talents.${n.id}: max 非法`)
+const talentClassIds = Object.keys(talents.trees ?? {})
+if (talentClassIds.length !== Object.keys(classes).length) {
+  err(`talents: 树数量 ${talentClassIds.length} 与职业数量 ${Object.keys(classes).length} 不一致`)
+}
+for (const cid of talentClassIds) {
+  if (!classes[cid]) err(`talents: 未知职业树 ${cid}`)
+  const tree = talents.trees[cid]
+  if (!Array.isArray(tree.branches) || tree.branches.length !== 3) err(`talents.${cid}: 须为 3 条分支`)
+  let nodeCount = 0
+  for (const br of tree.branches ?? []) {
+    if (!br.style) err(`talents.${cid}.${br.id}: 缺少流派名 style`)
+    for (const n of br.nodes) {
+      nodeCount++
+      if (talentIds.has(n.id)) err(`talents: 节点 id 重复 ${n.id}`)
+      talentIds.add(n.id)
+      for (const k of Object.keys(n.per)) if (!MOD_KEYS.includes(k)) err(`talents.${n.id}: 未知修饰 ${k}`)
+      if (!(n.max > 0)) err(`talents.${n.id}: max 非法`)
+      if (![1, 2, 3].includes(n.tier)) err(`talents.${n.id}: tier 须为 1/2/3`)
+    }
   }
+  if (nodeCount !== 18) err(`talents.${cid}: 须为 18 个节点，当前 ${nodeCount}`)
 }
 
 if (errors > 0) {

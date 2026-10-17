@@ -134,6 +134,7 @@
     .tnode { display: flex; justify-content: space-between; align-items: center; font-size: 12px; padding: 4px 0; border-top: 1px dashed #28303f; }
     .tnode .pips { color: #f0d98c; letter-spacing: 2px; }
     .tnode button { margin: 0; padding: 2px 10px; }
+    .tnode button + button { margin-left: 4px; }
 
     /* ---------- 开机画面 ---------- */
     #titleVideo {

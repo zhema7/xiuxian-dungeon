@@ -146,7 +146,7 @@ export function calculateTribulationReward(state: GameState, trib: EnhancedTribu
 
   reward.messages.push(`渡过${trib.name}！获得悟道点 ${reward.insight}`)
   reward.messages.push(`灵石 +${reward.bonusGold}`)
-  reward.messages.push(`HP恢复至满值`)
+  reward.messages.push(`气血恢复至满值`)
 
   // 心魔劫特殊奖励
   if (trib.kind === 'heart_demon') {
@@ -183,7 +183,7 @@ export function calculateTribulationFailure(state: GameState, trib: EnhancedTrib
 
   failure.hpLoss = Math.floor(state.level * 50 + 100)
   failure.expLoss = state.level * 30
-  failure.messages.push(`天劫失败！HP降至1，修为倒退${failure.expLoss}经验`)
+  failure.messages.push(`天劫失败！气血降至1，修为倒退${failure.expLoss}经验`)
 
   // 心魔增加
   if (trib.kind === 'heart_demon') {
@@ -244,7 +244,7 @@ export function prepareTribulation(state: GameState): { def: EnhancedTribulation
 
   // 天劫前准备建议
   warnings.push('')
-  warnings.push('建议：确保HP充足，准备恢复丹药')
+  warnings.push('建议：确保气血充足，准备恢复丹药')
 
   return { def, warnings }
 }

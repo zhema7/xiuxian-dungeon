@@ -93,7 +93,7 @@ export class SectWarScene extends Phaser.Scene {
 
     sfx('sfx_boss_spawn', 0.6)
     playBgm(BGM_SECT_WAR) // 宗门战专属BGM：仙魔血战
-    setFloorText(`宗门防御战 · vs ${this.enemySect.name}`)
+    setFloorText(`宗门防御战 · 迎战 ${this.enemySect.name}`)
 
     document.getElementById('hud')!.style.display = 'block'
   resetControls()
@@ -449,7 +449,7 @@ export class SectWarScene extends Phaser.Scene {
 
   private async openDeployPanel() {
     input.clearQueues()
-    const disciples = this.sect.disciples.filter(d => d.status === 'idle')
+    const disciples = this.state.disciples.filter(d => d.status === 'idle')
     const playerDeployed = this.towers.some(t => t.type === 'player')
     const lines = [`空闲弟子：${disciples.length} 人　${playerDeployed ? '（你已上阵）' : '你可亲自上阵'}`]
     const options: { label: string; value: string }[] = []

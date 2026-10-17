@@ -4,17 +4,21 @@ import Phaser from 'phaser'
 import { Player } from '../entities'
 import { input } from '../input'
 import { saveGame, loadSaveSlot, type GameState } from '../state'
+import { activeBeastRef, setActiveBeast } from '../party'
 import { toast, showDialog, dialogOpen, panelOpen, resetControls, setFloorText, updateHUD, setSettingsCallbacks, openInventory, closePanel, openSectDashboard, setSectCallbacks, type SectDashboardData, type BuildingProdInfo, openDiscipleDashboard, setDiscipleCallbacks, type DiscipleDashboardData, type DiscipleCardData, type RecruitCandidate } from '../ui'
 import { BGM_SECT, playBgm, sfx, stopBgm } from '../audio'
 import { advanceTime, formatTime, type WorldTime } from '../world-time'
 import { makeRng, type EquipItem } from '../core'
 import { QUALITY_NAMES } from '../data'
 import {
-  BUILDINGS, BUILDING_IDS, buildingUpgradeCost, canUpgradeBuilding,
+  BUILDINGS, BUILDING_IDS,
   spiritVeinProduction, spiritFarmProduction, oreMineProduction, woodPavilionProduction, discipleCapacity,
   addDiscipleEvent,
   type BuildingId, type SectData, type SectResources, type RevengeTarget,
 } from '../sect-data'
+import {
+  canUpgradeBuilding, getBuildingUpgradeCost, upgradeBuilding as upgradeBuildingV2,
+} from '../sect-building-v2'
 import {
   generateDisciple, cultivationSpeed, expToNextRealm,
   questSuccessRate, retreatCost, RETREAT_DURATION,
@@ -207,6 +211,7 @@ export class SectScene extends Phaser.Scene {
 
     this.time.delayedCall(800, () => {
       tryCompleteQuest(this.state).then(() => {
+        if (!questHud.scene) return   // 场景已切走：questHud 已被销毁，跳过刷新
         questHud.setText(getQuestHudText(this.state))
       })
     })
@@ -356,7 +361,7 @@ export class SectScene extends Phaser.Scene {
 
   /** 渲染宗门内弟子（程序化贴图 + 游荡/修炼） */
   private renderDisciples(): void {
-    for (const d of this.sect.disciples) {
+    for (const d of this.state.disciples) {
       // 派遣中的弟子不显示在宗门内
       if (d.status === 'dispatched') continue
 
@@ -566,7 +571,7 @@ export class SectScene extends Phaser.Scene {
       this.nearNpcId = nearNpc
       this.nearBuilding = null
       this.nearDiscipleUid = null
-      this.promptText?.setText('【对话】\n点击与 NPC 交流').setVisible(true)
+      this.promptText?.setText('【对话】\n点击与修士交谈').setVisible(true)
     } else if (!nearNpc && this.nearNpcId) {
       this.nearNpcId = null
     }
@@ -585,7 +590,7 @@ export class SectScene extends Phaser.Scene {
       if (nearDisc && nearDisc !== this.nearDiscipleUid) {
         this.nearDiscipleUid = nearDisc
         this.nearBuilding = null
-        const d = this.sect.disciples.find(x => x.uid === nearDisc)
+        const d = this.state.disciples.find(x => x.uid === nearDisc)
         const statusStr = d?.status === 'cultivating' ? '（修炼中）' : d?.status === 'retreating' ? '（闭关中）' : d?.status === 'dispatched' ? '（外派中）' : ''
         this.promptText?.setText(`【查看弟子】\n点击查看${statusStr}`).setVisible(true)
       } else if (!nearDisc && this.nearDiscipleUid) {
@@ -740,7 +745,7 @@ export class SectScene extends Phaser.Scene {
     const rate = seconds / 60
 
     let stoneBonus = 1, herbBonus = 1, oreBonus = 1, woodBonus = 1
-    for (const d of this.sect.disciples) {
+    for (const d of this.state.disciples) {
       if (!d.role) continue
       if (d.role === 'quartermaster') stoneBonus += 0.15
       if (d.role === 'herbalist') herbBonus += 0.15
@@ -748,7 +753,7 @@ export class SectScene extends Phaser.Scene {
       if (d.role === 'wood_master') woodBonus += 0.15
     }
     // 弟子宗门经营 buff
-    const sectBuffs = aggregateSectBuffs(this.sect.disciples)
+    const sectBuffs = aggregateSectBuffs(this.state.disciples)
     if (sectBuffs.stoneBonus) stoneBonus += sectBuffs.stoneBonus / 100
     if (sectBuffs.herbBonus) herbBonus += sectBuffs.herbBonus / 100
     if (sectBuffs.oreBonus) oreBonus += sectBuffs.oreBonus / 100
@@ -768,7 +773,7 @@ export class SectScene extends Phaser.Scene {
   private updateDiscipleAnimations(delta: number): void {
     const t = this.time.now * 0.001
     for (const entry of this.discipleSprites) {
-      const d = this.sect.disciples.find(x => x.uid === entry.uid)
+      const d = this.state.disciples.find(x => x.uid === entry.uid)
       if (!d) continue
       if (entry.sprite.alpha < 0.05) continue
 
@@ -828,7 +833,7 @@ export class SectScene extends Phaser.Scene {
   private tryDiscipleChat(): void {
     // 找一对距离较近的空闲弟子
     const idle = this.discipleSprites.filter(ds => {
-      const d = this.sect.disciples.find(x => x.uid === ds.uid)
+      const d = this.state.disciples.find(x => x.uid === ds.uid)
       return d && (d.status === 'idle') && ds.sprite.alpha > 0.05
     })
     if (idle.length < 2) return
@@ -846,8 +851,8 @@ export class SectScene extends Phaser.Scene {
     const dist = Phaser.Math.Distance.Between(a.sprite.x, a.sprite.y, b.sprite.x, b.sprite.y)
     if (dist > 80) return // 太远不互动
 
-    const dA = this.sect.disciples.find(x => x.uid === a.uid)
-    const dB = this.sect.disciples.find(x => x.uid === b.uid)
+    const dA = this.state.disciples.find(x => x.uid === a.uid)
+    const dB = this.state.disciples.find(x => x.uid === b.uid)
     if (!dA || !dB) return
 
     // 生成对话内容
@@ -988,14 +993,14 @@ export class SectScene extends Phaser.Scene {
 
     // 计算弟子职务+天赋加成
     let stoneBonus = 0, herbBonus = 0, oreBonus = 0, woodBonus = 0
-    for (const d of sect.disciples) {
+    for (const d of this.state.disciples) {
       if (!d.role) continue
       if (d.role === 'quartermaster') stoneBonus += 0.15
       if (d.role === 'herbalist') herbBonus += 0.15
       if (d.role === 'forge_master') oreBonus += 0.15
       if (d.role === 'wood_master') woodBonus += 0.15
     }
-    const sectBuffs = aggregateSectBuffs(sect.disciples)
+    const sectBuffs = aggregateSectBuffs(this.state.disciples)
     if (sectBuffs.stoneBonus) stoneBonus += sectBuffs.stoneBonus / 100
     if (sectBuffs.herbBonus) herbBonus += sectBuffs.herbBonus / 100
     if (sectBuffs.oreBonus) oreBonus += sectBuffs.oreBonus / 100
@@ -1020,7 +1025,7 @@ export class SectScene extends Phaser.Scene {
       buildings,
       productionBuildings,
       discipleBonuses: { stone: stoneBonus, herb: herbBonus, ore: oreBonus, wood: woodBonus },
-      discipleCount: sect.disciples.length,
+      discipleCount: this.state.disciples.length,
       discipleCapacity: discipleCapacity(sect.buildings.disciple_room ?? 0),
     }
 
@@ -1043,7 +1048,7 @@ export class SectScene extends Phaser.Scene {
       `宗门：${sect.name}（${sect.level}级）`,
       `灵石：${r.stone}  灵草：${r.herb}  矿石：${r.ore}`,
       `木材：${r.wood}  悟道：${r.insight}  声望：${r.prestige}`,
-      `弟子：${sect.disciples.length}/${discipleCapacity(sect.buildings.disciple_room ?? 0)}`,
+      `弟子：${this.state.disciples.length}/${discipleCapacity(sect.buildings.disciple_room ?? 0)}`,
       '',
       '—— 建筑等级 ——',
     ]
@@ -1132,7 +1137,7 @@ export class SectScene extends Phaser.Scene {
     }
     options.push({ label: '重置全部', value: 'reset' })
     options.push({ label: '返回', value: 'back' })
-    const result = await showDialog('NPC安排', ['选择要摆放的NPC：'], options)
+    const result = await showDialog('人员安排', ['选择要安排的修士：'], options)
     if (result === 'back' || result === null) { input.clearQueues(); return }
     if (result === 'reset') {
       this.state.customNpcPos = undefined
@@ -1264,12 +1269,19 @@ export class SectScene extends Phaser.Scene {
       return
     }
 
-    const cost = buildingUpgradeCost(id, currentLv)
+    // 成本与可执行性统一走 sect-building-v2 —— 与 WorldScene 同一实现，杜绝两套口径
+    const check = canUpgradeBuilding(this.state, id)
+    const cost = check.cost ?? getBuildingUpgradeCost(this.sect, id)
+    if (!cost) {
+      toast(`${def.name} 已达最高等级`, '#f0c987')
+      return
+    }
+    const goldNeed = cost.gold ?? 0
     const r = this.sect.resources
-    const canAfford = r.stone >= cost.stone && r.wood >= cost.wood && r.ore >= cost.ore
+    const canAfford = r.stone >= cost.stone && r.wood >= cost.wood && r.ore >= cost.ore && this.state.gold >= goldNeed
 
     const action = currentLv === 0 ? '建造' : `升级至 Lv.${currentLv + 1}`
-    const costStr = `灵石 ${cost.stone}  木材 ${cost.wood}  矿石 ${cost.ore}`
+    const costStr = `灵石 ${cost.stone}  木材 ${cost.wood}  矿石 ${cost.ore}  金银 ${goldNeed}`
 
     const result = await showDialog(def.name, [
       def.desc,
@@ -1283,12 +1295,11 @@ export class SectScene extends Phaser.Scene {
       return
     }
 
-    r.stone -= cost.stone
-    r.wood -= cost.wood
-    r.ore -= cost.ore
-    this.sect.buildings[id] = currentLv + 1
-    if (id === 'main_hall') {
-      this.sect.level = currentLv + 1
+    const res = upgradeBuildingV2(this.state, id)
+    if (!res.ok) {
+      input.clearQueues()
+      toast(res.message, '#f87171')
+      return
     }
 
     if (currentLv === 0) sfx('sfx_sect_build', 0.6)
@@ -1358,7 +1369,7 @@ export class SectScene extends Phaser.Scene {
     const cap = discipleCapacity(sect.buildings.disciple_room ?? 0)
     const now = Date.now()
 
-    const disciples: DiscipleCardData[] = sect.disciples.map(d => {
+    const disciples: DiscipleCardData[] = this.state.disciples.map(d => {
       const rootInfo = SPIRIT_ROOTS[d.root]
       const tierLabel = d.rootTier === 'epic' ? '变异' : d.rootTier === 'rare' ? '稀有' : '普通'
       const rankDef = DISCIPLE_RANKS[d.rank]
@@ -1434,7 +1445,7 @@ export class SectScene extends Phaser.Scene {
 
     setDiscipleCallbacks({
       onCultivate: (uid) => {
-        const d = sect.disciples.find(x => x.uid === uid)
+        const d = this.state.disciples.find(x => x.uid === uid)
         if (d && d.status === 'idle') {
           d.status = 'cultivating'
           toast(`${d.name} 开始修炼`, '#60a5fa')
@@ -1443,7 +1454,7 @@ export class SectScene extends Phaser.Scene {
         this.refreshDiscipleDashboard()
       },
       onStopCultivate: (uid) => {
-        const d = sect.disciples.find(x => x.uid === uid)
+        const d = this.state.disciples.find(x => x.uid === uid)
         if (d && d.status === 'cultivating') {
           d.status = 'idle'
           toast(`${d.name} 停止修炼`, '#a3a3a3')
@@ -1452,11 +1463,11 @@ export class SectScene extends Phaser.Scene {
         this.refreshDiscipleDashboard()
       },
       onRetreat: (uid) => {
-        const d = sect.disciples.find(x => x.uid === uid)
+        const d = this.state.disciples.find(x => x.uid === uid)
         if (d) this.startRetreat(d).then(() => this.refreshDiscipleDashboard())
       },
       onBreakRetreat: (uid) => {
-        const d = sect.disciples.find(x => x.uid === uid)
+        const d = this.state.disciples.find(x => x.uid === uid)
         if (d && d.status === 'retreating') {
           d.status = 'idle'
           d.retreatEndTime = 0
@@ -1466,26 +1477,26 @@ export class SectScene extends Phaser.Scene {
         this.refreshDiscipleDashboard()
       },
       onGuide: (uid) => {
-        const d = sect.disciples.find(x => x.uid === uid)
+        const d = this.state.disciples.find(x => x.uid === uid)
         if (d) this.guideDisciple(d).then(() => this.refreshDiscipleDashboard())
       },
       onDispatch: (uid) => {
-        const d = sect.disciples.find(x => x.uid === uid)
+        const d = this.state.disciples.find(x => x.uid === uid)
         if (d) this.dispatchDisciple(d).then(() => this.refreshDiscipleDashboard())
       },
       onEquip: (uid) => {
-        const d = sect.disciples.find(x => x.uid === uid)
+        const d = this.state.disciples.find(x => x.uid === uid)
         if (d) this.openDiscipleEquip(d)
       },
       onPromote: (uid) => {
-        const d = sect.disciples.find(x => x.uid === uid)
+        const d = this.state.disciples.find(x => x.uid === uid)
         if (d) this.openPromotionPanel(d)
       },
       onRecruitAccept: () => {
         if (this.sect.recruitCandidate) {
           // 确认招募当前候补
           const c = this.sect.recruitCandidate
-          sect.disciples.push(c)
+          this.state.disciples.push(c)
           sect.recruitCooldown = Date.now() + 300000
           addDiscipleEvent(sect, c, 'recruit', `${c.name}拜入山门，成为${rankName(c)}弟子`)
           saveGame(this.state)
@@ -1509,7 +1520,7 @@ export class SectScene extends Phaser.Scene {
     })
 
     openDiscipleDashboard({
-      count: sect.disciples.length,
+      count: this.state.disciples.length,
       capacity: cap,
       recruitCooldownRemain: cdRemain,
       disciples,
@@ -1520,7 +1531,7 @@ export class SectScene extends Phaser.Scene {
   private async recruitDisciple() {
     input.clearQueues()
     const cap = discipleCapacity(this.sect.buildings.disciple_room ?? 0)
-    if (this.sect.disciples.length >= cap) {
+    if (this.state.disciples.length >= cap) {
       toast('弟子房已满，请先升级弟子房', '#f87171')
       return
     }
@@ -1544,7 +1555,7 @@ export class SectScene extends Phaser.Scene {
     ], [{ label: '收下', value: 'accept' }, { label: '拒绝', value: 'reject' }])
 
     if (result === 'accept') {
-      this.sect.disciples.push(disciple)
+      this.state.disciples.push(disciple)
       this.sect.recruitCooldown = now + 300000 // 5分钟冷却
       saveGame(this.state)
       sfx('sfx_levelup')
@@ -1797,12 +1808,12 @@ export class SectScene extends Phaser.Scene {
 
     let instructorBonus = 0
     let grandElderBonus = 0
-    for (const d of this.sect.disciples) {
+    for (const d of this.state.disciples) {
       if (d.role === 'instructor') instructorBonus = 0.30
       if (d.rank === 4) grandElderBonus = 0.15
       if (instructorBonus > 0 && grandElderBonus > 0) break // 都已找到，提前退出
     }
-    for (const d of this.sect.disciples) {
+    for (const d of this.state.disciples) {
       if (d.status !== 'cultivating') continue
       const speed = cultivationSpeed(d.root, d.rootTier, d.talents)
       const rankBonus = 1 + d.rank * 0.05 + instructorBonus + grandElderBonus
@@ -1814,7 +1825,7 @@ export class SectScene extends Phaser.Scene {
 
   private updateDiscipleTasks() {
     const now = Date.now()
-    for (const d of this.sect.disciples) {
+    for (const d of this.state.disciples) {
       // 闭关结算
       if (d.status === 'retreating' && d.retreatEndTime > 0 && now >= d.retreatEndTime) {
         const expGain = expToNextRealm(d.realm) * 3
@@ -1984,8 +1995,8 @@ export class SectScene extends Phaser.Scene {
           { questId: quest.id, attacker: attackerName })
         this.addRevengeTarget(attackerName, ambush, d.name, '', 'killed')
         // 从弟子列表中移除
-        const idx = this.sect.disciples.indexOf(d)
-        if (idx >= 0) this.sect.disciples.splice(idx, 1)
+        const idx = this.state.disciples.indexOf(d)
+        if (idx >= 0) this.state.disciples.splice(idx, 1)
         sfx('sfx_boss_death', 0.5)
         toast(`${d.name} 遭${attackerName}杀害，不幸陨落...`, '#f87171')
         // 宗门声望下降
@@ -2102,7 +2113,7 @@ export class SectScene extends Phaser.Scene {
   /** 从场景内点击弟子打开详情面板（背景/性格/道途/事件日志 + 灵石灌顶） */
   private async openDiscipleDetail(uid: string) {
     input.clearQueues()
-    const d = this.sect.disciples.find(x => x.uid === uid)
+    const d = this.state.disciples.find(x => x.uid === uid)
     if (!d) return
 
     const rootInfo = SPIRIT_ROOTS[d.root]
@@ -2491,15 +2502,15 @@ export class SectScene extends Phaser.Scene {
 
   private async teachDiscipleSkill() {
     input.clearQueues()
-    if (this.sect.disciples.length === 0) {
+    if (this.state.disciples.length === 0) {
       toast('宗门暂无弟子', '#f87171')
       return
     }
     // 选择弟子
     const dLines = ['选择弟子：']
     const dOptions: { label: string; value: string }[] = []
-    for (let i = 0; i < this.sect.disciples.length; i++) {
-      const d = this.sect.disciples[i]
+    for (let i = 0; i < this.state.disciples.length; i++) {
+      const d = this.state.disciples[i]
       dLines.push(`${i + 1}. ${d.name}  已学${d.skills.length}/3`)
       dOptions.push({ label: d.name, value: 'd_' + i })
     }
@@ -2511,7 +2522,7 @@ export class SectScene extends Phaser.Scene {
       return
     }
     const dIdx = parseInt(dResult.slice(2))
-    const d = this.sect.disciples[dIdx]
+    const d = this.state.disciples[dIdx]
     if (!d) { input.clearQueues(); return }
 
     // 选择功法
@@ -2704,7 +2715,7 @@ export class SectScene extends Phaser.Scene {
       return
     }
 
-    const available = this.sect.disciples.filter(d => d.status === 'idle' && Date.now() > d.sparCooldown)
+    const available = this.state.disciples.filter(d => d.status === 'idle' && Date.now() > d.sparCooldown)
     if (available.length < 2) {
       toast('需要至少 2 名空闲弟子（未冷却）才能切磋', '#f87171')
       input.clearQueues()
@@ -2783,7 +2794,7 @@ export class SectScene extends Phaser.Scene {
     this.checkDiscipleBreakthrough(spar.loser)
 
     const logLines = [
-      `${d1.name}（战力${spar.d1Power}） VS ${d2.name}（战力${spar.d2Power}）`,
+      `${d1.name}（战力${spar.d1Power}） 对阵 ${d2.name}（战力${spar.d2Power}）`,
       ...spar.rounds.slice(0, 6),
       spar.rounds.length > 6 ? `...（共${spar.rounds.length}回合）` : '',
       '',
@@ -2819,7 +2830,7 @@ export class SectScene extends Phaser.Scene {
 
     const cap = beastCapacity(parkLv)
     const beasts = this.state.beasts
-    const activePet = beasts.find(b => b.uid === this.state.activePetUid)
+    const activePet = beasts.find(b => b.uid === activeBeastRef(this.state.party))
     const activeMount = beasts.find(b => b.uid === this.state.activeMountUid)
 
     const lines = [
@@ -2865,7 +2876,7 @@ export class SectScene extends Phaser.Scene {
       const el = ELEMENT_NAMES[b.element]
       lines.push(`${i + 1}. ${b.name} ${rn}·${el} Lv.${b.level}`)
       lines.push(`  攻${b.atk} 防${b.def} 体${b.maxHp} 速${b.speed}`)
-      const isPet = this.state.activePetUid === b.uid
+      const isPet = activeBeastRef(this.state.party) === b.uid
       const isMount = this.state.activeMountUid === b.uid
       const tag = isPet ? '【出战】' : isMount ? '【坐骑】' : ''
       options.push({ label: `${b.name} Lv.${b.level} ${tag}`, value: 'b_' + i })
@@ -2898,7 +2909,7 @@ export class SectScene extends Phaser.Scene {
 
     const options: { label: string; value: string }[] = []
     if (canFeed) options.push({ label: '喂养升级', value: 'feed' })
-    if (this.state.activePetUid === b.uid) {
+    if (activeBeastRef(this.state.party) === b.uid) {
       options.push({ label: '收回出战', value: 'unpet' })
     } else if (b.deployed === false || true) {
       options.push({ label: '设为出战', value: 'pet' })
@@ -2922,12 +2933,12 @@ export class SectScene extends Phaser.Scene {
       this.updateResourceDisplay()
       await this.manageBeast(b)
     } else if (result === 'pet') {
-      this.state.activePetUid = b.uid
+      setActiveBeast(this.state, b)
       toast(`${b.name} 已设为出战灵兽`, '#c084fc')
       saveGame(this.state)
       await this.manageBeast(b)
     } else if (result === 'unpet') {
-      this.state.activePetUid = null
+      setActiveBeast(this.state, null)
       toast(`收回 ${b.name}`, '#94a3b8')
       saveGame(this.state)
       await this.manageBeast(b)
@@ -2943,7 +2954,7 @@ export class SectScene extends Phaser.Scene {
       await this.manageBeast(b)
     } else if (result === 'release') {
       this.state.beasts = this.state.beasts.filter(x => x.uid !== b.uid)
-      if (this.state.activePetUid === b.uid) this.state.activePetUid = null
+      if (activeBeastRef(this.state.party) === b.uid) setActiveBeast(this.state, null)
       if (this.state.activeMountUid === b.uid) this.state.activeMountUid = null
       toast(`放生了 ${b.name}`, '#94a3b8')
       saveGame(this.state)
@@ -2966,7 +2977,7 @@ export class SectScene extends Phaser.Scene {
     const options: { label: string; value: string }[] = []
     for (let i = 0; i < beasts.length; i++) {
       const b = beasts[i]
-      const cur = this.state.activePetUid === b.uid ? '（当前）' : ''
+      const cur = activeBeastRef(this.state.party) === b.uid ? '（当前）' : ''
       lines.push(`${i + 1}. ${b.name} Lv.${b.level} 攻${b.atk} 防${b.def}${cur}`)
       options.push({ label: `${b.name}${cur}`, value: 'p_' + i })
     }
@@ -2975,14 +2986,14 @@ export class SectScene extends Phaser.Scene {
 
     const result = await showDialog('出战灵兽', lines, options)
     if (result === 'unpet') {
-      this.state.activePetUid = null
+      setActiveBeast(this.state, null)
       toast('已取消出战灵兽', '#94a3b8')
       saveGame(this.state)
     } else if (result && result.startsWith('p_')) {
       const idx = parseInt(result.slice(2))
       const b = beasts[idx]
       if (b) {
-        this.state.activePetUid = b.uid
+        setActiveBeast(this.state, b)
         toast(`${b.name} 已出战`, '#c084fc')
         saveGame(this.state)
       }
@@ -3197,7 +3208,7 @@ export class SectScene extends Phaser.Scene {
     const availableRoles = DISCIPLE_ROLES.filter(r => {
       if (d.rank < 2) return false
       if (d.rank < 3 && (r.id === 'instructor' || r.id === 'array_master')) return false
-      const otherD = this.sect.disciples.find(x => x.role === r.id && x.uid !== d.uid)
+      const otherD = this.state.disciples.find(x => x.role === r.id && x.uid !== d.uid)
       return !otherD
     })
 
@@ -3293,7 +3304,7 @@ export class SectScene extends Phaser.Scene {
     }
 
     const buildingCount = Object.values(this.sect.buildings).filter(v => v > 0).length
-    const playerPower = Math.floor((200 + this.sect.level * 80 + buildingCount * 50 + this.sect.disciples.length * 30) * 1.0)
+    const playerPower = Math.floor((200 + this.sect.level * 80 + buildingCount * 50 + this.state.disciples.length * 30) * 1.0)
 
     const lines = [
       `我方宗门战力 ${playerPower}`,
@@ -3343,7 +3354,7 @@ export class SectScene extends Phaser.Scene {
 
     const lines = [
       `附庸宗门 ${vassals.length} 个`,
-      `每 tick 进贡资源`,
+      `每 5 分钟进贡资源`,
       '选择附庸查看详情：',
     ]
     const options: { label: string; value: string }[] = []
@@ -3546,7 +3557,7 @@ export class SectScene extends Phaser.Scene {
         break
       }
       case 'disciple_enlightenment': {
-        const idle = sect.disciples.filter(d => d.status === 'cultivating')
+        const idle = this.state.disciples.filter(d => d.status === 'cultivating')
         if (idle.length > 0) {
           const d = idle[Math.floor(this.rng() * idle.length)]
           const expGain = d.expToNext * 0.3
@@ -3562,7 +3573,7 @@ export class SectScene extends Phaser.Scene {
         break
       }
       case 'wandering_cultivator': {
-        if (sect.disciples.length < discipleCapacity(sect.buildings.disciple_room ?? 0) && Date.now() > sect.recruitCooldown) {
+        if (this.state.disciples.length < discipleCapacity(sect.buildings.disciple_room ?? 0) && Date.now() > sect.recruitCooldown) {
           this.sect.recruitCandidate = generateDisciple(this.rng, sect.level)
           sfx('sfx_wandering_cultivator', 0.5)
           toast('有游方修士叩访山门，可往弟子堂招募', '#34d399')
@@ -3575,7 +3586,7 @@ export class SectScene extends Phaser.Scene {
         break
       }
       case 'treasure_find': {
-        const idle = sect.disciples.filter(d => d.status === 'idle' || d.status === 'cultivating')
+        const idle = this.state.disciples.filter(d => d.status === 'idle' || d.status === 'cultivating')
         if (idle.length > 0) {
           const d = idle[Math.floor(this.rng() * idle.length)]
           const oreGain = 30 + sect.level * 10
@@ -3594,7 +3605,7 @@ export class SectScene extends Phaser.Scene {
         break
       }
       case 'spirit_beast_invasion': {
-        const defense = (sect.buildings.guard_array ?? 0) * 20 + sect.disciples.length * 10
+        const defense = (sect.buildings.guard_array ?? 0) * 20 + this.state.disciples.length * 10
         if (defense > 50) {
           const prestige = 5 + sect.level
           sect.resources.prestige += prestige
@@ -3609,7 +3620,7 @@ export class SectScene extends Phaser.Scene {
         break
       }
       case 'sect_aura_rise': {
-        for (const d of sect.disciples) {
+        for (const d of this.state.disciples) {
           d.loyalty = Math.min(100, d.loyalty + 3)
         }
         const prestige = 3 + Math.floor(sect.level / 2)

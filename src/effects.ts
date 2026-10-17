@@ -15,7 +15,19 @@ import { totalArtifactStats, getArtifactBuff, refineBuffMult, type ArtifactInsta
 export interface Stats {
   maxHp: number; atk: number; def: number; speed: number; crit: number
   aspd: number; lifesteal: number; skillPct: number; cdPct: number
+  // 天赋树新增机制（v0.9）
+  critDmg: number   // 会心伤害加成（基础 1.6 倍之上叠加）
+  thorns: number    // 反伤：受击时反弹伤害比例
+  dodge: number     // 闪避：受击时完全免伤的概率
+  dotPct: number    // 持续伤害强度（每秒伤害 = 攻击 × dotPct × DOT_TICK_RATE）
+  execute: number   // 斩杀线：目标气血低于该比例时直接击杀（首领无效）
+  shieldPct: number // 护盾：每层开始时获得 气血上限 × 该比例 的护盾
 }
+
+/** 持续伤害每秒系数：每秒伤害 = 攻击 × dotPct × 0.2 */
+export const DOT_DPS_RATE = 0.2
+/** 持续伤害时长（毫秒） */
+export const DOT_DURATION = 3000
 
 function addMod(mods: Mods, key: ModKey, v: number) { mods[key] += v }
 
@@ -148,6 +160,12 @@ export function calcStats(s: GameState): Stats {
     lifesteal: Math.min(0.35, m.lifesteal + lifestealBonus),
     skillPct: m.skillPct,
     cdPct: Math.min(0.5, m.cdPct),
+    critDmg: Math.min(3, m.critDmg),
+    thorns: Math.min(0.6, m.thorns),
+    dodge: Math.min(0.5, m.dodge),
+    dotPct: m.dotPct,
+    execute: Math.min(0.3, m.execute),
+    shieldPct: Math.min(0.6, m.shieldPct),
   }
 }
 

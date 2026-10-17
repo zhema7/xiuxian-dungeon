@@ -4,64 +4,24 @@
 import type { GameState } from './state'
 import type { ProceduralNpc } from './procedural-npc'
 import { addKarma } from './karma'
-import { generateDisciple, expToNextRealm, type Disciple, type DiscipleRealm } from './disciple-data'
+import {
+  generateDisciple, expToNextRealm, ensureCultivation,
+  type CultivatedDisciple, type Disciple, type DiscipleRealm,
+  type DiscipleSpecialty, type TrainingFocus,
+} from './disciple-data'
 
-export interface DiscipleData {
-  npcId: string          // 对应的 ProceduralNpc ID
-  name: string
-  realm: number
-  level: number
-  physique: string
-  daoPath: string
-  specialty: DiscipleSpecialty
-  // 培养
-  trainingFocus: TrainingFocus
-  resourcesAllocated: { gold: number; pills: number; materials: number }
-  // 成长
-  exp: number
-  expToNext: number
-  // 状态
-  loyalty: number        // 忠诚度 0~100
-  mood: number           // 心情 0~100
-  onMission: string | null  // 正在执行的任务
-  missionEndTime: number    // 任务结束时间
-  // 产出
-  weeklyContribution: number  // 每周上交贡献
-  lastContributionTime: number
-}
+export type { CultivatedDisciple } from './disciple-data'
+export { ensureCultivation } from './disciple-data'
 
-export type DiscipleSpecialty =
-  | 'combat' | 'alchemy' | 'crafting' | 'talisman' | 'management' | 'intelligence'
+/**
+ * 历史类型别名：合轨后弟子实体统一为 `Disciple`，唯一真源是 `state.disciples: Disciple[]`。
+ * 保留别名仅为兼容旧引用，新代码请直接使用 `Disciple`。
+ */
+export type DiscipleData = Disciple
 
-export type TrainingFocus =
-  | 'cultivation' | 'combat' | 'alchemy' | 'crafting' | 'talisman' | 'balanced'
+export type { DiscipleSpecialty, TrainingFocus } from './disciple-data'
 
-export const SPECIALTY_NAMES: Record<DiscipleSpecialty, string> = {
-  combat: '战斗型',
-  alchemy: '丹道型',
-  crafting: '器道型',
-  talisman: '符道型',
-  management: '管理型',
-  intelligence: '情报型',
-}
-
-export const SPECIALTY_DESC: Record<DiscipleSpecialty, string> = {
-  combat: '擅长战斗，可随师出战秘境',
-  alchemy: '擅长炼丹，管理药园，提供丹药',
-  crafting: '擅长炼器，管理矿场，打造装备',
-  talisman: '擅长画符，提供符箓支援',
-  management: '擅长经营，管理产业，打理灵石',
-  intelligence: '擅长搜集情报，打探消息',
-}
-
-export const TRAINING_FOCUS_NAMES: Record<TrainingFocus, string> = {
-  cultivation: '闭关修炼',
-  combat: '战斗训练',
-  alchemy: '丹道研习',
-  crafting: '器道研习',
-  talisman: '符道研习',
-  balanced: '均衡培养',
-}
+export { SPECIALTY_NAMES, SPECIALTY_DESC, TRAINING_FOCUS_NAMES } from './disciple-data'
 
 // 简易确定性 RNG（基于种子）
 function makeNpcRng(seed: number): () => number {
@@ -109,56 +69,47 @@ export function recruitDisciple(state: GameState, npc: ProceduralNpc): { ok: boo
   // 判定弟子特长
   const specialty = determineSpecialty(npc)
 
-  const disciple: DiscipleData = {
-    npcId: npc.id,
-    name: npc.name,
-    realm: npc.realm,
-    level: npc.level,
-    physique: npc.physique,
-    daoPath: npc.daoPath,
-    specialty: specialty,
-    trainingFocus: 'balanced',
-    resourcesAllocated: { gold: 0, pills: 0, materials: 0 },
-    exp: 0,
-    expToNext: discipleExpToNext(npc.realm),
-    loyalty: 60,
-    mood: 70,
-    onMission: null,
-    missionEndTime: 0,
-    weeklyContribution: 0,
-    lastContributionTime: Date.now(),
-  }
+  // 合轨：只生成一份 Disciple 实体写入 state.disciples，不再双写 sect.disciples
+  const rng = makeNpcRng(npc.seed)
+  const d = generateDisciple(rng, state.sect?.level ?? 1)
+  d.uid = 'd_npc_' + npc.id
+  d.name = npc.name
+  d.realm = Math.max(0, Math.min(6, npc.realm)) as DiscipleRealm
+  d.exp = 0
+  d.expToNext = expToNextRealm(d.realm)
+  d.loyalty = 60
+  d.affection = 30
+  d.skills = npc.skills.slice()
+  d.status = 'idle'
+  d.atk = npc.atk
+  d.def = npc.def
+  d.maxHp = npc.maxHp
+  d.crit = 5
+  // 同步 NPC 的外观和背景信息
+  d.gender = npc.gender
+  d.daoPath = npc.daoPath
+  d.background = npc.background
+  d.physique = npc.physique
+  d.lifeGoal = npc.lifeGoal
+  d.profession = npc.profession
+  d.personality = npc.personality.slice()
+  d.appearanceSeed = npc.appearanceSeed
+  // 培养线字段（原 DiscipleData 独有，已并入 Disciple）
+  d.npcId = npc.id
+  d.level = npc.level
+  d.specialty = specialty
+  d.trainingFocus = 'balanced'
+  d.resourcesAllocated = { gold: 0, pills: 0, materials: 0 }
+  d.mood = 70
+  d.onMission = null
+  d.missionEndTime = 0
+  d.weeklyContribution = 0
+  d.lastContributionTime = Date.now()
 
-  state.disciples.push(disciple)
+  state.disciples.push(d)
 
-  // 同步到宗门弟子列表，使宗门场景中可见
+  // 宗门内记录招募事件（未建宗时跳过，弟子仍存在于 state.disciples）
   if (state.sect) {
-    const rng = makeNpcRng(npc.seed)
-    const d = generateDisciple(rng, state.sect.level)
-    d.uid = 'd_npc_' + npc.id
-    d.name = npc.name
-    d.realm = Math.max(0, Math.min(6, npc.realm)) as DiscipleRealm
-    d.exp = 0
-    d.expToNext = expToNextRealm(d.realm)
-    d.loyalty = 60
-    d.affection = 30
-    d.skills = npc.skills.slice()
-    d.status = 'idle'
-    d.atk = npc.atk
-    d.def = npc.def
-    d.maxHp = npc.maxHp
-    d.crit = 5
-    // 同步NPC的外观和背景信息
-    d.gender = npc.gender
-    d.daoPath = npc.daoPath
-    d.background = npc.background
-    d.physique = npc.physique
-    d.lifeGoal = npc.lifeGoal
-    d.profession = npc.profession
-    d.personality = npc.personality.slice()
-    d.appearanceSeed = npc.appearanceSeed
-    state.sect.disciples.push(d)
-    // 记录招募事件
     if (typeof (state.sect as any).discipleEvents === 'undefined') {
       (state.sect as any).discipleEvents = []
     }
@@ -212,8 +163,9 @@ function determineSpecialty(npc: ProceduralNpc): DiscipleSpecialty {
 // ===== 弟子经验 =====
 
 export function discipleExpToNext(realm: number): number {
-  return 100 + realm * 80 + realm * realm * 30
+  return expToNextRealm(Math.max(0, Math.min(6, realm)) as DiscipleRealm)
 }
+
 
 // ===== 弟子成长 =====
 
@@ -222,8 +174,11 @@ export function updateDiscipleGrowth(state: GameState, deltaMs: number): string[
   const deltaMin = deltaMs / 60000
 
   for (const d of state.disciples) {
-    const npc = state.proceduralNpcs.find(n => n.id === d.npcId)
-    if (!npc || !npc.alive) continue
+    ensureCultivation(d)
+    // 宗门自行招录的弟子没有对应的世界 NPC（npcId 为空），此时用自身体质判定
+    const npc = d.npcId ? state.proceduralNpcs.find(n => n.id === d.npcId) : undefined
+    if (npc && !npc.alive) continue
+    const physique = npc?.physique ?? d.physique
 
     // 修炼速度由训练方向决定
     let cultSpeed = 1
@@ -237,8 +192,8 @@ export function updateDiscipleGrowth(state: GameState, deltaMs: number): string[
     }
 
     // 体质加成
-    if (npc.physique === '天灵根') cultSpeed *= 1.3
-    if (npc.physique === '异灵根') cultSpeed *= 1.5
+    if (physique === '天灵根') cultSpeed *= 1.3
+    if (physique === '异灵根') cultSpeed *= 1.5
 
     // 资源加成
     if (d.resourcesAllocated.pills > 0) cultSpeed *= 1.2
@@ -257,8 +212,8 @@ export function updateDiscipleGrowth(state: GameState, deltaMs: number): string[
     if (d.level >= (d.realm + 1) * 10 && d.realm < 7) {
       const chance = 0.3 + d.loyalty * 0.001
       if (Math.random() < chance) {
-        d.realm++
-        npc.realm = d.realm
+        d.realm = (d.realm + 1) as DiscipleRealm
+        if (npc) npc.realm = d.realm
         d.level = 0
         d.expToNext = discipleExpToNext(d.realm)
         messages.push(`${d.name} 突破至${['练气', '筑基', '金丹', '元婴', '化神', '合体', '大乘', '渡劫'][d.realm]}境！`)
@@ -290,7 +245,7 @@ export function updateDiscipleGrowth(state: GameState, deltaMs: number): string[
   return messages
 }
 
-function completeMission(d: DiscipleData): string[] {
+function completeMission(d: CultivatedDisciple): string[] {
   const messages: string[] = []
   const baseReward = (d.realm + 1) * 20
   d.resourcesAllocated.gold += baseReward
@@ -299,11 +254,11 @@ function completeMission(d: DiscipleData): string[] {
 }
 
 // 修复：避免直接访问未定义属性，使用安全方式
-function completeMissionReward(d: DiscipleData): number {
+function completeMissionReward(d: Disciple): number {
   return (d.realm + 1) * 20 + Math.floor(Math.random() * 50)
 }
 
-function calculateContribution(d: DiscipleData): number {
+function calculateContribution(d: CultivatedDisciple): number {
   const base = (d.realm + 1) * 10
   const specialtyBonus = d.specialty === 'management' ? 1.5 : 1.0
   const moodBonus = d.mood > 60 ? 1.2 : 0.8
@@ -330,7 +285,8 @@ export const MISSION_DURATIONS: Record<MissionType, number> = {
   train: 90 * 60 * 1000,
 }
 
-export function dispatchMission(d: DiscipleData, mission: MissionType): boolean {
+export function dispatchMission(d: Disciple, mission: MissionType): boolean {
+  ensureCultivation(d)
   if (d.onMission) return false
   d.onMission = mission
   d.missionEndTime = Date.now() + MISSION_DURATIONS[mission]
@@ -339,16 +295,18 @@ export function dispatchMission(d: DiscipleData, mission: MissionType): boolean 
 
 // ===== 设置训练方向 =====
 
-export function setTrainingFocus(d: DiscipleData, focus: TrainingFocus): void {
+export function setTrainingFocus(d: Disciple, focus: TrainingFocus): void {
+  ensureCultivation(d)
   d.trainingFocus = focus
 }
 
 // ===== 分配资源 =====
 
 export function allocateResources(
-  d: DiscipleData,
+  d: Disciple,
   resources: { gold?: number; pills?: number; materials?: number },
 ): void {
+  ensureCultivation(d)
   if (resources.gold) d.resourcesAllocated.gold += resources.gold
   if (resources.pills) d.resourcesAllocated.pills += resources.pills
   if (resources.materials) d.resourcesAllocated.materials += resources.materials

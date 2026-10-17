@@ -5,6 +5,10 @@ import { makeRng, randInt, rollEquip, REFINE_MAX, STAR_MAX, refineCost, starUpCo
 import { CLASSES, DIFFICULTIES, difficultyById, SKILLS, SLOT_KEYS, type SlotKey } from '../data'
 import { calcStats } from '../effects'
 import { saveGame, switchClass, loadSaveSlot, type GameState } from '../state'
+import {
+  addMemberToState, countActive, findMemberByRef, hasMemberRef, makeSisterMember,
+  PARTY_RULES, removeMemberFromState, sortParty, toggleMemberInState,
+} from '../party'
 import { unlearnedSkills } from '../skills'
 import { canEnterXianRealm, xianCheckpointFloor, XIAN_START_FLOOR } from '../xian-realm'
 import {
@@ -256,7 +260,7 @@ export class TownScene extends Phaser.Scene {
 
     this.time.delayedCall(800, () => {
       tryCompleteQuest(this.state).then(() => {
-        if (this.questHudText) this.questHudText.setText(getQuestHudText(this.state))
+        if (this.questHudText?.scene) this.questHudText.setText(getQuestHudText(this.state))
       })
     })
   }
@@ -365,7 +369,11 @@ export class TownScene extends Phaser.Scene {
       special.push({ label: '商会珍品', value: 'merchant_goods' })
       special.push({ label: '出售物品', value: 'sell' })
     }
-    if (id === 'sister' && !this.state.companion) special.push({ label: '结伴同行', value: 'join' })
+    if (id === 'sister') {
+      if (hasMemberRef(this.state.party, 'sister')) special.push({ label: '暂别同行', value: 'party_leave' })
+      else special.push({ label: '结伴同行', value: 'join' })
+    }
+    special.push({ label: '队伍', value: 'party_manage' })
 
     updateDailyProgress(this.state, 'npc_talk', 1)
     const choice = await showDialog(names[id], [...this.greetLines(id), statusLine], [
@@ -384,6 +392,8 @@ export class TownScene extends Phaser.Scene {
     else if (choice === 'merchant_goods') await this.openMerchantGoods()
     else if (choice === 'sell') await this.openSellPanel()
     else if (choice === 'join') await this.joinFlow()
+    else if (choice === 'party_leave') await this.partnerLeaveFlow()
+    else if (choice === 'party_manage') await this.openPartyPanel()
     // 彩蛋：连续与商人告辞 5 次，开启 GM 管理台（选了商人其他选项则重新计数）
     if (id === 'merchant') {
       if (choice === 'bye') {
@@ -739,10 +749,82 @@ export class TownScene extends Phaser.Scene {
       { label: '再想想', value: 'bye' },
     ])
     if (choice === 'join') {
-      this.state.companion = true
+      const member = makeSisterMember(this.state.classId, Date.now())
+      const res = addMemberToState(this.state, member)
+      if (!res.ok) {
+        toast(res.reason, '#f87171')
+        return
+      }
       saveGame(this.state)
       sfx('sfx_levelup')
-      toast('道友加入队伍！下本时会与你并肩作战', '#f5b7d6')
+      toast(`${member.displayName}加入队伍！下本时会与你并肩作战`, '#f5b7d6')
+    }
+  }
+
+  /** 伙伴暂离（修复 v0.7「入队后无法解散」缺陷） */
+  private async partnerLeaveFlow() {
+    const choice = await showDialog('道友', [
+      '你要独自下山？也好，洞府这边我替你守着。',
+      '（她会退出队伍，随时可再来邀她同行）',
+    ], [
+      { label: '确认暂别', value: 'yes' },
+      { label: '算了', value: 'no' },
+    ])
+    if (choice !== 'yes') return
+    removeMemberFromState(this.state, 'sister')
+    saveGame(this.state)
+    toast('道友已退出队伍', '#a3e4d7')
+  }
+
+  /** 队伍管理面板：出战 / 待命 / 暂离 */
+  private async openPartyPanel() {
+    const party = sortParty(this.state.party)
+    if (party.length === 0) {
+      await showDialog('队伍', [
+        '你如今仍是孤身一人。',
+        '（洞府可与陆青鸢结伴；大世界中好感达友好的道友可邀入队伍）',
+      ])
+      return
+    }
+    const options: Array<{ label: string; value: string }> = []
+    for (const m of party) {
+      const tag = m.status === 'active' ? '出战' : m.status === 'downed' ? '重伤' : '待命'
+      options.push({ label: `${m.displayName}（${tag}）`, value: `m_${m.refId}` })
+    }
+    options.push({ label: '告辞', value: 'bye' })
+
+    const lines = party.map(m => {
+      const pct = m.maxHp > 0 ? Math.round((m.hp / m.maxHp) * 100) : 100
+      const role = m.kind === 'beast' ? '灵兽' : '道友'
+      return `${m.displayName} · ${role} Lv.${m.level} · 气血 ${pct}% · 战力 ${(m.attackMult * 100).toFixed(0)}%`
+    })
+    lines.push(`<span class="dim">出战 ${countActive(this.state.party, 'cultivator')}/${PARTY_RULES.maxCultivator} 道友，${countActive(this.state.party, 'beast')}/${PARTY_RULES.maxBeast} 灵兽</span>`)
+
+    const choice = await showDialog('队伍', lines, options)
+    if (!choice || choice === 'bye') return
+    const refId = choice.slice(2)
+    const cur = findMemberByRef(this.state.party, refId)
+    if (!cur) return
+
+    const ops: Array<{ label: string; value: string }> = []
+    if (cur.status === 'active') ops.push({ label: '转为待命', value: 'toggle' })
+    else if (cur.status !== 'downed') ops.push({ label: '转为出战', value: 'toggle' })
+    ops.push({ label: '移出队伍', value: 'remove' })
+    ops.push({ label: '返回', value: 'back' })
+
+    const act = await showDialog(cur.displayName, [
+      cur.status === 'downed'
+        ? '「……这一战着实凶险，容我调息片刻。」'
+        : '「听你安排。」',
+    ], ops)
+    if (act === 'toggle') {
+      const res = toggleMemberInState(this.state, refId)
+      saveGame(this.state)
+      toast(res.ok ? '已调整出战状态' : res.reason, res.ok ? '#4ade80' : '#f87171')
+    } else if (act === 'remove') {
+      removeMemberFromState(this.state, refId)
+      saveGame(this.state)
+      toast(`${cur.displayName}已离开队伍`, '#a3e4d7')
     }
   }
 
@@ -987,7 +1069,7 @@ export class TownScene extends Phaser.Scene {
     const startFloor = Math.max(1, this.state.ladderFloor)
     const lines = [
       `紫色法阵直通天际——天梯是无尽攀升之路，每层妖魔渐强。`,
-      `每 ${10} 层有守关BOSS，层数越高奖励越丰。`,
+      `每 ${10} 层有守关首领，层数越高奖励越丰。`,
       `当前进度：第 ${startFloor} 层（历史最高：第 ${this.state.ladderMaxFloor} 层）`,
     ]
     const choice = await showDialog('天梯挑战', lines, [

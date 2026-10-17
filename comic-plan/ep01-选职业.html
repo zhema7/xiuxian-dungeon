@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>修仙与地下城 · 漫画第1集 · 选职业</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #050508;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  min-height: 100vh;
+  font-family: "Microsoft YaHei", "PingFang SC", "Hiragino Sans GB", sans-serif;
+  padding: 20px;
+}
+.comic {
+  width: 1080px;
+  height: 1440px;
+  background: #0a0a14;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 6px;
+  padding: 6px;
+  position: relative;
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 0 40px rgba(120,80,200,0.3);
+}
+.panel {
+  position: relative;
+  overflow: hidden;
+  border: 3px solid #c9a84c;
+  border-radius: 4px;
+}
+.panel-num {
+  position: absolute;
+  top: 8px; left: 8px;
+  width: 36px; height: 36px;
+  background: linear-gradient(135deg, #c9a84c, #8a6a2c);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; font-weight: bold; color: #1a1a28;
+  z-index: 10;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+}
+
+/* ═══ Backgrounds ═══ */
+.bg-nightsky {
+  background: linear-gradient(180deg, #0a0a1e 0%, #15102a 40%, #1a1535 70%, #121020 100%);
+}
+.bg-hall {
+  background: linear-gradient(180deg, #2a1810 0%, #3a2418 30%, #2a180c 70%, #1a1008 100%);
+}
+.bg-clash {
+  background: radial-gradient(ellipse at center, #2a103a 0%, #1a0a2a 40%, #0a0a1a 100%);
+}
+
+/* Stars */
+.stars {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none;
+}
+.star {
+  position: absolute;
+  background: #fff;
+  border-radius: 50%;
+  animation: twinkle 3s infinite;
+}
+@keyframes twinkle {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 1; }
+}
+
+/* Moon */
+.moon {
+  position: absolute;
+  top: 30px; right: 40px;
+  width: 60px; height: 60px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #fff8e0, #e8d090 60%, #c0a060);
+  box-shadow: 0 0 30px rgba(255,240,200,0.4), 0 0 60px rgba(255,220,150,0.2);
+}
+.moon-halo {
+  position: absolute;
+  top: 10px; right: 20px;
+  width: 100px; height: 100px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,240,200,0.08) 0%, transparent 70%);
+}
+
+/* Mountain silhouette */
+.mountains {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 100px;
+  pointer-events: none;
+}
+
+/* Pillars */
+.pillar {
+  position: absolute;
+  bottom: 0;
+  width: 40px;
+  height: 80%;
+  background: linear-gradient(90deg, #1a0e04 0%, #3a2410 40%, #4a3018 50%, #3a2410 60%, #1a0e04 100%);
+  border-radius: 4px 4px 0 0;
+}
+.pillar::before {
+  content: '';
+  position: absolute;
+  top: -8px; left: -6px; right: -6px;
+  height: 16px;
+  background: #4a3018;
+  border-radius: 4px;
+}
+.lantern {
+  position: absolute;
+  width: 20px; height: 28px;
+  background: radial-gradient(ellipse, #ff8040 0%, #c04020 60%, #601010 100%);
+  border-radius: 50% 50% 40% 40%;
+  box-shadow: 0 0 15px rgba(255,120,60,0.4);
+}
+.lantern::after {
+  content: '';
+  position: absolute;
+  top: -8px; left: 50%;
+  transform: translateX(-50%);
+  width: 2px; height: 8px;
+  background: #4a3018;
+}
+
+/* Spark effects */
+.spark {
+  position: absolute;
+  pointer-events: none;
+}
+.spark-line {
+  position: absolute;
+  background: linear-gradient(90deg, transparent, #fff, #c9a84c, #fff, transparent);
+  height: 3px;
+  border-radius: 2px;
+  transform-origin: center;
+  box-shadow: 0 0 6px rgba(255,200,80,0.8);
+}
+.spark-star {
+  position: absolute;
+  color: #c9a84c;
+  font-size: 14px;
+  text-shadow: 0 0 8px rgba(201,168,76,0.8);
+  animation: sparkFlash 1.5s infinite;
+}
+@keyframes sparkFlash {
+  0%, 100% { opacity: 0.3; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+/* ═══ Speech Bubbles ═══ */
+.bubble {
+  position: absolute;
+  background: #fff;
+  border: 3px solid #1a1a28;
+  border-radius: 18px;
+  padding: 8px 16px;
+  font-size: 15px;
+  font-weight: bold;
+  color: #1a1a28;
+  max-width: 380px;
+  line-height: 1.5;
+  z-index: 8;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+.bubble.small { font-size: 13px; padding: 6px 12px; }
+.bubble.large { font-size: 17px; padding: 10px 20px; }
+.bubble.gold {
+  background: linear-gradient(135deg, #fff8e0, #f0d896);
+  border-color: #8a6a2c;
+  color: #4a3a1a;
+}
+.bubble::after {
+  content: '';
+  position: absolute;
+  width: 0; height: 0;
+  border: 10px solid transparent;
+}
+.bubble.tail-bl::after { bottom: -18px; left: 24px; border-top-color: #fff; border-bottom: 0; }
+.bubble.tail-br::after { bottom: -18px; right: 24px; border-top-color: #fff; border-bottom: 0; }
+.bubble.tail-tl::after { top: -18px; left: 24px; border-bottom-color: #fff; border-top: 0; }
+.bubble.tail-tr::after { top: -18px; right: 24px; border-bottom-color: #fff; border-top: 0; }
+.bubble.gold.tail-bl::after { border-top-color: #f0d896; }
+.bubble.gold.tail-br::after { border-top-color: #f0d896; }
+.bubble.gold.tail-tl::after { border-bottom-color: #f0d896; }
+.bubble.gold.tail-tr::after { border-bottom-color: #f0d896; }
+
+/* Caption (narration) */
+.caption {
+  position: absolute;
+  top: 12px; right: 12px;
+  background: rgba(10,10,20,0.8);
+  border-left: 3px solid #c9a84c;
+  padding: 6px 14px;
+  color: #c9a84c;
+  font-size: 14px;
+  font-style: italic;
+  z-index: 9;
+  border-radius: 0 4px 4px 0;
+}
+.narration {
+  position: absolute;
+  bottom: 10px; left: 10px; right: 10px;
+  text-align: center;
+  color: #a0a0c0;
+  font-size: 13px;
+  z-index: 9;
+  padding: 6px;
+  background: rgba(0,0,0,0.4);
+  border-radius: 4px;
+}
+.narration .highlight { color: #f0d896; font-weight: bold; }
+
+/* ═══ Characters ═══ */
+.char {
+  position: absolute;
+  z-index: 5;
+}
+.char svg { display: block; }
+
+/* Title text */
+.game-title {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -60%);
+  text-align: center;
+  z-index: 7;
+}
+.game-title h1 {
+  font-size: 36px;
+  font-weight: bold;
+  letter-spacing: 6px;
+  background: linear-gradient(135deg, #c9a84c, #f0d896, #c9a84c);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  text-shadow: 0 0 20px rgba(201,168,76,0.3);
+  margin-bottom: 8px;
+}
+.game-title .sub {
+  color: #8a8aa0;
+  font-size: 14px;
+  margin-bottom: 20px;
+}
+.random-btn {
+  display: inline-block;
+  padding: 12px 32px;
+  background: linear-gradient(135deg, #c9a84c, #8a6a2c);
+  border: 2px solid #f0d896;
+  border-radius: 25px;
+  color: #1a1a28;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 0 20px rgba(201,168,76,0.4);
+  animation: btnPulse 2s infinite;
+}
+@keyframes btnPulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(201,168,76,0.4); }
+  50% { box-shadow: 0 0 35px rgba(201,168,76,0.7); }
+}
+.random-btn::before { content: '🎲 '; }
+
+/* Sweat drop */
+.sweat {
+  position: absolute;
+  width: 14px; height: 18px;
+  background: #80c0ff;
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  transform: rotate(-15deg);
+  z-index: 7;
+  box-shadow: inset -2px -2px 4px rgba(0,0,0,0.1);
+}
+
+/* Aura effect */
+.aura {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 4;
+}
+.aura-pink {
+  background: radial-gradient(circle, rgba(224,112,160,0.2) 0%, transparent 70%);
+  animation: auraPulse 2s infinite;
+}
+@keyframes auraPulse {
+  0%, 100% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(1.15); opacity: 1; }
+}
+
+/* Footer */
+.footer {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 36px;
+  background: rgba(10,10,20,0.9);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  z-index: 20;
+  border-top: 1px solid #c9a84c44;
+}
+.footer .left { color: #8a6a2c; font-size: 13px; font-weight: bold; }
+.footer .right { color: #6a6a8a; font-size: 12px; }
+
+/* Clash text */
+.clash-text {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 22px;
+  font-weight: bold;
+  color: #f0d896;
+  text-shadow: 0 0 10px rgba(240,216,150,0.6), 2px 2px 0 #1a1a28, -2px -2px 0 #1a1a28;
+  z-index: 9;
+  white-space: nowrap;
+  text-align: center;
+  line-height: 1.6;
+}
+.clash-bang {
+  position: absolute;
+  top: 40%; left: 50%;
+  transform: translate(-50%, -50%) rotate(-8deg);
+  font-size: 36px;
+  font-weight: bold;
+  color: #ff6040;
+  text-shadow: 2px 2px 0 #1a1a28, -1px -1px 0 #fff, 0 0 15px rgba(255,100,60,0.5);
+  z-index: 9;
+  font-style: italic;
+}
+</style>
+</head>
+<body>
+
+<div class="comic" id="comic">
+
+  <!-- ═══════════════════════════════════ -->
+  <!-- PANEL 1: 选职业 — 林霄选剑修 -->
+  <!-- ═══════════════════════════════════ -->
+  <div class="panel bg-nightsky" style="position:relative;">
+    <div class="panel-num">1</div>
+    <div class="caption">修仙之路，始于择道</div>
+
+    <!-- Stars -->
+    <div class="stars" id="stars1"></div>
+    <!-- Moon -->
+    <div class="moon-halo"></div>
+    <div class="moon"></div>
+
+    <!-- 林霄 (excited) -->
+    <div class="char" style="bottom:80px; left:50%; transform:translateX(-50%);">
+      <svg width="160" height="210" viewBox="0 0 100 130">
+        <!-- Sword on back -->
+        <rect x="68" y="30" width="5" height="60" fill="#c0c0d8" rx="2"/>
+        <rect x="63" y="28" width="15" height="5" fill="#8a6a2c" rx="1"/>
+        <rect x="70" y="88" width="3" height="8" fill="#8a6a2c"/>
+        <!-- Hair back -->
+        <path d="M28,28 Q50,8 72,28 L74,55 L26,55 Z" fill="#1a1a2a"/>
+        <!-- Face -->
+        <ellipse cx="50" cy="42" rx="20" ry="22" fill="#f5dab0"/>
+        <!-- Hair front (spiky) -->
+        <path d="M30,25 L35,15 L40,25 L45,12 L50,25 L55,12 L60,25 L65,15 L70,25 L72,32 L28,32 Z" fill="#1a1a2a"/>
+        <!-- Eyebrows (raised, excited) -->
+        <path d="M36,36 L44,34" stroke="#1a1a2a" stroke-width="2.5" stroke-linecap="round"/>
+        <path d="M56,34 L64,36" stroke="#1a1a2a" stroke-width="2.5" stroke-linecap="round"/>
+        <!-- Eyes (big, excited) -->
+        <ellipse cx="42" cy="42" rx="4" ry="5" fill="#1a1a2a"/>
+        <ellipse cx="58" cy="42" rx="4" ry="5" fill="#1a1a2a"/>
+        <circle cx="43" cy="41" r="1.5" fill="#fff"/>
+        <circle cx="59" cy="41" r="1.5" fill="#fff"/>
+        <!-- Blush -->
+        <ellipse cx="38" cy="48" rx="3" ry="2" fill="#ffaaaa" opacity="0.5"/>
+        <ellipse cx="62" cy="48" rx="3" ry="2" fill="#ffaaaa" opacity="0.5"/>
+        <!-- Mouth (open grin) -->
+        <path d="M43,52 Q50,58 57,52" fill="#1a1a2a" stroke="#1a1a2a" stroke-width="1.5"/>
+        <path d="M44,52 Q50,55 56,52" fill="#ff8888"/>
+        <!-- Body/robe -->
+        <path d="M33,62 L67,62 L74,125 L26,125 Z" fill="#3060c0"/>
+        <!-- Robe trim -->
+        <path d="M33,62 L67,62" stroke="#ffffff" stroke-width="3"/>
+        <path d="M50,62 L50,125" stroke="#ffffff" stroke-width="1.5" opacity="0.5"/>
+        <!-- Belt -->
+        <rect x="30" y="90" width="40" height="5" fill="#8a6a2c"/>
+        <circle cx="50" cy="92.5" r="4" fill="#c9a84c"/>
+        <!-- Arms (fist pump) -->
+        <path d="M67,68 L78,62 L82,72 L75,78" fill="#3060c0" stroke="#2650a0" stroke-width="1"/>
+        <circle cx="80" cy="73" r="5" fill="#f5dab0"/>
+        <path d="M33,68 L22,75 L20,85 L27,88" fill="#3060c0" stroke="#2650a0" stroke-width="1"/>
+        <circle cx="23" cy="82" r="5" fill="#f5dab0"/>
+        <!-- Sparkle eyes effect -->
+        <text x="38" y="40" font-size="6" fill="#fff" opacity="0.8">✦</text>
+        <text x="60" y="40" font-size="6" fill="#fff" opacity="0.8">✦</text>
+      </svg>
+    </div>
+
+    <!-- Speech bubble -->
+    <div class="bubble large tail-tl" style="top:70px; left:30px;">
+      我选剑修！<br>一剑破万法！
+    </div>
+
+    <!-- Sweat/energy effect -->
+    <div class="spark-star" style="top:100px; left:250px; font-size:18px;">✦</div>
+    <div class="spark-star" style="top:130px; left:420px; font-size:12px; animation-delay:0.5s;">✦</div>
+    <div class="spark-star" style="top:200px; left:280px; font-size:10px; animation-delay:1s;">✦</div>
+  </div>
+
+  <!-- ═══════════════════════════════════ -->
+  <!-- PANEL 2: 其他职业展示 -->
+  <!-- ═══════════════════════════════════ -->
+  <div class="panel bg-hall" style="position:relative;">
+    <div class="panel-num">2</div>
+    <div class="caption">五大职业 · 各显神通</div>
+
+    <!-- Pillars -->
+    <div class="pillar" style="left:10px;"></div>
+    <div class="pillar" style="right:10px;"></div>
+    <div class="lantern" style="top:30px; left:20px;"></div>
+    <div class="lantern" style="top:30px; right:20px;"></div>
+
+    <!-- 苏瑶 (仙子, confident) -->
+    <div class="char" style="bottom:60px; left:20px;">
+      <div class="aura aura-pink" style="width:110px; height:110px; top:15px; left:5px;"></div>
+      <svg width="100" height="140" viewBox="0 0 100 130">
+        <!-- Long hair back -->
+        <path d="M25,25 Q50,5 75,25 L80,70 L20,70 Z" fill="#e070a0"/>
+        <path d="M25,50 L18,100 L22,105 M75,50 L82,100 L78,105" fill="#e070a0"/>
+        <!-- Face -->
+        <ellipse cx="50" cy="42" rx="19" ry="21" fill="#f5dab0"/>
+        <!-- Hair front -->
+        <path d="M30,22 Q40,15 50,22 Q60,15 70,22 L72,30 L28,30 Z" fill="#e070a0"/>
+        <!-- Hair accessories (flower) -->
+        <circle cx="30" cy="24" r="4" fill="#ffc0d0"/>
+        <circle cx="30" cy="24" r="2" fill="#e070a0"/>
+        <!-- Eyebrows (confident, one raised) -->
+        <path d="M36,35 L44,36" stroke="#1a1a2a" stroke-width="2" stroke-linecap="round"/>
+        <path d="M56,34 L64,36" stroke="#1a1a2a" stroke-width="2" stroke-linecap="round"/>
+        <!-- Eyes (half-closed, confident) -->
+        <path d="M38,42 Q42,44 46,42" stroke="#1a1a2a" stroke-width="2.5" fill="none"/>
+        <path d="M54,42 Q58,44 62,42" stroke="#1a1a2a" stroke-width="2.5" fill="none"/>
+        <!-- Eyelashes -->
+        <path d="M38,40 L36,38 M62,40 L64,38" stroke="#1a1a2a" stroke-width="1.5"/>
+        <!-- Blush -->
+        <ellipse cx="38" cy="48" rx="4" ry="2.5" fill="#ffaaaa" opacity="0.6"/>
+        <ellipse cx="62" cy="48" rx="4" ry="2.5" fill="#ffaaaa" opacity="0.6"/>
+        <!-- Mouth (smirk) -->
+        <path d="M44,53 Q50,50 56,54" stroke="#1a1a2a" stroke-width="2" fill="none" stroke-linecap="round"/>
+        <!-- Body/robe (flowing) -->
+        <path d="M33,62 L67,62 L72,80 L75,125 L25,125 L28,80 Z" fill="#d05080"/>
+        <path d="M33,62 L67,62" stroke="#ffc0d0" stroke-width="2.5"/>
+        <!-- Flower pattern -->
+        <circle cx="50" cy="95" r="4" fill="#ffc0d0" opacity="0.5"/>
+        <circle cx="45" cy="105" r="3" fill="#ffc0d0" opacity="0.4"/>
+        <circle cx="55" cy="110" r="3" fill="#ffc0d0" opacity="0.4"/>
+        <!-- Arms (hand on hip) -->
+        <path d="M67,65 L75,75 L72,85" fill="#d05080" stroke="#b04070" stroke-width="1"/>
+        <path d="M33,65 L25,75 L28,85" fill="#d05080" stroke="#b04070" stroke-width="1"/>
+      </svg>
+    </div>
+    <div class="bubble small tail-tl" style="bottom:150px; left:15px; max-width:160px;">
+      仙子才是正道~<br>灵法秒杀！
+    </div>
+
+    <!-- 陈符 (法修, calm) -->
+    <div class="char" style="bottom:60px; left:145px;">
+      <svg width="100" height="140" viewBox="0 0 100 130">
+        <!-- Hair back -->
+        <path d="M28,28 Q50,10 72,28 L72,50 L28,50 Z" fill="#1a1a2a"/>
+        <!-- Face -->
+        <ellipse cx="50" cy="42" rx="19" ry="21" fill="#f5dab0"/>
+        <!-- Hair front (neat) -->
+        <path d="M30,25 Q40,18 50,25 Q60,18 70,25 L70,30 L30,30 Z" fill="#1a1a2a"/>
+        <!-- Glasses -->
+        <circle cx="42" cy="42" r="6" fill="none" stroke="#303030" stroke-width="2"/>
+        <circle cx="58" cy="42" r="6" fill="none" stroke="#303030" stroke-width="2"/>
+        <line x1="48" y1="42" x2="52" y2="42" stroke="#303030" stroke-width="2"/>
+        <!-- Eyes behind glasses (small, calm) -->
+        <circle cx="42" cy="42" r="2.5" fill="#1a1a2a"/>
+        <circle cx="58" cy="42" r="2.5" fill="#1a1a2a"/>
+        <!-- Eyebrows (flat, calm) -->
+        <path d="M37,34 L47,34" stroke="#1a1a2a" stroke-width="2" stroke-linecap="round"/>
+        <path d="M53,34 L63,34" stroke="#1a1a2a" stroke-width="2" stroke-linecap="round"/>
+        <!-- Mouth (small smile) -->
+        <path d="M46,52 Q50,54 54,52" stroke="#1a1a2a" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+        <!-- Body/robe -->
+        <path d="M33,62 L67,62 L72,125 L28,125 Z" fill="#209090"/>
+        <path d="M33,62 L67,62" stroke="#c0f0f0" stroke-width="2.5"/>
+        <!-- Talisman in hand -->
+        <rect x="68" y="78" width="10" height="16" fill="#ffe0a0" rx="1" transform="rotate(10 73 86)"/>
+        <line x1="70" y1="82" x2="76" y2="82" stroke="#c04020" stroke-width="0.8"/>
+        <line x1="70" y1="86" x2="76" y2="86" stroke="#c04020" stroke-width="0.8"/>
+        <line x1="70" y1="90" x2="76" y2="90" stroke="#c04020" stroke-width="0.8"/>
+        <!-- Arms (holding talisman) -->
+        <path d="M67,68 L72,78" fill="#209090" stroke="#187070" stroke-width="1"/>
+      </svg>
+    </div>
+    <div class="bubble small tail-tl" style="bottom:155px; left:140px; max-width:140px;">
+      法修稳…<br>符箓通玄。
+    </div>
+
+    <!-- 赵岩 (道修, simple/happy) -->
+    <div class="char" style="bottom:55px; left:270px;">
+      <svg width="110" height="145" viewBox="0 0 100 130">
+        <!-- Hair back (short) -->
+        <path d="M26,28 Q50,10 74,28 L74,48 L26,48 Z" fill="#604020"/>
+        <!-- Face (bigger, rounder) -->
+        <ellipse cx="50" cy="44" rx="22" ry="23" fill="#f5dab0"/>
+        <!-- Hair front -->
+        <path d="M28,25 Q38,18 50,25 Q62,18 72,25 L72,30 L28,30 Z" fill="#604020"/>
+        <!-- Eyebrows -->
+        <path d="M36,36 L46,36" stroke="#604020" stroke-width="2.5" stroke-linecap="round"/>
+        <path d="M54,36 L64,36" stroke="#604020" stroke-width="2.5" stroke-linecap="round"/>
+        <!-- Eyes (round, simple) -->
+        <circle cx="42" cy="43" r="3.5" fill="#1a1a2a"/>
+        <circle cx="58" cy="43" r="3.5" fill="#1a1a2a"/>
+        <circle cx="43" cy="42" r="1.2" fill="#fff"/>
+        <circle cx="59" cy="42" r="1.2" fill="#fff"/>
+        <!-- Mouth (wide smile) -->
+        <path d="M40,53 Q50,60 60,53" stroke="#1a1a2a" stroke-width="2" fill="none" stroke-linecap="round"/>
+        <!-- Body/robe (wider, muscular) -->
+        <path d="M28,64 L72,64 L80,125 L20,125 Z" fill="#806040"/>
+        <path d="M28,64 L72,64" stroke="#d0c0a0" stroke-width="3"/>
+        <!-- Armor plate -->
+        <rect x="35" y="75" width="30" height="18" fill="#604020" rx="3" opacity="0.6"/>
+        <rect x="40" y="78" width="20" height="2" fill="#d0c0a0" opacity="0.5"/>
+        <!-- Arms (flexing) -->
+        <path d="M72,68 L82,75 L80,88" fill="#806040" stroke="#604020" stroke-width="1"/>
+        <circle cx="81" cy="80" r="6" fill="#f5dab0"/>
+        <path d="M28,68 L18,75 L20,88" fill="#806040" stroke="#604020" stroke-width="1"/>
+        <circle cx="19" cy="80" r="6" fill="#f5dab0"/>
+      </svg>
+    </div>
+    <div class="bubble small tail-tl" style="bottom:160px; left:265px; max-width:120px;">
+      道修肉！<br>打不死！
+    </div>
+
+    <!-- 柳烟 (合欢, mischievous) -->
+    <div class="char" style="bottom:60px; right:15px;">
+      <svg width="100" height="140" viewBox="0 0 100 130">
+        <!-- Long hair back (purple, flowing) -->
+        <path d="M25,25 Q50,5 75,25 L80,70 L20,70 Z" fill="#603080"/>
+        <path d="M22,55 L14,110 L18,115 M78,55 L86,110 L82,115" fill="#603080"/>
+        <!-- Face -->
+        <ellipse cx="50" cy="42" rx="19" ry="21" fill="#f5dab0"/>
+        <!-- Hair front -->
+        <path d="M30,22 Q40,15 50,22 Q60,15 70,22 L72,30 L28,30 Z" fill="#603080"/>
+        <!-- Hair pin -->
+        <rect x="68" y="20" width="8" height="3" fill="#c9a84c" transform="rotate(20 72 21)"/>
+        <!-- Eyebrows (one raised, mischievous) -->
+        <path d="M36,35 L44,33" stroke="#1a1a2a" stroke-width="2" stroke-linecap="round"/>
+        <path d="M56,33 L64,35" stroke="#1a1a2a" stroke-width="2" stroke-linecap="round"/>
+        <!-- Eyes (one wink) -->
+        <path d="M38,42 Q42,44 46,42" stroke="#1a1a2a" stroke-width="2.5" fill="none"/>
+        <ellipse cx="58" cy="42" rx="3.5" ry="4.5" fill="#1a1a2a"/>
+        <circle cx="59" cy="41" r="1.2" fill="#fff"/>
+        <!-- Blush -->
+        <ellipse cx="38" cy="48" rx="4" ry="2.5" fill="#ffaaaa" opacity="0.6"/>
+        <ellipse cx="62" cy="48" rx="4" ry="2.5" fill="#ffaaaa" opacity="0.6"/>
+        <!-- Mouth (smirk with fang) -->
+        <path d="M44,53 Q50,50 56,54" stroke="#1a1a2a" stroke-width="2" fill="none" stroke-linecap="round"/>
+        <path d="M55,53 L57,56 L53,55" fill="#fff" stroke="#1a1a2a" stroke-width="0.5"/>
+        <!-- Body/robe (flowing, low-cut) -->
+        <path d="M35,62 L65,62 L70,80 L75,125 L25,125 L30,80 Z" fill="#7030a0"/>
+        <path d="M35,62 L65,62" stroke="#d0a0e0" stroke-width="2.5"/>
+        <!-- Fan -->
+        <path d="M70,68 L82,60 L84,70 L82,78 L72,75 Z" fill="#d0a0e0" opacity="0.8" stroke="#603080" stroke-width="1"/>
+        <line x1="72" y1="65" x2="82" y2="63" stroke="#603080" stroke-width="0.8"/>
+        <line x1="73" y1="70" x2="83" y2="68" stroke="#603080" stroke-width="0.8"/>
+        <line x1="72" y1="75" x2="82" y2="73" stroke="#603080" stroke-width="0.8"/>
+        <!-- Arm holding fan -->
+        <path d="M65,68 L72,68" fill="#7030a0" stroke="#502080" stroke-width="1"/>
+      </svg>
+    </div>
+    <div class="bubble small tail-tr" style="bottom:155px; right:10px; max-width:140px;">
+      合欢暴击，<br>一刀一个~
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════ -->
+  <!-- PANEL 3: 争辩 — 谁也不服谁 -->
+  <!-- ═══════════════════════════════════ -->
+  <div class="panel bg-clash" style="position:relative;">
+    <div class="panel-num">3</div>
+    <div class="caption">谁才是最强？</div>
+
+    <!-- Spark effects -->
+    <div class="spark-line" style="top:200px; left:120px; width:80px; transform:rotate(15deg);"></div>
+    <div class="spark-line" style="top:180px; left:350px; width:60px; transform:rotate(-20deg);"></div>
+    <div class="spark-line" style="top:250px; left:200px; width:70px; transform:rotate(25deg);"></div>
+    <div class="spark-line" style="top:230px; left:320px; width:50px; transform:rotate(-15deg);"></div>
+    <div class="spark-star" style="top:160px; left:250px; font-size:20px;">✦</div>
+    <div class="spark-star" style="top:280px; left:150px; font-size:14px; animation-delay:0.3s;">✦</div>
+    <div class="spark-star" style="top:300px; left:380px; font-size:16px; animation-delay:0.6s;">✦</div>
+    <div class="spark-star" style="top:150px; left:400px; font-size:12px; animation-delay:0.9s;">✧</div>
+    <div class="spark-star" style="top:320px; left:280px; font-size:18px; animation-delay:1.2s;">✧</div>
+
+    <!-- BANG effect -->
+    <div class="clash-bang">对峙！！</div>
+
+    <!-- 林霄 (angry, left) -->
+    <div class="char" style="bottom:40px; left:20px; transform:scaleX(-1);">
+      <svg width="90" height="120" viewBox="0 0 100 130">
+        <path d="M28,28 Q50,8 72,28 L72,50 L28,50 Z" fill="#1a1a2a"/>
+        <ellipse cx="50" cy="42" rx="19" ry="21" fill="#f5dab0"/>
+        <path d="M30,25 L35,15 L40,25 L45,12 L50,25 L55,12 L60,25 L65,15 L70,25 L72,32 L28,32 Z" fill="#1a1a2a"/>
+        <!-- Angry eyebrows -->
+        <path d="M35,34 L45,38" stroke="#1a1a2a" stroke-width="3" stroke-linecap="round"/>
+        <path d="M55,38 L65,34" stroke="#1a1a2a" stroke-width="3" stroke-linecap="round"/>
+        <!-- Angry eyes (narrowed) -->
+        <path d="M38,42 Q42,40 46,42" stroke="#1a1a2a" stroke-width="2.5" fill="none"/>
+        <path d="M54,42 Q58,40 62,42" stroke="#1a1a2a" stroke-width="2.5" fill="none"/>
+        <!-- Gritted teeth -->
+        <rect x="42" y="52" width="16" height="5" fill="#fff" stroke="#1a1a2a" stroke-width="1"/>
+        <line x1="46" y1="52" x2="46" y2="57" stroke="#1a1a2a" stroke-width="0.8"/>
+        <line x1="50" y1="52" x2="50" y2="57" stroke="#1a1a2a" stroke-width="0.8"/>
+        <line x1="54" y1="52" x2="54" y2="57" stroke="#1a1a2a" stroke-width="0.8"/>
+        <!-- Body -->
+        <path d="M33,62 L67,62 L74,125 L26,125 Z" fill="#3060c0"/>
+        <path d="M33,62 L67,62" stroke="#fff" stroke-width="2.5"/>
+        <!-- Fist raised -->
+        <path d="M33,65 L18,60 L15,70 L22,75" fill="#3060c0" stroke="#2650a0" stroke-width="1"/>
+        <circle cx="16" cy="65" r="6" fill="#f5dab0"/>
+      </svg>
+    </div>
+
+    <!-- 苏瑶 (angry, left-center) -->
+    <div class="char" style="bottom:45px; left:115px;">
+      <svg width="85" height="115" viewBox="0 0 100 130">
+        <path d="M25,25 Q50,5 75,25 L78,60 L22,60 Z" fill="#e070a0"/>
+        <ellipse cx="50" cy="42" rx="18" ry="20" fill="#f5dab0"/>
+        <path d="M30,22 Q40,15 50,22 Q60,15 70,22 L72,30 L28,30 Z" fill="#e070a0"/>
+        <circle cx="30" cy="24" r="3" fill="#ffc0d0"/>
+        <!-- Angry eyebrows -->
+        <path d="M35,34 L44,38" stroke="#1a1a2a" stroke-width="2.5" stroke-linecap="round"/>
+        <path d="M56,38 L65,34" stroke="#1a1a2a" stroke-width="2.5" stroke-linecap="round"/>
+        <!-- Angry eyes -->
+        <ellipse cx="42" cy="43" rx="3" ry="2.5" fill="#1a1a2a"/>
+        <ellipse cx="58" cy="43" rx="3" ry="2.5" fill="#1a1a2a"/>
+        <!-- Pout mouth -->
+        <path d="M44,55 Q50,50 56,55" stroke="#1a1a2a" stroke-width="2" fill="none" stroke-linecap="round"/>
+        <path d="M33,62 L67,62 L72,125 L28,125 Z" fill="#d05080"/>
+        <path d="M33,62 L67,62" stroke="#ffc0d0" stroke-width="2"/>
+      </svg>
+    </div>
+
+    <!-- 陈符 (angry, center) -->
+    <div class="char" style="bottom:45px; left:215px;">
+      <svg width="85" height="115" viewBox="0 0 100 130">
+        <path d="M28,28 Q50,10 72,28 L72,48 L28,48 Z" fill="#1a1a2a"/>
+        <ellipse cx="50" cy="42" rx="18" ry="20" fill="#f5dab0"/>
+        <path d="M30,25 Q40,18 50,25 Q60,18 70,25 L70,30 L30,30 Z" fill="#1a1a2a"/>
+        <circle cx="42" cy="42" r="5" fill="none" stroke="#303030" stroke-width="1.5"/>
+        <circle cx="58" cy="42" r="5" fill="none" stroke="#303030" stroke-width="1.5"/>
+        <line x1="47" y1="42" x2="53" y2="42" stroke="#303030" stroke-width="1.5"/>
+        <path d="M36,34 L45,37" stroke="#1a1a2a" stroke-width="2.5" stroke-linecap="round"/>
+        <path d="M55,37 L64,34" stroke="#1a1a2a" stroke-width="2.5" stroke-linecap="round"/>
+        <ellipse cx="42" cy="43" rx="2" ry="2" fill="#1a1a2a"/>
+        <ellipse cx="58" cy="43" rx="2" ry="2" fill="#1a1a2a"/>
+        <rect x="43" y="52" width="14" height="4" fill="#fff" stroke="#1a1a2a" stroke-width="0.8"/>
+        <path d="M33,62 L67,62 L72,125 L28,125 Z" fill="#209090"/>
+        <path d="M33,62 L67,62" stroke="#c0f0f0" stroke-width="2"/>
+      </svg>
+    </div>
+
+    <!-- 赵岩 (angry, right-center) -->
+    <div class="char" style="bottom:40px; left:310px;">
+      <svg width="90" height="120" viewBox="0 0 100 130">
+        <path d="M26,28 Q50,10 74,28 L74,48 L26,48 Z" fill="#604020"/>
+        <ellipse cx="50" cy="44" rx="21" ry="22" fill="#f5dab0"/>
+        <path d="M28,25 Q38,18 50,25 Q62,18 72,25 L72,30 L28,30 Z" fill="#604020"/>
+        <path d="M34,35 L45,39" stroke="#604020" stroke-width="3" stroke-linecap="round"/>
+        <path d="M55,39 L66,35" stroke="#604020" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="42" cy="44" r="3" fill="#1a1a2a"/>
+        <circle cx="58" cy="44" r="3" fill="#1a1a2a"/>
+        <rect x="40" y="53" width="20" height="5" fill="#fff" stroke="#1a1a2a" stroke-width="1"/>
+        <line x1="45" y1="53" x2="45" y2="58" stroke="#1a1a2a" stroke-width="0.8"/>
+        <line x1="50" y1="53" x2="50" y2="58" stroke="#1a1a2a" stroke-width="0.8"/>
+        <line x1="55" y1="53" x2="55" y2="58" stroke="#1a1a2a" stroke-width="0.8"/>
+        <path d="M28,64 L72,64 L80,125 L20,125 Z" fill="#806040"/>
+        <path d="M28,64 L72,64" stroke="#d0c0a0" stroke-width="2.5"/>
+      </svg>
+    </div>
+
+    <!-- 柳烟 (angry, right) -->
+    <div class="char" style="bottom:45px; right:20px;">
+      <svg width="85" height="115" viewBox="0 0 100 130">
+        <path d="M25,25 Q50,5 75,25 L78,55 L22,55 Z" fill="#603080"/>
+        <ellipse cx="50" cy="42" rx="18" ry="20" fill="#f5dab0"/>
+        <path d="M30,22 Q40,15 50,22 Q60,15 70,22 L72,30 L28,30 Z" fill="#603080"/>
+        <rect x="68" y="20" width="6" height="2.5" fill="#c9a84c" transform="rotate(20 71 21)"/>
+        <path d="M35,34 L44,38" stroke="#1a1a2a" stroke-width="2.5" stroke-linecap="round"/>
+        <path d="M56,38 L65,34" stroke="#1a1a2a" stroke-width="2.5" stroke-linecap="round"/>
+        <ellipse cx="42" cy="43" rx="2.5" ry="3" fill="#1a1a2a"/>
+        <ellipse cx="58" cy="43" rx="2.5" ry="3" fill="#1a1a2a"/>
+        <path d="M43,55 Q50,51 57,55" stroke="#1a1a2a" stroke-width="2" fill="none" stroke-linecap="round"/>
+        <path d="M33,62 L67,62 L72,125 L28,125 Z" fill="#7030a0"/>
+        <path d="M33,62 L67,62" stroke="#d0a0e0" stroke-width="2"/>
+        <!-- Fan (closed, like a weapon) -->
+        <rect x="68" y="65" width="4" height="20" fill="#d0a0e0" rx="1" transform="rotate(15 70 75)"/>
+      </svg>
+    </div>
+
+    <!-- Central speech -->
+    <div class="clash-text" style="bottom:170px;">
+      我的职业才是<br>最强的！！
+    </div>
+
+    <!-- Lightning between characters -->
+    <svg style="position:absolute; top:150px; left:0; width:100%; height:200px; pointer-events:none; z-index:7;">
+      <path d="M100,30 L120,50 L110,60 L140,80" stroke="#fff" stroke-width="2" fill="none" opacity="0.6"/>
+      <path d="M200,20 L180,50 L190,60 L160,80" stroke="#fff" stroke-width="2" fill="none" opacity="0.6"/>
+      <path d="M300,25 L320,45 L310,55 L340,75" stroke="#fff" stroke-width="2" fill="none" opacity="0.6"/>
+      <path d="M400,30 L380,50 L390,60 L360,80" stroke="#fff" stroke-width="2" fill="none" opacity="0.6"/>
+    </svg>
+  </div>
+
+  <!-- ═══════════════════════════════════ -->
+  <!-- PANEL 4: 标题画面 -->
+  <!-- ═══════════════════════════════════ -->
+  <div class="panel bg-nightsky" style="position:relative;">
+    <div class="panel-num">4</div>
+
+    <!-- Stars -->
+    <div class="stars" id="stars4"></div>
+    <!-- Moon -->
+    <div class="moon-halo"></div>
+    <div class="moon"></div>
+
+    <!-- Mountain silhouettes -->
+    <svg class="mountains" viewBox="0 0 540 100" preserveAspectRatio="none">
+      <polygon points="0,100 80,40 140,70 200,30 280,60 340,20 420,55 480,35 540,70 540,100" fill="#0a0a18" opacity="0.8"/>
+      <polygon points="0,100 60,60 120,80 180,50 260,75 320,45 400,65 460,50 540,80 540,100" fill="#12101e" opacity="0.6"/>
+    </svg>
+
+    <!-- Flying sword trail -->
+    <svg style="position:absolute; top:100px; left:50px; width:300px; height:40px; z-index:6; pointer-events:none;">
+      <line x1="0" y1="20" x2="250" y2="15" stroke="#c9a84c" stroke-width="1.5" opacity="0.3"/>
+      <line x1="20" y1="22" x2="230" y2="18" stroke="#fff" stroke-width="1" opacity="0.4"/>
+      <circle cx="250" cy="15" r="3" fill="#c9a84c" opacity="0.6"/>
+    </svg>
+
+    <!-- Game Title -->
+    <div class="game-title">
+      <h1>修仙与地下城</h1>
+      <div class="sub">— 五大职业 · 七大境界 · 无尽探索 —</div>
+      <div class="random-btn">随机结缘</div>
+      <div style="margin-top:12px; color:#7a7a9a; font-size:12px;">
+        其实选「随机」才有惊喜哦~
+      </div>
+    </div>
+
+    <!-- 5 mini character silhouettes at bottom -->
+    <div style="position:absolute; bottom:15px; left:50%; transform:translateX(-50%); display:flex; gap:8px; z-index:6; opacity:0.7;">
+      <!-- Mini char icons -->
+      <svg width="32" height="42" viewBox="0 0 100 130"><circle cx="50" cy="40" r="18" fill="#3060c0"/><circle cx="50" cy="38" r="14" fill="#f5dab0"/><path d="M30,25 Q50,10 70,25 L70,30 L30,30 Z" fill="#1a1a2a"/></svg>
+      <svg width="32" height="42" viewBox="0 0 100 130"><circle cx="50" cy="40" r="18" fill="#d05080"/><circle cx="50" cy="38" r="14" fill="#f5dab0"/><path d="M30,22 Q50,8 70,22 L70,30 L30,30 Z" fill="#e070a0"/></svg>
+      <svg width="32" height="42" viewBox="0 0 100 130"><circle cx="50" cy="40" r="18" fill="#209090"/><circle cx="50" cy="38" r="14" fill="#f5dab0"/><path d="M30,25 Q50,12 70,25 L70,30 L30,30 Z" fill="#1a1a2a"/></svg>
+      <svg width="32" height="42" viewBox="0 0 100 130"><circle cx="50" cy="40" r="18" fill="#806040"/><circle cx="50" cy="38" r="14" fill="#f5dab0"/><path d="M28,25 Q50,12 72,25 L72,30 L28,30 Z" fill="#604020"/></svg>
+      <svg width="32" height="42" viewBox="0 0 100 130"><circle cx="50" cy="40" r="18" fill="#7030a0"/><circle cx="50" cy="38" r="14" fill="#f5dab0"/><path d="M30,22 Q50,8 70,22 L70,30 L30,30 Z" fill="#603080"/></svg>
+    </div>
+
+    <!-- Narration -->
+    <div class="narration" style="bottom:70px;">
+      <span class="highlight">TapTap搜索：修仙与地下城</span><br>
+      <span style="font-size:11px; color:#6a6a8a;">你的修仙之路从哪个职业开始？</span>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="left">哲码游戏 出品</div>
+    <div class="right">修仙与地下城 · 漫画 EP01 · 选职业</div>
+  </div>
+
+</div>
+
+<script>
+// Generate stars
+function makeStars(containerId, count) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  for (let i = 0; i < count; i++) {
+    const s = document.createElement('div');
+    s.className = 'star';
+    s.style.left = Math.random() * 100 + '%';
+    s.style.top = Math.random() * 70 + '%';
+    const size = Math.random() * 2 + 1;
+    s.style.width = size + 'px';
+    s.style.height = size + 'px';
+    s.style.animationDelay = Math.random() * 3 + 's';
+    container.appendChild(s);
+  }
+}
+makeStars('stars1', 40);
+makeStars('stars4', 40);
+</script>
+
+</body>
+</html>
